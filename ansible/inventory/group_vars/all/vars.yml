@@ -1,0 +1,31 @@
+---
+timezone: America/Fortaleza
+ntp_server: pool.ntp.org
+
+# Proxmox
+proxmox_host: "<proxmox_host>"
+proxmox_node: "proxmox"
+proxmox_user: "root@pam"
+proxmox_token_id: "ansible"
+proxmox_token_secret: "{{ vault_proxmox_token_secret }}"
+
+# LXC
+lxc_vmid: 100
+lxc_template: "local:vztmpl/ubuntu-26.04-standard_26.04-1_amd64.tar.zst"
+lxc_hostname: "forgejo"
+lxc_cores: 2
+lxc_memory: 1024
+lxc_disk: "local-lvm:8"
+lxc_password: "{{ vault_lxc_root_password }}"
+# DNS da LAN: sem isso o container herda o DNS do host (Tailscale MagicDNS,
+# inalcançável antes do Tailscale subir no container)
+lxc_nameserver: "192.168.18.1"
+
+# Tailscale
+tailscale_hostname: "forgejo-lxc"
+tailscale_auth_key: "{{ vault_tailscale_auth_key }}"
+
+# Forgejo
+forgejo_domain: "forge.nextlevelcode.pro"
+forgejo_dir: "/opt/forgejo"
+forgejo_db_password: "{{ vault_forgejo_db_password }}"

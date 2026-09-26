@@ -1,0 +1,45 @@
+services:
+  server:
+    image: {{ forgejo_image }}
+    container_name: forgejo
+    user: "{{ forgejo_user }}:{{ forgejo_group }}"
+    restart: unless-stopped
+    environment:
+      - FORGEJO__database__DB_TYPE=postgres
+      - FORGEJO__database__HOST=db:5432
+      - FORGEJO__database__NAME=forgejo
+      - FORGEJO__database__USER=forgejo
+      - FORGEJO__database__PASSWD={{ forgejo_db_password }}
+      - FORGEJO__server__ROOT_URL=https://{{ forgejo_domain }}/
+      - FORGEJO__server__DOMAIN={{ forgejo_domain }}
+      - FORGEJO__server__SSH_DOMAIN={{ forgejo_domain }}
+      - FORGEJO__server__SSH_PORT=2222
+      - FORGEJO__server__SSH_LISTEN_PORT=2222
+      - FORGEJO__security__INSTALL_LOCK=true
+      - FORGEJO__service__DISABLE_REGISTRATION=true
+      - FORGEJO__service__REQUIRE_SIGNIN_VIEW=false
+    volumes:
+      - ./forgejo:/var/lib/gitea
+      - ./forgejo/conf:/etc/gitea
+    ports:
+      - "3000:3000"
+      - "2222:2222"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: {{ forgejo_db_image }}
+    container_name: forgejo-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=forgejo
+      - POSTGRES_PASSWORD={{ forgejo_db_password }}
+      - POSTGRES_DB=forgejo
+    volumes:
+      - ./postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U forgejo"]
+      interval: 5s
+      timeout: 5s
+      retries: 5

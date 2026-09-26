@@ -1,0 +1,7 @@
+[sshd]
+enabled = true
+port    = {{ security_ssh_port }}
+filter  = sshd
+{% if ansible_facts.os_family == 'Debian' and ansible_facts.distribution_major_version | int >= 12 %}
+backend = systemd
+{% endif %}

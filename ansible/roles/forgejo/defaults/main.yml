@@ -1,0 +1,4 @@
+forgejo_image: "codeberg.org/forgejo/forgejo:15-rootless"
+forgejo_db_image: "postgres:16-alpine"
+forgejo_user: "1000"
+forgejo_group: "1000"
