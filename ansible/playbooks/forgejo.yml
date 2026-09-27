@@ -1,7 +1,7 @@
 ---
 - name: Criar LXC no Proxmox
   hosts: proxmox
-  gather_facts: false
+  gather_facts: true
   module_defaults:
     group/community.proxmox.proxmox:
       api_host: "{{ proxmox_host }}"
@@ -10,24 +10,31 @@
       api_token_secret: "{{ proxmox_token_secret }}"
       node: "{{ proxmox_node }}"
       validate_certs: false
+  roles:
+    - role: geerlingguy.pip
+  vars:
+    pip_install_packages:
+      - name: proxmoxer
+        version: ">=2.3"
+      - name: requests
   tasks:
     - name: Remover proxmoxer antigo do apt (trixie só tem 2.2, módulo exige >= 2.3)
       ansible.builtin.apt:
         name: python3-proxmoxer
         state: absent
 
-    - name: Instalar pip
-      ansible.builtin.apt:
-        name: python3-pip
-        state: present
-        update_cache: true
-
-    - name: Instalar proxmoxer >= 2.3 via pip
-      ansible.builtin.pip:
-        name:
-          - "proxmoxer>=2.3"
-          - requests
-        break_system_packages: true
+    # - name: Instalar pip
+    #   ansible.builtin.apt:
+    #     name: python3-pip
+    #     state: present
+    #     update_cache: true
+    #
+    # - name: Instalar proxmoxer >= 2.3 via pip
+    #   ansible.builtin.pip:
+    #     name:
+    #       - "proxmoxer>=2.3"
+    #       - requests
+    #     break_system_packages: true
 
     - name: Criar container Forgejo
       community.proxmox.proxmox:
