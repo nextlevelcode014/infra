@@ -1,3 +1,30 @@
-#SPDX-License-Identifier: MIT-0
 ---
-# tasks file for homelab-ansible/roles/common
+- name: Definir timezone
+  community.general.timezone:
+    timezone: "{{ timezone }}"
+
+- name: Criar diretório de drop-in do systemd-timesyncd
+  ansible.builtin.file:
+    path: /etc/systemd/timesyncd.conf.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Configurar NTP server no systemd-timesyncd
+  ansible.builtin.copy:
+    dest: /etc/systemd/timesyncd.conf.d/10-nextlevelcode.conf
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      # Gerido pelo Ansible — não editar à mão
+      [Time]
+      NTP={{ ntp_server }}
+  notify: Restart systemd-timesyncd
+
+- name: Garantir systemd-timesyncd ativo
+  ansible.builtin.service:
+    name: systemd-timesyncd
+    state: started
+    enabled: true
