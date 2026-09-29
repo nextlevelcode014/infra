@@ -3,7 +3,13 @@ variable "node_name" {
 }
 
 variable "vm_id" {
-  type = number
+  type        = number
+  description = "ID do container no Proxmox. Faixa reservada para containers: 200-299."
+
+  validation {
+    condition     = var.vm_id >= 200 && var.vm_id <= 299
+    error_message = "VMID ${var.vm_id} fora da faixa reservada para containers (200-299)."
+  }
 }
 
 variable "hostname" {
@@ -65,3 +71,4 @@ variable "keyctl" {
   type    = bool
   default = false
 }
+

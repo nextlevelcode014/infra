@@ -6,7 +6,7 @@ resource "proxmox_virtual_environment_container" "this" {
   started      = true
   tags         = ["terraform"]
 
-  cpu    { cores = var.cores }
+  cpu { cores = var.cores }
   memory { dedicated = var.memory }
 
   disk {
@@ -16,7 +16,7 @@ resource "proxmox_virtual_environment_container" "this" {
 
   operating_system {
     template_file_id = var.template_file_id
-    type              = var.template_type
+    type             = var.template_type
   }
 
   network_interface {
@@ -40,7 +40,14 @@ resource "proxmox_virtual_environment_container" "this" {
   }
 
   features {
+    # keyctl fica em false: feature flags só podem ser alteradas autenticado
+    # como root@pam, e aqui usamos um token de API (recebe 403).
+    # Quem aplica keyctl é o Ansible (roles/lxc_flags), via pct no host.
     nesting = var.nesting
     keyctl  = var.keyctl
   }
 }
+
+# /dev/net/tun NÃO fica aqui: device passthrough tem a mesma restrição do
+# Proxmox ("configuring device passthrough is only allowed for root@pam"),
+# então um token nunca consegue aplicá-lo. Vai no mesmo role do keyctl.
