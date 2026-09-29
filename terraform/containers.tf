@@ -1,3 +1,10 @@
+# Faixa reservada para containers gerenciados aqui: 200-299.
+# Convenção: hostname, VMID e último octeto do IP usam o mesmo número.
+#   caddy        -> vmid 200 -> 192.168.50.200
+#   forgejo      -> vmid 201 -> 192.168.50.201
+#   vaultwarden  -> vmid 202 -> 192.168.50.202
+# O Ansible consome isso pelo grupo "lxc" (ver inventory.tf).
+
 module "caddy" {
   source           = "./modules/lxc"
   node_name        = var.node_name

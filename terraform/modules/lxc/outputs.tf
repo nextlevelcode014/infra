@@ -1,4 +1,9 @@
 output "ip_address" {
-  description = "The assigned IPv4 address"
-  value       = proxmox_virtual_environment_container.this.network_interface[0].ipv4_address
+  description = "Endereço IPv4 do container, sem a máscara de rede"
+  value       = split("/", var.ip_address)[0]
+}
+
+output "vm_id" {
+  description = "ID do container no Proxmox"
+  value       = var.vm_id
 }
