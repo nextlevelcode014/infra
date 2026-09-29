@@ -1,0 +1,62 @@
+---
+# Aplica o que o Proxmox reserva ao root@pam e por isso não pode ficar no
+# Terraform (que usa token de API e recebe 403):
+#   - feature flags  -> keyctl
+#   - device passthrough -> /dev/net/tun
+# Espera a variável lxc_vmid, que vem do inventário do Terraform.
+
+- name: Validar que o inventário trouxe o VMID
+  ansible.builtin.assert:
+    that:
+      - lxc_vmid is defined
+      - lxc_vmid | int > 0
+    fail_msg: >
+      lxc_vmid não definido. Ele vem como host var pelo inventário do
+      Terraform (ver inventory.tf).
+
+- name: Verificar que o device existe no host
+  ansible.builtin.stat:
+    path: "{{ lxc_tun_device }}"
+  register: tun_host
+  failed_when: not tun_host.stat.exists
+
+- name: Ler config atual do container
+  ansible.builtin.command: "pct config {{ lxc_vmid }}"
+  register: pct_config
+  changed_when: false
+
+- name: Determinar o que falta aplicar
+  ansible.builtin.set_fact:
+    lxc_falta_keyctl: "{{ ('keyctl=1' not in pct_config.stdout) | bool }}"
+    lxc_falta_tun: "{{ ('dev0' not in pct_config.stdout) | bool }}"
+
+- name: Consolidar se precisa mexer no container
+  ansible.builtin.set_fact:
+    lxc_precisa_alterar: "{{ (lxc_falta_keyctl or lxc_falta_tun) | bool }}"
+
+- name: Verificar estado do container
+  ansible.builtin.command: "pct status {{ lxc_vmid }}"
+  register: pct_status
+  changed_when: false
+  when: lxc_precisa_alterar
+
+# Nem feature flag nem device passthrough são hot-plug: só valem no próximo
+# boot. Então mexe com o container parado.
+- name: Parar o container
+  ansible.builtin.command: "pct stop {{ lxc_vmid }}"
+  when:
+    - lxc_precisa_alterar
+    - "'status: running' in pct_status.stdout"
+
+- name: Aplicar features do container
+  # pct set substitui a string inteira, por isso nesting vem junto no default.
+  ansible.builtin.command: "pct set {{ lxc_vmid }} --features {{ lxc_features }}"
+  when: lxc_falta_keyctl
+
+- name: Liberar {{ lxc_tun_device }} no container
+  ansible.builtin.command: "pct set {{ lxc_vmid }} --dev0 {{ lxc_tun_device }}"
+  when: lxc_falta_tun
+
+- name: Subir o container
+  ansible.builtin.command: "pct start {{ lxc_vmid }}"
+  when: lxc_precisa_alterar
