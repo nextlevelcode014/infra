@@ -1,0 +1,6 @@
+---
+lxc_features: "nesting=1,keyctl=1"
+
+# /dev/net/tun: precisa existir no container para o Tailscale (e VPNs).
+# O host precisa ter o device; sem ele o pct set falha.
+lxc_tun_device: "/dev/net/tun"

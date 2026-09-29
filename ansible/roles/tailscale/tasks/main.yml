@@ -1,0 +1,58 @@
+---
+- name: Verificar se o Tailscale já está instalado
+  ansible.builtin.shell: "command -v tailscale"
+  register: tailscale_check
+  failed_when: false
+  changed_when: false
+
+- name: Garantir curl e ca-certificates
+  ansible.builtin.apt:
+    name:
+      - curl
+      - ca-certificates
+    state: present
+    update_cache: true
+  register: apt_curl
+  until: apt_curl is succeeded
+  retries: 12
+  delay: 5 # unattended-upgrades do 1º boot segura o lock do apt
+  when: tailscale_check.rc != 0
+
+- name: Baixar script de instalação
+  ansible.builtin.get_url:
+    url: https://tailscale.com/install.sh
+    dest: /tmp/tailscale-install.sh
+    mode: "0700"
+  when: tailscale_check.rc != 0
+
+- name: Instalar Tailscale
+  ansible.builtin.command: /tmp/tailscale-install.sh
+  register: tailscale_install
+  until: tailscale_install.rc == 0
+  retries: 12
+  delay: 5
+  changed_when: true
+  when: tailscale_check.rc != 0
+
+- name: Remover script de instalação
+  ansible.builtin.file:
+    path: /tmp/tailscale-install.sh
+    state: absent
+
+- name: Verificar se já está conectado
+  ansible.builtin.command: "tailscale status --json"
+  register: tailscale_status
+  failed_when: false
+  changed_when: false
+  no_log: true
+
+- name: Subir Tailscale na tailnet
+  ansible.builtin.command: >
+    tailscale up
+    --authkey={{ tailscale_auth_key }}
+    --hostname={{ tailscale_hostname }}
+    {{ tailscale_args }}
+  when: >
+    tailscale_status.rc != 0 or
+    (tailscale_status.stdout | from_json).BackendState != "Running"
+  no_log: true # sem isso a auth key aparece no output da execução

@@ -1,0 +1,30 @@
+---
+# keyctl só pode ser alterado autenticado como root@pam no Proxmox; um token
+# de API recebe 403 mesmo pertencendo ao root. Por isso essa flag fica aqui e
+# não no Terraform. Todo o resto do provisionamento é do Terraform.
+- name: Aplicar flags do LXC
+  hosts: proxmox
+  gather_facts: false
+  tasks:
+    - name: Garantir keyctl no container
+      ansible.builtin.include_role:
+        name: lxc_flags
+      vars:
+        lxc_vmid: "{{ hostvars[item].lxc_vmid }}"
+      loop: "{{ groups['lxc'] }}"
+
+- name: Configurar containers
+  hosts: lxc
+  gather_facts: true
+  pre_tasks:
+    - name: Aguardar SSH disponível
+      ansible.builtin.wait_for:
+        host: "{{ ansible_host }}"
+        port: 22
+        timeout: 120
+      delegate_to: localhost
+      become: false
+  roles:
+    - common
+    - tailscale
+    - geerlingguy.docker

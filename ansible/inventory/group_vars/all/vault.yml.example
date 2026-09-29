@@ -12,9 +12,6 @@
 # community.proxmox.*
 vault_proxmox_token_secret: "CHANGE-ME"
 
-# Senha de root definida no LXC no momento da criação (community.proxmox.proxmox -> password)
-vault_lxc_root_password: "CHANGE-ME"
-
 # Chave de autorização reutilizável e sem expiração, gerada em
 # https://login.tailscale.com/admin/settings/oauth
 vault_tailscale_auth_key: "tskey-auth-CHANGE-ME"
