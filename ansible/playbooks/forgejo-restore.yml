@@ -1,0 +1,7 @@
+---
+# Operação destrutiva e explícita. O deploy normal é playbooks/forgejo.yml.
+- name: Restaurar Forgejo a partir do Borg
+  hosts: forgejo
+  gather_facts: false
+  roles:
+    - role: forgejo_restore

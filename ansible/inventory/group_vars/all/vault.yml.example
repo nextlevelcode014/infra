@@ -20,3 +20,18 @@ vault_tailscale_auth_key: "tskey-auth-CHANGE-ME"
 # {{ forgejo_dir }}/docker-compose.yml do container, então use uma senha
 # exclusiva para este stack.
 vault_forgejo_db_password: "CHANGE-ME"
+
+# Acesso independente ao repositório Borg usado pelo backup do Forgejo.
+# O Pi de recuperação precisa desses valores sem depender do Forgejo ou
+# Vaultwarden restaurado.
+vault_forgejo_borg_repo: "ssh://host.repo.borgbase.com/./repo"
+vault_forgejo_borg_passcommand: "cat /root/.borg-pass"
+vault_forgejo_borg_ssh_key: "/root/.ssh/id_ed25519"
+vault_forgejo_borg_password: |-
+  CHANGE-ME
+vault_forgejo_borg_ssh_private_key: |
+  -----BEGIN OPENSSH PRIVATE KEY-----
+  CHANGE-ME
+  -----END OPENSSH PRIVATE KEY-----
+# Chave pública do servidor Borg, sem o hostname no início.
+vault_forgejo_borg_known_host_key: "ssh-ed25519 AAAA..."

@@ -6,6 +6,72 @@
     group: "{{ forgejo_group }}"
     mode: "0750"
 
+- name: Instalar Borg para backups e restores
+  ansible.builtin.package:
+    name: borgbackup
+    state: present
+
+- name: Criar diretório SSH do Borg
+  ansible.builtin.file:
+    path: "{{ forgejo_borg_ssh_key | dirname }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: Instalar chave SSH do Borg
+  ansible.builtin.copy:
+    content: "{{ vault_forgejo_borg_ssh_private_key }}"
+    dest: "{{ forgejo_borg_ssh_key }}"
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+
+- name: Instalar arquivo da senha do Borg
+  ansible.builtin.copy:
+    content: "{{ vault_forgejo_borg_password }}"
+    dest: "{{ forgejo_borg_password_file }}"
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+
+- name: Criar arquivo known_hosts do Borg
+  ansible.builtin.file:
+    path: "{{ forgejo_borg_ssh_key | dirname }}/known_hosts"
+    state: touch
+    owner: root
+    group: root
+    mode: "0600"
+
+- name: Adicionar servidor Borg ao known_hosts
+  ansible.builtin.known_hosts:
+    name: "{{ forgejo_borg_host }}"
+    key: "{{ forgejo_borg_host }} {{ vault_forgejo_borg_known_host_key }}"
+    path: "{{ forgejo_borg_ssh_key | dirname }}/known_hosts"
+    state: present
+
+- name: Instalar script de backup do Forgejo
+  ansible.builtin.template:
+    src: backup_forgejo.sh.j2
+    dest: "{{ forgejo_backup_script }}"
+    owner: root
+    group: root
+    mode: "0750"
+  no_log: true
+
+- name: Agendar backup do Forgejo
+  ansible.builtin.cron:
+    name: Backup Borg do Forgejo
+    user: root
+    minute: "{{ forgejo_backup_schedule.split()[0] }}"
+    hour: "{{ forgejo_backup_schedule.split()[1] }}"
+    day: "{{ forgejo_backup_schedule.split()[2] }}"
+    month: "{{ forgejo_backup_schedule.split()[3] }}"
+    weekday: "{{ forgejo_backup_schedule.split()[4] }}"
+    job: "{{ forgejo_backup_script }} >> {{ forgejo_backup_log_file }} 2>&1"
+
 - name: Criar subdiretórios de dados
   ansible.builtin.file:
     path: "{{ forgejo_dir }}/{{ item }}"
@@ -16,7 +82,14 @@
   loop:
     - forgejo
     - forgejo/conf
-    - postgres
+
+- name: Criar diretório do PostgreSQL
+  ansible.builtin.file:
+    path: "{{ forgejo_dir }}/postgres"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
 
 - name: Renderizar docker-compose.yml
   ansible.builtin.template:
