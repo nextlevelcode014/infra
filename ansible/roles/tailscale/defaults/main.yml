@@ -1,8 +1,0 @@
----
-tailscale_hostname: "{{ inventory_hostname }}"
-
-# --ssh expõe o container via Tailscale SSH.
-# --accept-risk=lose-ssh reconhece que o SSH passa a depender da tailnet.
-# Como o acesso principal do Ansible é pela LAN (IP fixo do Terraform),
-# aqui é um caminho alternativo, não o único.
-tailscale_args: "--ssh --accept-risk=lose-ssh"

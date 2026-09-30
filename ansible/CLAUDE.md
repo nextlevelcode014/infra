@@ -41,20 +41,26 @@ usadas depois.
 | Playbook | Hosts | Faz |
 |---|---|---|
 | `playbooks/lxc.yml` | `proxmox`, depois `lxc` | flags do container, depois a config base de todos |
+| `playbooks/caddy.yml` | `caddy` | binário custom com plugin DNS-01 + Caddyfile + drop-in |
 | `playbooks/forgejo.yml` | `forgejo` | stack do Forgejo |
 
-A config base (em `lxc.yml`) é `common` → `tailscale` → `geerlingguy.docker`,
-aplicada ao grupo `lxc` inteiro. Serviços específicos entram em playbook
-próprio, como o Forgejo já faz. **Caddy e Vaultwarden ainda não têm serviço
-configurado** — só recebem a base.
+A config base (em `lxc.yml`) é `common` → `artis3n.tailscale.machine` →
+`geerlingguy.docker`, aplicada ao grupo `lxc` inteiro. Serviços específicos
+entram em playbook próprio, como o Caddy e o Forgejo já fazem. **Vaultwarden
+ainda não tem serviço configurado** — só recebe a base.
+
+O Caddy do homelab atende `*.lab.nextlevelcode.pro`, acessível via Tailscale
+split DNS dentro da tailnet. O Caddy público (VPS) é o que serve os
+domínios voltados para a internet — está fora deste repo.
 
 ## Roles
 
 | Role | O que é |
 |---|---|
 | `common` | timezone + NTP de máquina física |
-| `tailscale` | instala e sobe na tailnet, com `--ssh` |
+| `artis3n.tailscale.machine` | instala e sobe na tailnet, com `--ssh` |
 | `lxc_flags` | exceção: aplica flags do container (ver abaixo) |
+| `caddy` | binário custom (DNS-01) + Caddyfile + systemd drop-in |
 | `forgejo` | compose do Forgejo + Postgres |
 | `geerlingguy.docker` | vendido, instala o engine |
 | `geerlingguy.pip`, `geerlingguy.security` | vendidos, sem uso ainda |
@@ -74,10 +80,13 @@ Vale não repetir:
   kernel do host. As tasks de NTP do role `common` só rodam fora de container.
 - **Fatos com prefixo `ansible_` estão depreciados.** Use
   `ansible_facts.virtualization_type`; a forma antiga sai no ansible-core 2.24.
-- **`tailscale up` precisa de `no_log: true`**, senão a auth key aparece no
-  output da execução.
-- **Uma mesma auth key serve para os três containers.** Se ela for efêmera ou
-  de uso único, só o primeiro host sobe.
+- **Uma mesma auth key serve para os três containers.** Se ela for efêmera
+  ou de uso único, só o primeiro host sobe. O role `artis3n.tailscale.machine`
+  já cuida do `no_log`; não precisa repetir.
+- **O `validate` de `copy`/`template` não passa por shell.** O Ansible faz
+  `shlex.split` + `execvp`, então `VAR=x comando` falha com
+  `No such file or directory: 'VAR=x'` (procura um binário com esse nome).
+  Para env var inline use `/usr/bin/env VAR=x comando`.
 
 ## Segredos
 
