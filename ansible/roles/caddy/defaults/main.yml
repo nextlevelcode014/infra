@@ -1,0 +1,7 @@
+---
+caddy_apt_package: caddy
+caddy_download_url: "https://caddyserver.com/api/download?os=linux&arch=amd64&p=github.com%2Fcaddy-dns%2Fcloudflare"
+caddy_config_dir: /etc/caddy
+caddy_env_file: /etc/caddy/cf-token.env
+caddy_systemd_drop_in: /etc/systemd/system/caddy.service.d/override.conf
+caddy_cloudflare_env_var: "CLOUDFLARE_API_TOKEN"

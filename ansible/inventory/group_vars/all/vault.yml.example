@@ -14,7 +14,7 @@ vault_proxmox_token_secret: "CHANGE-ME"
 
 # Chave de autorização reutilizável e sem expiração, gerada em
 # https://login.tailscale.com/admin/settings/oauth
-vault_tailscale_auth_key: "tskey-auth-CHANGE-ME"
+vault_tailscale_authkey: "tskey-auth-CHANGE-ME"
 
 # Senha do Postgres do Forgejo. Vai parar em texto no
 # {{ forgejo_dir }}/docker-compose.yml do container, então use uma senha
@@ -35,3 +35,8 @@ vault_forgejo_borg_ssh_private_key: |
   -----END OPENSSH PRIVATE KEY-----
 # Chave pública do servidor Borg, sem o hostname no início.
 vault_forgejo_borg_known_host_key: "ssh-ed25519 AAAA..."
+
+# Token do Cloudflare para DNS-01 (https://dash.cloudflare.com/profile/api-tokens).
+# Scope: Zone:DNS:Edit em todas as zonas que os caddies (VPS + homelab)
+# atendem — mínimo: nextlevelcode.pro e lab.nextlevelcode.pro.
+vault_caddy_cloudflare_token: "CHANGE-ME"
