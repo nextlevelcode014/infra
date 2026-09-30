@@ -47,3 +47,8 @@ vault_caddy_cloudflare_token: "CHANGE-ME"
 # container. Guarde também fora do Vaultwarden (em local independente
 # do serviço) para recuperação no Pi.
 vault_vaultwarden_admin_token: "CHANGE-ME"
+
+# Credenciais SMTP do Vaultwarden (Proton Mail). O username é o email
+# completo da conta Proton que vai enviar as notificações.
+vault_vaultwarden_smtp_username: "vaultwarden@nextlevelcode.pro"
+vault_vaultwarden_smtp_password: "CHANGE-ME"

@@ -81,11 +81,17 @@
     group: root
     mode: "0750"
 
+- name: Remover config.json para usar variáveis de ambiente
+  ansible.builtin.file:
+    path: "{{ vaultwarden_dir }}/vw-data/config.json"
+    state: absent
+
 - name: Renderizar docker-compose.yml
   ansible.builtin.template:
     src: docker-compose.yml.j2
     dest: "{{ vaultwarden_dir }}/docker-compose.yml"
     mode: "0640"
+  notify: Reiniciar Vaultwarden
 
 - name: Subir os serviços
   community.docker.docker_compose_v2:
