@@ -36,3 +36,11 @@ forgejo_db_password: "{{ vault_forgejo_db_password }}"
 # existe para os serviços internos do homelab (RPi, etc).
 caddy_email: "work@nextlevelcode.pro"
 caddy_domain: "lab.nextlevelcode.pro"
+
+# Vaultwarden
+# Acessível apenas pelo Caddy interno em *.lab.nextlevelcode.pro. O
+# ADMIN_TOKEN é gerado com `docker run --rm vaultwarden/server
+# /vaultwarden hash` e vive no vault.
+vaultwarden_domain: "vault.lab.nextlevelcode.pro"
+vaultwarden_dir: "/opt/vaultwarden"
+vaultwarden_admin_token: "{{ vault_vaultwarden_admin_token }}"

@@ -40,3 +40,10 @@ vault_forgejo_borg_known_host_key: "ssh-ed25519 AAAA..."
 # Scope: Zone:DNS:Edit em todas as zonas que os caddies (VPS + homelab)
 # atendem — mínimo: nextlevelcode.pro e lab.nextlevelcode.pro.
 vault_caddy_cloudflare_token: "CHANGE-ME"
+
+# Hash argon2 do token admin do Vaultwarden (painel /admin). Gere com:
+#   docker run --rm vaultwarden/server /vaultwarden hash
+# Vai parar em texto no {{ vaultwarden_dir }}/docker-compose.yml do
+# container. Guarde também fora do Vaultwarden (em local independente
+# do serviço) para recuperação no Pi.
+vault_vaultwarden_admin_token: "CHANGE-ME"

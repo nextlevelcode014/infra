@@ -1,0 +1,8 @@
+---
+# O container é criado pelo Terraform (ver terraform/containers.tf).
+# Aqui entra só a configuração do serviço.
+- name: Configurar Vaultwarden
+  hosts: vaultwarden
+  gather_facts: true
+  roles:
+    - role: vaultwarden

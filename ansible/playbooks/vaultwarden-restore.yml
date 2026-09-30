@@ -1,0 +1,7 @@
+---
+# Operação destrutiva e explícita. O deploy normal é playbooks/vaultwarden.yml.
+- name: Restaurar Vaultwarden a partir do Borg
+  hosts: vaultwarden
+  gather_facts: false
+  roles:
+    - role: vaultwarden_restore
