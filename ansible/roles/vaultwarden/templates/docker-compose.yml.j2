@@ -6,7 +6,7 @@ services:
     environment:
       DOMAIN: "https://{{ vaultwarden_domain }}/"
       SIGNUPS_ALLOWED: "{{ vaultwarden_signups_allowed }}"
-      ADMIN_TOKEN: {{ vaultwarden_admin_token }}
+      ADMIN_TOKEN: {{ vaultwarden_admin_token | replace('$', '$$') }}
     volumes:
       - ./vw-data:/data
     ports:

@@ -11,10 +11,10 @@
 
     # Adicione handle blocks antes deste catch-all para cada serviço:
     #
-    # @nome host nome.{{ caddy_domain }}
-    # handle @nome {
-    #     reverse_proxy servico-lxc:porta
-    # }
+    @vault host vault.{{ caddy_domain }}
+    handle @vault {
+        reverse_proxy vaultwarden-lxc:8080
+    }
 
     handle {
         respond 404
