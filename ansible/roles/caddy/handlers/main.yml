@@ -1,0 +1,17 @@
+---
+- name: Reload systemd
+  ansible.builtin.systemd:
+    daemon_reload: true
+
+# Reload fica antes do restart de propósito: se os dois forem notificados no
+# mesmo run (ex.: Caddyfile + env file mudaram), o restart roda por último e
+# garante o estado final correto — reload não relê o EnvironmentFile.
+- name: Reload caddy
+  ansible.builtin.service:
+    name: caddy
+    state: reloaded
+
+- name: Restart caddy
+  ansible.builtin.service:
+    name: caddy
+    state: restarted

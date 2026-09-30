@@ -14,10 +14,14 @@ proxmox_user: "root@pam"
 proxmox_token_id: "ansible"
 proxmox_token_secret: "{{ vault_proxmox_token_secret }}"
 
-# Tailscale
-# tailscale_hostname é derivado do inventory_hostname por host (ver defaults
-# do role tailscale). Só sobrescreva aqui se quiser outro nome na tailnet.
-tailscale_auth_key: "{{ vault_tailscale_auth_key }}"
+# Tailscale (artis3n.tailscale.machine)
+# --hostname usa o inventory_hostname com sufixo -lxc para distinguir
+# containers de bare-metal na tailnet. --ssh expõe o container via tailnet;
+# --accept-risk=lose-ssh reconhece que o SSH passa a depender dela.
+# Como o acesso principal do Ansible é pela LAN (IP fixo do Terraform),
+# este é um caminho alternativo, não o único.
+tailscale_authkey: "{{ vault_tailscale_authkey }}"
+tailscale_args: "--ssh --accept-risk=lose-ssh --hostname={{ inventory_hostname }}-lxc"
 
 # Forgejo
 forgejo_domain: "forge.nextlevelcode.pro"
@@ -25,3 +29,10 @@ forgejo_domain: "forge.nextlevelcode.pro"
 forgejo_ssh_domain: "forgejo-lxc"
 forgejo_dir: "/opt/forgejo"
 forgejo_db_password: "{{ vault_forgejo_db_password }}"
+
+# Caddy (homelab, privado na tailnet)
+# Domínio wildcard *.lab.nextlevelcode.pro, acessível via Tailscale split
+# DNS. O Caddy público fica na VPS e serve os domínios públicos; este aqui
+# existe para os serviços internos do homelab (RPi, etc).
+caddy_email: "work@nextlevelcode.pro"
+caddy_domain: "lab.nextlevelcode.pro"

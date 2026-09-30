@@ -1,0 +1,22 @@
+{
+    email {{ caddy_email }}
+}
+
+# Domínio wildcard privado. Só acessível de dentro da tailnet via
+# Tailscale split DNS. O catch-all 404 segura os hosts não mapeados.
+*.{{ caddy_domain }} {
+    tls {
+        dns cloudflare {env.{{ caddy_cloudflare_env_var }}}
+    }
+
+    # Adicione handle blocks antes deste catch-all para cada serviço:
+    #
+    # @nome host nome.{{ caddy_domain }}
+    # handle @nome {
+    #     reverse_proxy servico-lxc:porta
+    # }
+
+    handle {
+        respond 404
+    }
+}

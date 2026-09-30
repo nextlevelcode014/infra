@@ -24,7 +24,7 @@
         timeout: 120
       delegate_to: localhost
       become: false
-  roles:
+roles:
     - common
-    - tailscale
+    - role: artis3n.tailscale.machine
     - geerlingguy.docker
