@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+compose_file="{{ forgejo_dir }}/docker-compose.yml"
+data_dir="{{ forgejo_dir }}/forgejo"
+db_container="forgejo-db"
+db_user="forgejo"
+db_name="forgejo"
+db_dump="/tmp/forgejo_db_dump.sql"
+timestamp="$(date +%Y-%m-%d_%H-%M-%S)"
+
+export BORG_PASSCOMMAND="{{ forgejo_borg_passcommand }}"
+export BORG_RSH="ssh -i {{ forgejo_borg_ssh_key }} {{ forgejo_borg_rsh_options }}"
+
+cleanup() {
+    exit_code=$?
+    if [[ "$exit_code" -ne 0 ]]; then
+        echo "ERRO detectado (código $exit_code). Reiniciando containers..."
+        docker compose -f "$compose_file" up -d
+    fi
+    rm -f "$db_dump"
+}
+trap cleanup EXIT
+
+echo "[$timestamp] Iniciando backup do Forgejo..."
+docker exec "$db_container" pg_dump -U "$db_user" "$db_name" > "$db_dump"
+docker compose -f "$compose_file" down
+
+borg create \
+    --compression "{{ forgejo_backup_compression }}" \
+    --exclude '*.tmp' \
+    --exclude '*.log' \
+    --exclude 'cache/*' \
+    "{{ forgejo_borg_repo }}::forgejo-$timestamp" \
+    "$data_dir" \
+    "$db_dump"
+
+docker compose -f "$compose_file" up -d
+borg prune --glob-archives 'forgejo-*' "{{ forgejo_borg_repo }}" {{ forgejo_backup_retention }}
+
+echo "[$(date +%Y-%m-%d_%H-%M-%S)] Backup concluído com sucesso!"

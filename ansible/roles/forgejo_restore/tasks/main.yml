@@ -1,0 +1,223 @@
+---
+- name: Exigir confirmação explícita do restore
+  ansible.builtin.assert:
+    that:
+      - forgejo_restore_confirmation == "RESTORE_FORGEJO"
+    fail_msg: >-
+      Restore bloqueado. Execute o playbook com
+      -e forgejo_restore_confirmation=RESTORE_FORGEJO somente depois de
+      confirmar que esta instância deve substituir os dados atuais.
+
+- name: Validar variáveis necessárias do Borg
+  ansible.builtin.assert:
+    that:
+      - forgejo_borg_repo | length > 0
+      - forgejo_borg_passcommand | length > 0
+      - forgejo_borg_ssh_key | length > 0
+      - forgejo_dir is defined
+    fail_msg: "Configure o repositório Borg, o passcommand, a chave SSH e forgejo_dir."
+
+- name: Verificar dependências do restore
+  ansible.builtin.command:
+    argv:
+      - "{{ item }}"
+      - "--version"
+  loop:
+    - borg
+    - docker
+  changed_when: false
+
+- name: Criar diretório temporário do restore
+  ansible.builtin.file:
+    path: "{{ forgejo_restore_work_dir }}"
+    state: directory
+    mode: "0700"
+
+- name: Selecionar o archive Forgejo mais recente
+  ansible.builtin.command:
+    argv:
+      - borg
+      - --lock-wait
+      - "10"
+      - list
+      - --prefix
+      - "forgejo-"
+      - --last
+      - "1"
+      - --format
+      - "{archive}{NL}"
+      - "{{ forgejo_borg_repo }}"
+  environment:
+    BORG_PASSCOMMAND: "{{ forgejo_borg_passcommand }}"
+    BORG_RSH: "ssh -i {{ forgejo_borg_ssh_key }} {{ forgejo_borg_rsh_options }}"
+  register: forgejo_restore_archive_result
+  changed_when: false
+
+- name: Validar execução da consulta ao Borg
+  ansible.builtin.assert:
+    that:
+      - forgejo_restore_archive_result.rc == 0
+    fail_msg: >-
+      borg list falhou (rc={{ forgejo_restore_archive_result.rc }}):
+      {{ forgejo_restore_archive_result.stderr | default('sem detalhes') }}
+
+- name: Validar que um archive Forgejo foi encontrado
+  ansible.builtin.assert:
+    that:
+      - forgejo_restore_archive_result.stdout_lines | length == 1
+      - forgejo_restore_archive_result.stdout_lines[0] is match('^forgejo-[^/]+$')
+    fail_msg: "Nenhum archive Borg Forgejo válido foi encontrado."
+
+- name: Guardar o nome do archive selecionado
+  ansible.builtin.set_fact:
+    forgejo_restore_archive: "{{ forgejo_restore_archive_result.stdout_lines[0] }}"
+
+- name: Limpar diretório temporário de uma execução anterior
+  ansible.builtin.file:
+    path: "{{ forgejo_restore_work_dir }}/extracted"
+    state: absent
+
+- name: Criar diretório de extração
+  ansible.builtin.file:
+    path: "{{ forgejo_restore_work_dir }}/extracted"
+    state: directory
+    mode: "0700"
+
+- name: Extrair o archive selecionado para área temporária
+  ansible.builtin.command:
+    argv:
+      - borg
+      - extract
+      - "{{ forgejo_borg_repo }}::{{ forgejo_restore_archive }}"
+      - "{{ forgejo_restore_data_archive_path }}"
+      - "{{ forgejo_restore_dump_archive_path }}"
+  args:
+    chdir: "{{ forgejo_restore_work_dir }}/extracted"
+  environment:
+    BORG_PASSCOMMAND: "{{ forgejo_borg_passcommand }}"
+    BORG_RSH: "ssh -i {{ forgejo_borg_ssh_key }} {{ forgejo_borg_rsh_options }}"
+  no_log: true
+
+- name: Validar dados e dump extraídos
+  ansible.builtin.stat:
+    path: "{{ forgejo_restore_work_dir }}/extracted/{{ item }}"
+  loop:
+    - "{{ forgejo_restore_data_archive_path }}"
+    - "{{ forgejo_restore_dump_archive_path }}"
+  register: forgejo_restore_extracted
+
+- name: Bloquear restore incompleto
+  ansible.builtin.assert:
+    that:
+      - item.stat.exists
+      - item.stat.size | default(1) > 0
+    fail_msg: "Arquivo esperado não foi extraído ou está vazio: {{ item.item }}"
+  loop: "{{ forgejo_restore_extracted.results }}"
+
+- name: Parar os serviços do Forgejo antes de substituir os dados
+  community.docker.docker_compose_v2:
+    project_src: "{{ forgejo_dir }}"
+    state: absent
+
+- name: Remover dados atuais do Forgejo e do PostgreSQL
+  ansible.builtin.file:
+    path: "{{ forgejo_dir }}/{{ item }}"
+    state: absent
+  loop:
+    - forgejo
+    - postgres
+
+- name: Recriar diretórios de dados
+  ansible.builtin.file:
+    path: "{{ forgejo_dir }}/{{ item }}"
+    state: directory
+    owner: "{{ forgejo_user }}"
+    group: "{{ forgejo_group }}"
+    mode: "0750"
+  loop:
+    - forgejo
+
+- name: Recriar diretório do PostgreSQL
+  ansible.builtin.file:
+    path: "{{ forgejo_dir }}/postgres"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Restaurar dados do Forgejo
+  ansible.builtin.command:
+    argv:
+      - cp
+      - -a
+      - "{{ forgejo_restore_work_dir }}/extracted/{{ forgejo_restore_data_archive_path }}/."
+      - "{{ forgejo_dir }}/forgejo/"
+  changed_when: true
+
+- name: Corrigir ownership dos dados restaurados
+  ansible.builtin.file:
+    path: "{{ forgejo_dir }}/forgejo"
+    owner: "{{ forgejo_user }}"
+    group: "{{ forgejo_group }}"
+    recurse: true
+
+- name: Iniciar somente o PostgreSQL
+  community.docker.docker_compose_v2:
+    project_src: "{{ forgejo_dir }}"
+    services:
+      - db
+    state: present
+
+- name: Corrigir ownership do volume PostgreSQL
+  ansible.builtin.command:
+    argv:
+      - docker
+      - compose
+      - exec
+      - -T
+      - -u
+      - root
+      - db
+      - chown
+      - -R
+      - postgres:postgres
+      - /var/lib/postgresql/data
+  args:
+    chdir: "{{ forgejo_dir }}"
+  changed_when: true
+
+- name: Aguardar PostgreSQL ficar saudável
+  ansible.builtin.command:
+    argv:
+      - docker
+      - inspect
+      - --format
+      - "{{ '{{' }}.State.Health.Status{{ '}}' }}"
+      - forgejo-db
+  args:
+    chdir: "{{ forgejo_dir }}"
+  register: forgejo_restore_db_status
+  retries: 30
+  delay: 2
+  until: forgejo_restore_db_status.stdout == "healthy"
+  changed_when: false
+
+- name: Carregar dump no PostgreSQL restaurado
+  ansible.builtin.shell: >-
+    docker compose exec -T db psql -U forgejo -d forgejo
+    < {{ forgejo_restore_work_dir }}/extracted/{{ forgejo_restore_dump_archive_path }}
+  args:
+    chdir: "{{ forgejo_dir }}"
+  changed_when: true
+  no_log: true
+
+- name: Subir Forgejo e PostgreSQL restaurados
+  community.docker.docker_compose_v2:
+    project_src: "{{ forgejo_dir }}"
+    state: present
+    pull: never
+
+- name: Remover arquivos temporários do restore
+  ansible.builtin.file:
+    path: "{{ forgejo_restore_work_dir }}"
+    state: absent

@@ -20,6 +20,8 @@ proxmox_token_secret: "{{ vault_proxmox_token_secret }}"
 tailscale_auth_key: "{{ vault_tailscale_auth_key }}"
 
 # Forgejo
-forgejo_domain: "forge.lab.nextlevelcode.pro"
+forgejo_domain: "forge.nextlevelcode.pro"
+# SSH do Git permanece privado na tailnet; não passa pelo Caddy HTTP.
+forgejo_ssh_domain: "forgejo-lxc"
 forgejo_dir: "/opt/forgejo"
 forgejo_db_password: "{{ vault_forgejo_db_password }}"

@@ -1,0 +1,18 @@
+---
+forgejo_restore_confirmation: ""
+forgejo_restore_work_dir: "/var/tmp/forgejo-restore"
+forgejo_user: "1000"
+forgejo_group: "1000"
+
+# These paths are the paths Borg stores after stripping the leading slash
+# from the absolute paths used by lib/backup_forgejo.sh.
+forgejo_restore_data_archive_path: "opt/forgejo/forgejo"
+forgejo_restore_dump_archive_path: "tmp/forgejo_db_dump.sql"
+
+forgejo_borg_repo: "{{ vault_forgejo_borg_repo }}"
+forgejo_borg_passcommand: "{{ vault_forgejo_borg_passcommand }}"
+forgejo_borg_password_file: "/root/.borg-pass"
+forgejo_borg_ssh_key: "{{ vault_forgejo_borg_ssh_key }}"
+forgejo_borg_rsh_options: >-
+  -o IdentitiesOnly=yes -o BatchMode=yes -o ConnectTimeout=10
+  -o ServerAliveInterval=5 -o ServerAliveCountMax=2
