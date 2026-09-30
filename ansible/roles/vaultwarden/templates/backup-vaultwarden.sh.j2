@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+compose_file="{{ vaultwarden_dir }}/docker-compose.yml"
+data_dir="{{ vaultwarden_dir }}/vw-data"
+timestamp="$(date +%Y-%m-%d_%H-%M-%S)"
+
+export BORG_PASSCOMMAND="{{ vaultwarden_borg_passcommand }}"
+export BORG_RSH="ssh -i {{ vaultwarden_borg_ssh_key }} {{ vaultwarden_borg_rsh_options }}"
+
+cleanup() {
+    exit_code=$?
+    if [[ "$exit_code" -ne 0 ]]; then
+        echo "ERRO detectado (código $exit_code). Reiniciando containers..."
+        docker compose -f "$compose_file" up -d
+    fi
+}
+trap cleanup EXIT
+
+echo "[$timestamp] Iniciando backup do Vaultwarden..."
+docker compose -f "$compose_file" down
+
+borg create \
+    --compression "{{ vaultwarden_backup_compression }}" \
+    --exclude '*.tmp' \
+    --exclude '*.log' \
+    --exclude 'cache/*' \
+    "{{ vaultwarden_borg_repo }}::vaultwarden-$timestamp" \
+    "$data_dir"
+
+docker compose -f "$compose_file" up -d
+borg prune --glob-archives 'vaultwarden-*' "{{ vaultwarden_borg_repo }}" {{ vaultwarden_backup_retention }}
+borg compact "{{ vaultwarden_borg_repo }}"
+
+echo "[$(date +%H:%M:%S)] Backup concluído com sucesso!"

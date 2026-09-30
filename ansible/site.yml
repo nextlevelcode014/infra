@@ -4,3 +4,4 @@
 - import_playbook: playbooks/lxc.yml
 - import_playbook: playbooks/caddy.yml
 - import_playbook: playbooks/forgejo.yml
+- import_playbook: playbooks/vaultwarden.yml

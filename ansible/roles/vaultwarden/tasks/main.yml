@@ -1,0 +1,94 @@
+---
+- name: Criar diretório do Vaultwarden
+  ansible.builtin.file:
+    path: "{{ vaultwarden_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0750"
+
+- name: Instalar Borg para backups e restores
+  ansible.builtin.package:
+    name: borgbackup
+    state: present
+
+- name: Criar diretório SSH do Borg
+  ansible.builtin.file:
+    path: "{{ vaultwarden_borg_ssh_key | dirname }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: Instalar chave SSH do Borg
+  ansible.builtin.copy:
+    content: "{{ vault_forgejo_borg_ssh_private_key }}"
+    dest: "{{ vaultwarden_borg_ssh_key }}"
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+
+- name: Instalar arquivo da senha do Borg
+  ansible.builtin.copy:
+    content: "{{ vault_forgejo_borg_password }}"
+    dest: "{{ vaultwarden_borg_password_file }}"
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+
+- name: Criar arquivo known_hosts do Borg
+  ansible.builtin.file:
+    path: "{{ vaultwarden_borg_ssh_key | dirname }}/known_hosts"
+    state: touch
+    owner: root
+    group: root
+    mode: "0600"
+
+- name: Adicionar servidor Borg ao known_hosts
+  ansible.builtin.known_hosts:
+    name: "{{ vaultwarden_borg_host }}"
+    key: "{{ vaultwarden_borg_host }} {{ vault_forgejo_borg_known_host_key }}"
+    path: "{{ vaultwarden_borg_ssh_key | dirname }}/known_hosts"
+    state: present
+
+- name: Instalar script de backup do Vaultwarden
+  ansible.builtin.template:
+    src: backup-vaultwarden.sh.j2
+    dest: "{{ vaultwarden_backup_script }}"
+    owner: root
+    group: root
+    mode: "0750"
+  no_log: true
+
+- name: Agendar backup do Vaultwarden
+  ansible.builtin.cron:
+    name: Backup Borg do Vaultwarden
+    user: root
+    minute: "{{ vaultwarden_backup_schedule.split()[0] }}"
+    hour: "{{ vaultwarden_backup_schedule.split()[1] }}"
+    day: "{{ vaultwarden_backup_schedule.split()[2] }}"
+    month: "{{ vaultwarden_backup_schedule.split()[3] }}"
+    weekday: "{{ vaultwarden_backup_schedule.split()[4] }}"
+    job: "{{ vaultwarden_backup_script }} >> {{ vaultwarden_backup_log_file }} 2>&1"
+
+- name: Criar diretório de dados
+  ansible.builtin.file:
+    path: "{{ vaultwarden_dir }}/vw-data"
+    state: directory
+    owner: root
+    group: root
+    mode: "0750"
+
+- name: Renderizar docker-compose.yml
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ vaultwarden_dir }}/docker-compose.yml"
+    mode: "0640"
+
+- name: Subir os serviços
+  community.docker.docker_compose_v2:
+    project_src: "{{ vaultwarden_dir }}"
+    state: present
+    pull: always

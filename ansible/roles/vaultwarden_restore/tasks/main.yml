@@ -1,0 +1,149 @@
+---
+- name: Exigir confirmação explícita do restore
+  ansible.builtin.assert:
+    that:
+      - vaultwarden_restore_confirmation == "RESTORE_VAULTWARDEN"
+    fail_msg: >-
+      Restore bloqueado. Execute o playbook com
+      -e vaultwarden_restore_confirmation=RESTORE_VAULTWARDEN somente
+      depois de confirmar que esta instância deve substituir os dados
+      atuais.
+
+- name: Validar variáveis necessárias do Borg
+  ansible.builtin.assert:
+    that:
+      - vaultwarden_borg_repo | length > 0
+      - vaultwarden_borg_passcommand | length > 0
+      - vaultwarden_borg_ssh_key | length > 0
+      - vaultwarden_dir is defined
+    fail_msg: "Configure o repositório Borg, o passcommand, a chave SSH e vaultwarden_dir."
+
+- name: Verificar dependências do restore
+  ansible.builtin.command:
+    argv:
+      - "{{ item }}"
+      - "--version"
+  loop:
+    - borg
+    - docker
+  changed_when: false
+
+- name: Criar diretório temporário do restore
+  ansible.builtin.file:
+    path: "{{ vaultwarden_restore_work_dir }}"
+    state: directory
+    mode: "0700"
+
+- name: Selecionar o archive Vaultwarden mais recente
+  ansible.builtin.command:
+    argv:
+      - borg
+      - --lock-wait
+      - "10"
+      - list
+      - --prefix
+      - "vaultwarden-"
+      - --last
+      - "1"
+      - --format
+      - "{archive}{NL}"
+      - "{{ vaultwarden_borg_repo }}"
+  environment:
+    BORG_PASSCOMMAND: "{{ vaultwarden_borg_passcommand }}"
+    BORG_RSH: "ssh -i {{ vaultwarden_borg_ssh_key }} {{ vaultwarden_borg_rsh_options }}"
+  register: vaultwarden_restore_archive_result
+  changed_when: false
+
+- name: Validar execução da consulta ao Borg
+  ansible.builtin.assert:
+    that:
+      - vaultwarden_restore_archive_result.rc == 0
+    fail_msg: >-
+      borg list falhou (rc={{ vaultwarden_restore_archive_result.rc }}):
+      {{ vaultwarden_restore_archive_result.stderr | default('sem detalhes') }}
+
+- name: Validar que um archive Vaultwarden foi encontrado
+  ansible.builtin.assert:
+    that:
+      - vaultwarden_restore_archive_result.stdout_lines | length == 1
+      - vaultwarden_restore_archive_result.stdout_lines[0] is match('^vaultwarden-[^/]+$')
+    fail_msg: "Nenhum archive Borg Vaultwarden válido foi encontrado."
+
+- name: Guardar o nome do archive selecionado
+  ansible.builtin.set_fact:
+    vaultwarden_restore_archive: "{{ vaultwarden_restore_archive_result.stdout_lines[0] }}"
+
+- name: Limpar diretório temporário de uma execução anterior
+  ansible.builtin.file:
+    path: "{{ vaultwarden_restore_work_dir }}/extracted"
+    state: absent
+
+- name: Criar diretório de extração
+  ansible.builtin.file:
+    path: "{{ vaultwarden_restore_work_dir }}/extracted"
+    state: directory
+    mode: "0700"
+
+- name: Extrair o archive selecionado para área temporária
+  ansible.builtin.command:
+    argv:
+      - borg
+      - extract
+      - "{{ vaultwarden_borg_repo }}::{{ vaultwarden_restore_archive }}"
+      - "{{ vaultwarden_restore_data_archive_path }}"
+  args:
+    chdir: "{{ vaultwarden_restore_work_dir }}/extracted"
+  environment:
+    BORG_PASSCOMMAND: "{{ vaultwarden_borg_passcommand }}"
+    BORG_RSH: "ssh -i {{ vaultwarden_borg_ssh_key }} {{ vaultwarden_borg_rsh_options }}"
+  no_log: true
+
+- name: Validar dados extraídos
+  ansible.builtin.stat:
+    path: "{{ vaultwarden_restore_work_dir }}/extracted/{{ vaultwarden_restore_data_archive_path }}"
+  register: vaultwarden_restore_extracted
+
+- name: Bloquear restore incompleto
+  ansible.builtin.assert:
+    that:
+      - vaultwarden_restore_extracted.stat.exists
+      - vaultwarden_restore_extracted.stat.size | default(1) > 0
+    fail_msg: "Diretório de dados não foi extraído ou está vazio."
+
+- name: Parar os serviços do Vaultwarden antes de substituir os dados
+  community.docker.docker_compose_v2:
+    project_src: "{{ vaultwarden_dir }}"
+    state: absent
+
+- name: Remover dados atuais do Vaultwarden
+  ansible.builtin.file:
+    path: "{{ vaultwarden_dir }}/vw-data"
+    state: absent
+
+- name: Recriar diretório de dados
+  ansible.builtin.file:
+    path: "{{ vaultwarden_dir }}/vw-data"
+    state: directory
+    owner: root
+    group: root
+    mode: "0750"
+
+- name: Restaurar dados do Vaultwarden
+  ansible.builtin.command:
+    argv:
+      - cp
+      - -a
+      - "{{ vaultwarden_restore_work_dir }}/extracted/{{ vaultwarden_restore_data_archive_path }}/."
+      - "{{ vaultwarden_dir }}/vw-data/"
+  changed_when: true
+
+- name: Subir Vaultwarden restaurado
+  community.docker.docker_compose_v2:
+    project_src: "{{ vaultwarden_dir }}"
+    state: present
+    pull: never
+
+- name: Remover arquivos temporários do restore
+  ansible.builtin.file:
+    path: "{{ vaultwarden_restore_work_dir }}"
+    state: absent
