@@ -37,5 +37,6 @@ borg create \
 
 docker compose -f "$compose_file" up -d
 borg prune --glob-archives 'forgejo-*' "{{ forgejo_borg_repo }}" {{ forgejo_backup_retention }}
+borg compact "{{ forgejo_borg_repo }}"
 
 echo "[$(date +%Y-%m-%d_%H-%M-%S)] Backup concluído com sucesso!"
