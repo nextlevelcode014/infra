@@ -25,3 +25,32 @@ vaultwarden_backup_log_file: "/var/log/vaultwarden_backup.log"
 vaultwarden_backup_schedule: "0 2 * * *"
 vaultwarden_backup_compression: "zstd,3"
 vaultwarden_backup_retention: "--keep-daily=7 --keep-weekly=4 --keep-monthly=3"
+
+# SMTP
+vaultwarden_smtp_host: "smtp.protonmail.ch"
+vaultwarden_smtp_port: "587"
+vaultwarden_smtp_security: "starttls"
+vaultwarden_smtp_from: "vaultwarden@nextlevelcode.pro"
+vaultwarden_smtp_from_name: "NextLevelCode | Vaultwarden"
+vaultwarden_smtp_username: "{{ vault_vaultwarden_smtp_username }}"
+vaultwarden_smtp_password: "{{ vault_vaultwarden_smtp_password }}"
+
+# Segurança
+vaultwarden_signups_verify: "true"
+vaultwarden_signups_verify_resend_time: "3600"
+vaultwarden_signups_verify_resend_limit: "6"
+vaultwarden_password_iterations: "600000"
+vaultwarden_password_hints_allowed: "true"
+vaultwarden_show_password_hint: "false"
+vaultwarden_admin_session_lifetime: "20"
+
+# Email 2FA
+vaultwarden_email_2fa_enforce_on_verified_invite: "true"
+vaultwarden_email_token_size: "6"
+vaultwarden_email_expiration_time: "600"
+vaultwarden_email_attempts_limit: "5"
+
+# Proxy
+vaultwarden_ip_header: "X-Forwarded-For"
+vaultwarden_icon_redirect_code: "302"
+vaultwarden_http_request_block_non_global_ips: "true"
