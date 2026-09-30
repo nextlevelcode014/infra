@@ -23,10 +23,21 @@ via Ansible Vault antes do restore.
    as imagens e os diretórios, se esta for uma máquina nova.
 
 Para restaurar o archive legado criado no Pi, informe também o caminho
-antigo do archive:
+antigo do archive. Há três variantes conhecidas:
 
 ```bash
+# Pi, primeira geração (só o symlink — arquivo inútil para restore)
 -e vaultwarden_restore_data_archive_path=home/ubuntu/self-hosted/vaultwarden/vw-data
+
+# Pi, dados reais (Borg seguiu o symlink e arquivou o conteúdo)
+-e vaultwarden_restore_data_archive_path=mnt/secure/appdata/vaultwarden/vw-data
+```
+
+Para confirmar o path antes de rodar, liste o conteúdo do archive no
+servidor Borg:
+
+```bash
+borg list ssh://USER@HOST./repo::vaultwarden-<timestamp>
 ```
 
 ## Executar
