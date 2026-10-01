@@ -6,6 +6,11 @@ arr_restore_work_dir: "{{ secure_mount_dir }}/restore/arr"
 
 arr_restore_stack_dir: /opt/arr
 
+# Subir a stack depois de restaurar. Desligado no pi-lab: com a config de
+# produção, o qBittorrent retomaria os torrents (sem a mídia, baixaria tudo
+# de novo) e os *arr disparariam buscas. Lá se sobe só o que vai conferir.
+arr_restore_start_stack: true
+
 # Destino real da config: /mnt/media-stack/config é symlink para cá.
 # O restore grava aqui direto, sem passar pelo link.
 arr_restore_config_dir: "{{ appdata_dir }}/mnt/media-stack/config"

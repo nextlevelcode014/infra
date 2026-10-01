@@ -168,7 +168,19 @@
     files: [compose.yml]
     state: present
     pull: never
-  when: arr_restore_stack_file.stat.exists
+  when:
+    - arr_restore_stack_file.stat.exists
+    - arr_restore_start_stack
+
+- name: Avisar que a stack ficou parada
+  ansible.builtin.debug:
+    msg: >-
+      Config restaurada com a stack parada (arr_restore_start_stack=false).
+      Suba só o que for conferir, por exemplo:
+      docker compose -f {{ arr_restore_stack_dir }}/compose.yml up -d sonarr radarr jellyfin
+  when:
+    - arr_restore_stack_file.stat.exists
+    - not arr_restore_start_stack
 
 - name: Avisar que a stack ainda não foi aplicada
   ansible.builtin.debug:

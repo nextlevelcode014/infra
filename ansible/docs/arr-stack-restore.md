@@ -56,3 +56,45 @@ ssh ubuntu@nextlevelcode docker compose -f /opt/arr/compose.yml logs --tail=50 s
 Abrir `https://sonarr.lab.nextlevelcode.pro` e `https://radarr.lab.nextlevelcode.pro`,
 conferir a biblioteca e *System → Status*. Se as API keys mudaram, atualizar
 `vault_arr_*` e reaplicar `playbooks/arr-stack.yml` para o decluttarr.
+
+## Ensaio no pi-lab
+
+O pi-lab restaura o archive real de produção, só para leitura: ele tem o acesso
+ao Borg, mas `borg_backup_enabled: false` impede que escreva lá. A config
+restaurada traz as API keys e as credenciais dos indexadores, então o pi-lab
+passa a guardar segredos reais — destrua o volume ou reaplique a stack limpa
+depois do ensaio.
+
+O restore deixa a stack **parada** (`arr_restore_start_stack: false` no
+`pi_staging`): subir tudo faria o qBittorrent baixar de novo os torrents e os
+*arr dispararem buscas.
+
+1. Rodar o restore:
+
+   ```bash
+   ansible-playbook playbooks/arr-stack-restore.yml --ask-vault-pass --limit pi_staging \
+     -e arr_restore_confirmation=RESTORE_ARR
+   ```
+
+   Anote o archive escolhido (task "Guardar o nome do archive selecionado") e a
+   duração.
+
+2. Subir só os apps a conferir, sem qBittorrent, Prowlarr e decluttarr:
+
+   ```bash
+   ssh root@192.168.50.203 docker compose -f /opt/arr/compose.yml up -d sonarr radarr bazarr jellyfin jellyseerr
+   ```
+
+3. Conferir em `http://192.168.50.203:<porta>`: Sonarr (`8989`) e Radarr (`7878`)
+   com séries, filmes e perfis; Jellyfin (`8096`) com usuários e bibliotecas
+   (sem mídia, os itens aparecem indisponíveis); Jellyseerr (`5055`) com os
+   pedidos. Em *System → Status* dos *arr, nenhum erro de banco corrompido.
+
+4. Limpar: parar a stack e apagar a config de produção do pi-lab.
+
+   ```bash
+   ssh root@192.168.50.203 'docker compose -f /opt/arr/compose.yml down && rm -rf /mnt/secure/appdata/mnt/media-stack/config/*'
+   ```
+
+   **Não rode `arr-stack.yml` no pi-lab antes de limpar**: ele sobe a stack
+   inteira, com qBittorrent.
