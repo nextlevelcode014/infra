@@ -26,9 +26,13 @@ Todo container gerenciado aqui usa a **faixa 200-299**, e hostname, VMID e
 | caddy | 200 | 192.168.50.200 | reverse proxy |
 | forgejo | 201 | 192.168.50.201 | git + CI |
 | vaultwarden | 202 | 192.168.50.202 | senhas |
+| pi-lab | 203 | 192.168.50.203 | staging do Raspberry Pi: grupos `staging` + `pi_staging`, volume `/mnt/secure` no papel do LUKS |
+
+`pi_staging` fica sob `pi_hosts` no Ansible, o grupo que recebe os playbooks
+do Raspberry Pi.
 
 O módulo `lxc` **valida** a faixa e falha o plano se você sair dela. Próximo
-container livre: `203`.
+container livre: `204`.
 
 Rede padrão: bridge `vmbr0`, gateway `192.168.50.1`, DNS `192.168.50.1`,
 datastore `local-lvm`, template Ubuntu 26.04.
@@ -42,7 +46,9 @@ datastore `local-lvm`, template Ubuntu 26.04.
    livre da faixa (hostname, `vm_id` e IP batendo).
 2. Bloco novo em `inventory.tf`: recurso `ansible_host` com `groups = ["lxc"]`,
    `depends_on = [module.<nome>]` e as vars `ansible_host`, `ansible_user`,
-   `ansible_ssh_private_key_file` e `lxc_vmid`.
+   `ansible_ssh_private_key_file` e `lxc_vmid`. Máquina de teste entra também
+   no grupo `staging` (`groups = ["lxc", "staging"]`), para o Ansible poder
+   mirar só nela com `--limit staging` e ter `group_vars/staging.yml` próprio.
 3. `terraform apply`.
 4. Ir no repo `ansible` e escrever o role do serviço.
 

@@ -36,3 +36,16 @@ resource "ansible_host" "vaultwarden" {
     lxc_vmid                     = module.vaultwarden.vm_id
   }
 }
+
+resource "ansible_host" "pi_lab" {
+  name   = "pi-lab"
+  groups = ["lxc", "staging", "pi_staging"]
+
+  depends_on = [module.pi_lab]
+  variables = {
+    ansible_host                 = module.pi_lab.ip_address
+    ansible_user                 = "root"
+    ansible_ssh_private_key_file = "~/.ssh/id_ed25519"
+    lxc_vmid                     = module.pi_lab.vm_id
+  }
+}

@@ -72,3 +72,11 @@ variable "keyctl" {
   default = false
 }
 
+variable "mount_points" {
+  description = "Volumes extras no datastore do container: path dentro dele e tamanho (ex.: \"20G\")."
+  type = list(object({
+    path = string
+    size = string
+  }))
+  default = []
+}

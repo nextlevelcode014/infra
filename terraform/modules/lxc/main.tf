@@ -14,6 +14,18 @@ resource "proxmox_virtual_environment_container" "this" {
     size         = var.disk_size
   }
 
+  # Volumes extras do datastore, montados dentro do container. O pi-lab usa
+  # um para simular o /mnt/secure (LUKS) do Raspberry Pi: precisa ser um
+  # mountpoint de verdade, porque os roles do Pi checam isso antes de gravar.
+  dynamic "mount_point" {
+    for_each = var.mount_points
+    content {
+      volume = var.datastore_id
+      size   = mount_point.value.size
+      path   = mount_point.value.path
+    }
+  }
+
   operating_system {
     template_file_id = var.template_file_id
     type             = var.template_type
@@ -45,6 +57,13 @@ resource "proxmox_virtual_environment_container" "this" {
     # Quem aplica keyctl é o Ansible (roles/lxc_flags), via pct no host.
     nesting = var.nesting
     keyctl  = var.keyctl
+  }
+
+  # keyctl e device_passthrough são do Ansible (roles/lxc_flags). Sem isto,
+  # todo plan tenta desfazer o que o role aplicou — e o apply ou leva 403 do
+  # token, ou, se passasse, desligaria o Docker dentro do container.
+  lifecycle {
+    ignore_changes = [features[0].keyctl, device_passthrough]
   }
 }
 
