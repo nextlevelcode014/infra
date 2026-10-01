@@ -11,6 +11,10 @@ services:
       - VPN_TYPE=wireguard
       - WIREGUARD_PRIVATE_KEY=${WIREGUARD_PRIVATE_KEY}
       - WIREGUARD_ADDRESSES=${WIREGUARD_ADDRESSES}
+      # Sem filtro o gluetun sorteia qualquer servidor Proton, inclusive os
+      # gratuitos, que bloqueiam P2P: a conexão é pausada e o qBittorrent e o
+      # SearXNG ficam sem rede. Na Proton, port forwarding = servidor P2P.
+      - PORT_FORWARD_ONLY=on
       - HTTPPROXY=on
       - HTTPPROXY_LISTENING_ADDRESS=:8888
       - HEALTH_TARGET_ADDRESS=1.1.1.1:443
