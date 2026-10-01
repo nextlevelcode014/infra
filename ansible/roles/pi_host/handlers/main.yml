@@ -1,10 +1,4 @@
 ---
-- name: Reiniciar Docker
-  ansible.builtin.systemd_service:
-    name: docker
-    state: restarted
-    daemon_reload: true
-
 - name: Recarregar systemd
   ansible.builtin.systemd_service:
     daemon_reload: true

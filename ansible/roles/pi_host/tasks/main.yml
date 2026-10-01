@@ -100,7 +100,7 @@
         "data-root": "{{ secure_mount_dir }}/docker",
         "features": { "containerd-snapshotter": false }
       }
-  notify: Reiniciar Docker
+  register: pi_docker_daemon_json
 
 - name: Criar diretório de drop-in do Docker
   ansible.builtin.file:
@@ -115,7 +115,15 @@
     content: |
       [Unit]
       RequiresMountsFor={{ secure_mount_dir }}
-  notify: Recarregar systemd
+  register: pi_docker_dropin
+
+# O geerlingguy.docker só atualiza o cache quando adiciona o repositório. Se
+# uma execução parar depois disso, a próxima acha o repo sem o cache e falha
+# com "No package matching 'docker-ce'".
+- name: Atualizar o cache do apt antes do Docker
+  ansible.builtin.apt:
+    update_cache: true
+  changed_when: false
 
 # Com LUKS, desabilitado no boot: quem sobe o Docker é o secure-unlock,
 # depois de abrir o volume. Sem LUKS (pi-lab) o volume monta sozinho, então
@@ -127,6 +135,17 @@
     docker_service_enabled: "{{ pi_luks_uuid is not defined }}"
     docker_users:
       - "{{ admin_user }}"
+
+# Task, não handler: o geerlingguy.docker roda flush_handlers no meio da
+# instalação, e um handler de restart disparava antes de o Docker existir.
+# Num host novo a config já está no lugar no primeiro start; isto só pega
+# mudança num Docker já instalado.
+- name: Reiniciar o Docker se a config mudou
+  ansible.builtin.systemd_service:
+    name: docker
+    state: restarted
+    daemon_reload: true
+  when: pi_docker_daemon_json is changed or pi_docker_dropin is changed
 
 - name: Criar as redes Docker compartilhadas
   community.docker.docker_network:

@@ -7,6 +7,9 @@ pi_packages:
   - git
   - rsync
   - cryptsetup
+  # Os módulos community.docker que falam com a API (docker_network,
+  # docker_container*) precisam dele no host; o docker_compose_v2 não.
+  - python3-requests
 
 # Nome do mapeamento em /etc/crypttab. O UUID (pi_luks_uuid) vem do
 # inventário: é da partição, não do repo.
