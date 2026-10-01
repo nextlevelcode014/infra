@@ -28,25 +28,38 @@
     files: [compose.yml]
     state: present
     wait: true
-  register: gluetun_compose
 
-# A netns antiga some com o container recriado; quem estava pendurado nela
-# fica sem rede (sem vazar: o killswitch é a própria netns).
+# network_mode "container:gluetun" vira o ID do gluetun na criação do
+# container. Recriado o gluetun, quem dependia dele aponta para um ID que não
+# existe mais e fica sem rede; reiniciar não resolve, só recriar. Comparar os
+# IDs (em vez de "o gluetun mudou agora") conserta também o que ficou quebrado
+# numa execução anterior.
+- name: Ler o gluetun atual
+  community.docker.docker_container_info:
+    name: gluetun
+  register: gluetun_info
+
 - name: Ler os containers que dependem do gluetun
   community.docker.docker_container_info:
     name: "{{ item }}"
   loop: "{{ gluetun_dependents }}"
   register: gluetun_dependents_info
-  when: gluetun_compose is changed
 
-- name: Reiniciar os containers que dependem do gluetun
-  community.docker.docker_container:
-    name: "{{ item.item }}"
-    state: started
-    restart: true
-  loop: "{{ gluetun_dependents_info.results | default([]) }}"
+# Pelos labels do Compose, recria no projeto de onde o container veio — vale
+# para stack do Ansible (/opt/...) e para a que ainda sobe pelo self-hosted.
+- name: Recriar os dependentes presos a um gluetun antigo
+  community.docker.docker_compose_v2:
+    project_src: "{{ labels['com.docker.compose.project.working_dir'] }}"
+    files: "{{ labels['com.docker.compose.project.config_files'].split(',') }}"
+    services:
+      - "{{ labels['com.docker.compose.service'] }}"
+    recreate: always
+    state: present
+  vars:
+    labels: "{{ item.container.Config.Labels }}"
+  loop: "{{ gluetun_dependents_info.results }}"
   loop_control:
     label: "{{ item.item }}"
   when:
-    - gluetun_compose is changed
-    - item.exists | default(false)
+    - item.exists
+    - item.container.HostConfig.NetworkMode != 'container:' ~ gluetun_info.container.Id

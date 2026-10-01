@@ -63,6 +63,11 @@
         reverse_proxy nextlevelcode:8081
     }
 
+    @searxng host searxng.{{ caddy_domain }}
+    handle @searxng {
+        reverse_proxy nextlevelcode:8082
+    }
+
     handle {
         respond 404
     }

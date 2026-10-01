@@ -9,7 +9,7 @@ gluetun_wireguard_private_key: "{{ vault_gluetun_wireguard_private_key }}"
 gluetun_wireguard_addresses: "{{ vault_gluetun_wireguard_addresses }}"
 
 # Containers que usam a netns do gluetun (network_mode: container:gluetun).
-# Quando o gluetun é recriado eles ficam sem rede até reiniciar.
+# Quando o gluetun é recriado eles ficam sem rede até serem recriados.
 gluetun_dependents:
   - qbittorrent
   - searxng-core

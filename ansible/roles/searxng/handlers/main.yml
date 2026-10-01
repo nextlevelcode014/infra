@@ -1,0 +1,5 @@
+---
+- name: Reiniciar SearXNG
+  community.docker.docker_container:
+    name: searxng-core
+    restart: true

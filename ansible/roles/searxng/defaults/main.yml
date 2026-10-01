@@ -1,0 +1,14 @@
+---
+# Mesmo nome de projeto Compose ("searxng") do self-hosted: ao aplicar pela
+# primeira vez, o Compose adota os containers e os volumes nomeados.
+searxng_dir: /opt/searxng
+
+# Config que o container lê (/etc/searxng). Mesmo lugar onde o link-data do
+# self-hosted a guardava, já dentro do LUKS — por isso não precisa de link.
+searxng_config_dir: "{{ appdata_dir }}/searxng/core-config"
+
+# Usuário do container. Ele precisa escrever no diretório de config.
+searxng_uid: 977
+
+# Assina os cookies das preferências. Trocar desloga os navegadores.
+searxng_secret_key: "{{ vault_searxng_secret_key }}"

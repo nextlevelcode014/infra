@@ -21,6 +21,8 @@ services:
       - "8090:8090"     # qBittorrent WebUI
       - "6881:6881"     # qBittorrent TCP
       - "6881:6881/udp" # qBittorrent DHT
+      # WebUI do SearXNG, só no IP Tailscale: o Caddy do Proxmox chega por ali.
+      - "${TS_IP:?defina TS_IP no .env}:8082:8080"
     healthcheck:
       test: ["CMD", "/gluetun-entrypoint", "healthcheck"]
       interval: 10s

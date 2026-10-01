@@ -1,0 +1,4 @@
+---
+dependencies:
+  - role: pi_host
+  - role: gluetun   # searxng-core usa a netns dele

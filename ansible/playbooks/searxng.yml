@@ -1,0 +1,6 @@
+---
+- name: Configurar o SearXNG
+  hosts: pi_hosts
+  gather_facts: true
+  roles:
+    - role: searxng

@@ -5,7 +5,9 @@
 (`self-hosted/gluetun/compose.yml`) e passa a morar em `/opt/gluetun`. O nome do
 projeto Compose continua `gluetun`, então o container atual é adotado.
 
-O `arr-stack.yml` já o aplica como dependência. Quando o gluetun é recriado, o
+Além das portas do compose original, publica `8082` (WebUI do SearXNG) só no
+IP Tailscale, para o Caddy. O `arr-stack.yml` e o `searxng.yml` já o aplicam
+como dependência. Quando o gluetun é recriado, o
 role reinicia quem usa a netns dele (`qbittorrent`, `searxng-core`): sem isso
 eles ficam sem rede.
 

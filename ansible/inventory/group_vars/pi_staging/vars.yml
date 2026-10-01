@@ -20,3 +20,6 @@ arr_radarr_api_key: staging
 arr_sonarr_api_key: staging
 arr_qbit_username: admin
 arr_qbit_password: staging
+
+# Não é segredo de verdade no pi-lab; não precisa vir do vault.
+searxng_secret_key: staging-nao-e-segredo

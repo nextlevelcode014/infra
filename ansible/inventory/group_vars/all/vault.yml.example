@@ -70,3 +70,8 @@ vault_gluetun_wireguard_addresses: "10.2.0.2/32"
 # separada: a mesma chave em duas máquinas derruba o túnel do Pi.
 vault_gluetun_staging_wireguard_private_key: "CHANGE-ME"
 vault_gluetun_staging_wireguard_addresses: "10.2.0.2/32"
+
+# server.secret_key do SearXNG (assina os cookies de preferência). Copie o do
+# settings.yml que roda no Pi para não deslogar ninguém; numa instalação nova,
+# gere com `openssl rand -hex 32`.
+vault_searxng_secret_key: "CHANGE-ME"

@@ -1,0 +1,42 @@
+---
+- name: Criar o diretório da stack
+  ansible.builtin.file:
+    path: "{{ searxng_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0750"
+
+# O container roda como uid 977 e escreve aqui (limiter.toml). Antes era um
+# chown manual depois do link-data.
+- name: Criar o diretório de config no volume cifrado
+  ansible.builtin.file:
+    path: "{{ searxng_config_dir }}"
+    state: directory
+    owner: "{{ searxng_uid }}"
+    group: "{{ searxng_uid }}"
+    mode: "0755"
+
+- name: Renderizar o settings.yml
+  ansible.builtin.template:
+    src: settings.yml.j2
+    dest: "{{ searxng_config_dir }}/settings.yml"
+    owner: "{{ searxng_uid }}"
+    group: "{{ searxng_uid }}"
+    mode: "0600"
+  no_log: true
+  notify: Reiniciar SearXNG
+
+- name: Renderizar o compose.yml
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: "{{ searxng_dir }}/compose.yml"
+    mode: "0644"
+
+# remove_orphans tira o sidecar tailscale-searxng que o compose antigo tinha.
+- name: Subir o SearXNG
+  community.docker.docker_compose_v2:
+    project_src: "{{ searxng_dir }}"
+    files: [compose.yml]
+    state: present
+    remove_orphans: true

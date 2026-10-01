@@ -48,6 +48,7 @@ usadas depois.
 | `playbooks/pi.yml` | `pi_hosts` | base do Pi (LUKS, Docker, redes, disk-guard) |
 | `playbooks/gluetun.yml` | `pi_hosts` | gateway VPN do Pi |
 | `playbooks/arr-stack.yml` | `pi_hosts` | stack Arr do Pi + backup Borg |
+| `playbooks/searxng.yml` | `pi_hosts` | SearXNG do Pi (sai pela VPN do gluetun) |
 | `playbooks/*-restore.yml` | o grupo do serviço | restore Borg explícito (ver `docs/`) |
 
 A config base (em `lxc.yml`) é `common` → `artis3n.tailscale.machine` →
@@ -85,6 +86,7 @@ domínios voltados para a internet — está fora deste repo.
 | `borg_client` | Borg + chave + senha + known_hosts; dependência de todo role com backup/restore |
 | `gluetun` | gateway VPN do Pi (compose do `self-hosted/gluetun`) |
 | `arr_stack` | stack Arr do Pi (compose do `self-hosted/arr`) |
+| `searxng` | SearXNG do Pi; `settings.yml` renderizado, porta publicada pelo gluetun |
 | `*_restore` | restore Borg do serviço, exige `-e <svc>_restore_confirmation` |
 | `geerlingguy.docker` | vendido, instala o engine |
 | `geerlingguy.pip`, `geerlingguy.security` | vendidos, sem uso ainda |
