@@ -21,8 +21,8 @@ inventário — é assim mesmo. Para automatizar, existe a linha
 
 | Arquivo | Onde rodam | Grupos |
 |---|---|---|
-| `static.ini` | Proxmox (`pve`, hoje comentado) | `proxmox` |
-| `pi.yml` | Raspberry Pi 5 (`nextlevelcode`, user `ubuntu`) | `rpi` |
+| `static.ini` | Proxmox (`pve`) | `proxmox` |
+| `pi.yml` | Raspberry Pi 5 (`nextlevelcode`, user `ubuntu`) e o grupo das máquinas que se passam por ele | `pi_hosts` → `rpi`, `pi_staging` |
 | `terraform.yml` | plugin `cloud.terraform`, lendo o state do terraform | `lxc` |
 
 Os containers **não** estão em arquivo nenhum: aparecem como recursos
@@ -45,19 +45,22 @@ usadas depois.
 | `playbooks/caddy.yml` | `caddy` | binário custom com plugin DNS-01 + Caddyfile + drop-in |
 | `playbooks/forgejo.yml` | `forgejo` | stack do Forgejo + backup Borg |
 | `playbooks/vaultwarden.yml` | `vaultwarden` | stack do Vaultwarden + backup Borg |
-| `playbooks/pi.yml` | `rpi` | base do Pi (LUKS, Docker, redes, disk-guard) |
-| `playbooks/arr-stack.yml` | `rpi` | stack Arr do Pi + backup Borg |
+| `playbooks/pi.yml` | `pi_hosts` | base do Pi (LUKS, Docker, redes, disk-guard) |
+| `playbooks/gluetun.yml` | `pi_hosts` | gateway VPN do Pi |
+| `playbooks/arr-stack.yml` | `pi_hosts` | stack Arr do Pi + backup Borg |
 | `playbooks/*-restore.yml` | o grupo do serviço | restore Borg explícito (ver `docs/`) |
 
 A config base (em `lxc.yml`) é `common` → `artis3n.tailscale.machine` →
-`geerlingguy.docker`, aplicada ao grupo `lxc` inteiro. Serviços específicos
+`geerlingguy.docker`, aplicada ao grupo `lxc` menos `pi_hosts`. O `pi-lab` é
+LXC mas se passa pelo Pi: do `lxc.yml` recebe só as flags. Serviços específicos
 entram em playbook próprio, como Caddy, Forgejo e Vaultwarden já fazem.
 
 O Pi não passa pela base de `lxc.yml`: é host físico com LUKS em
 `/mnt/secure`. A base dele é o role `pi_host`, e **todo role de serviço do Pi
 o declara em `meta/main.yml`** junto com `borg_client` e, se precisar,
 `secure_links`. Assim cada playbook de serviço prepara o host sozinho. A
-receita para um serviço novo está em `docs/pi.md`.
+receita para um serviço novo e o staging (`pi-lab`, sempre com
+`--limit pi_staging`) estão em `docs/pi.md`.
 
 O Ansible configura o Pi inteiro, menos o que exige a passphrase do LUKS ou
 login interativo (Tailscale no host, `luksFormat`, `secure-unlock` a cada
@@ -80,6 +83,7 @@ domínios voltados para a internet — está fora deste repo.
 | `pi_host` | base do Pi: LUKS no crypttab/fstab, `secure-unlock`, Docker com data-root cifrado, redes, disk-guard |
 | `secure_links` | symlinks de caminhos antigos para o LUKS (o `bin/link-data`); recebe `secure_links_paths` |
 | `borg_client` | Borg + chave + senha + known_hosts; dependência de todo role com backup/restore |
+| `gluetun` | gateway VPN do Pi (compose do `self-hosted/gluetun`) |
 | `arr_stack` | stack Arr do Pi (compose do `self-hosted/arr`) |
 | `*_restore` | restore Borg do serviço, exige `-e <svc>_restore_confirmation` |
 | `geerlingguy.docker` | vendido, instala o engine |

@@ -1,0 +1,8 @@
+---
+# Gateway VPN do Pi. O arr-stack.yml já o puxa como dependência; este
+# playbook existe para aplicar só o gluetun.
+- name: Configurar o gluetun
+  hosts: pi_hosts
+  gather_facts: true
+  roles:
+    - role: gluetun

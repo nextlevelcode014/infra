@@ -1,0 +1,41 @@
+services:
+  gluetun:
+    image: qmcgaw/gluetun
+    container_name: gluetun
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    environment:
+      - VPN_SERVICE_PROVIDER=protonvpn
+      - VPN_TYPE=wireguard
+      - WIREGUARD_PRIVATE_KEY=${WIREGUARD_PRIVATE_KEY}
+      - WIREGUARD_ADDRESSES=${WIREGUARD_ADDRESSES}
+      - HTTPPROXY=on
+      - HTTPPROXY_LISTENING_ADDRESS=:8888
+      - HEALTH_TARGET_ADDRESS=1.1.1.1:443
+      - TZ=America/Sao_Paulo
+    ports:
+      - "8888:8888"     # proxy HTTP (SearXNG)
+      - "8001:8000"     # control server
+      - "8090:8090"     # qBittorrent WebUI
+      - "6881:6881"     # qBittorrent TCP
+      - "6881:6881/udp" # qBittorrent DHT
+    healthcheck:
+      test: ["CMD", "/gluetun-entrypoint", "healthcheck"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - vpn_net
+      - medianet
+
+networks:
+  vpn_net:
+    name: vpn_net
+    external: true
+  medianet:
+    name: medianet
+    external: true

@@ -1,0 +1,15 @@
+---
+# Mesmo nome de projeto Compose ("gluetun") do self-hosted/gluetun: ao
+# aplicar pela primeira vez, o Compose adota o container que já roda.
+gluetun_dir: /opt/gluetun
+
+# WireGuard da ProtonVPN. Cada máquina precisa da PRÓPRIA config: a mesma
+# chave em dois lugares derruba o túnel do outro (ver group_vars/pi_staging).
+gluetun_wireguard_private_key: "{{ vault_gluetun_wireguard_private_key }}"
+gluetun_wireguard_addresses: "{{ vault_gluetun_wireguard_addresses }}"
+
+# Containers que usam a netns do gluetun (network_mode: container:gluetun).
+# Quando o gluetun é recriado eles ficam sem rede até reiniciar.
+gluetun_dependents:
+  - qbittorrent
+  - searxng-core

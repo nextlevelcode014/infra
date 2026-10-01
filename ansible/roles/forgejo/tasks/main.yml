@@ -19,6 +19,7 @@
   ansible.builtin.cron:
     name: Backup Borg do Forgejo
     user: root
+    state: "{{ 'present' if borg_backup_enabled else 'absent' }}"
     minute: "{{ forgejo_backup_schedule.split()[0] }}"
     hour: "{{ forgejo_backup_schedule.split()[1] }}"
     day: "{{ forgejo_backup_schedule.split()[2] }}"

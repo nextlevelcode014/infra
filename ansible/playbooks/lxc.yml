@@ -13,8 +13,11 @@
         lxc_vmid: "{{ hostvars[item].lxc_vmid }}"
       loop: "{{ groups['lxc'] }}"
 
+# pi_hosts fica de fora: o pi-lab é LXC, mas se passa pelo Raspberry Pi e
+# recebe a base dele (playbooks/pi.yml) — sem Tailscale, com o Docker do Pi.
+# As flags acima ele recebe, porque sem elas o Docker não roda no LXC.
 - name: Configurar containers
-  hosts: lxc
+  hosts: "lxc:!pi_hosts"
   gather_facts: true
   pre_tasks:
     - name: Aguardar SSH disponível
@@ -26,5 +29,7 @@
       become: false
   roles:
     - common
+    # Máquina de teste não entra na tailnet nem gasta a auth key real.
     - role: artis3n.tailscale.machine
+      when: "'staging' not in group_names"
     - geerlingguy.docker

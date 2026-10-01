@@ -4,35 +4,46 @@
     name: "{{ pi_packages }}"
     state: present
 
+# No Pi o Ubuntu já cria o ubuntu (uid 1000); no pi-lab não. Os composes e
+# os dados usam esse uid.
+- name: Garantir o usuário admin com o uid dos containers
+  ansible.builtin.user:
+    name: "{{ admin_user }}"
+    uid: "{{ puid }}"
+
 # --- LUKS -------------------------------------------------------------------
 # Criar a partição cifrada (luksFormat + mkfs) é manual e acontece uma vez:
 # precisa da passphrase, que não pode viver em lugar nenhum daqui. Ver
 # docs/pi.md. Aqui só se registra o mapeamento, com noauto para o boot não
 # travar pedindo senha.
 
-- name: Registrar o volume cifrado no crypttab
-  ansible.builtin.lineinfile:
-    path: /etc/crypttab
-    regexp: '^{{ pi_luks_name }}\s'
-    line: "{{ pi_luks_name }} UUID={{ pi_luks_uuid }} none luks,noauto"
-    create: true
-    mode: "0644"
+- name: Registrar o LUKS (só em host que tem)
+  when: pi_luks_uuid is defined
+  block:
+    - name: Registrar o volume cifrado no crypttab
+      ansible.builtin.lineinfile:
+        path: /etc/crypttab
+        regexp: '^{{ pi_luks_name }}\s'
+        line: "{{ pi_luks_name }} UUID={{ pi_luks_uuid }} none luks,noauto"
+        create: true
+        mode: "0644"
 
-- name: Registrar o ponto de montagem no fstab
-  ansible.builtin.lineinfile:
-    path: /etc/fstab
-    regexp: '^/dev/mapper/{{ pi_luks_name }}\s'
-    line: "/dev/mapper/{{ pi_luks_name }}  {{ secure_mount_dir }}  ext4  noauto  0  2"
+    - name: Registrar o ponto de montagem no fstab
+      ansible.builtin.lineinfile:
+        path: /etc/fstab
+        regexp: '^/dev/mapper/{{ pi_luks_name }}\s'
+        line: "/dev/mapper/{{ pi_luks_name }}  {{ secure_mount_dir }}  ext4  noauto  0  2"
 
-- name: Instalar o script de destravar o volume
-  ansible.builtin.template:
-    src: secure-unlock.sh.j2
-    dest: "{{ pi_unlock_script }}"
-    owner: root
-    group: root
-    mode: "0755"
+    - name: Instalar o script de destravar o volume
+      ansible.builtin.template:
+        src: secure-unlock.sh.j2
+        dest: "{{ pi_unlock_script }}"
+        owner: root
+        group: root
+        mode: "0755"
 
-# Daqui para baixo tudo depende do volume aberto.
+# Daqui para baixo tudo depende do volume aberto. No pi-lab o /mnt/secure é
+# um volume do Proxmox, mas a guarda é a mesma.
 - name: Confirmar que o volume cifrado está montado
   ansible.builtin.command:
     argv: [mountpoint, -q, "{{ secure_mount_dir }}"]
@@ -47,7 +58,7 @@
     fail_msg: >-
       {{ secure_mount_dir }} não está montado. Entre no Pi e rode
       `{{ pi_unlock_script }}` (pede a passphrase do LUKS), depois rode
-      o playbook de novo.
+      o playbook de novo. No pi-lab, confira o mount point no Terraform.
 
 # Não recursivo: só a raiz, para o admin gravar appdata/ e env/ sem sudo.
 # O data-root do Docker (docker/) continua de root.
@@ -106,13 +117,14 @@
       RequiresMountsFor={{ secure_mount_dir }}
   notify: Recarregar systemd
 
-# Desabilitado no boot: quem sobe o Docker é o secure-unlock, depois de
-# abrir o volume. Habilitado, ele tentaria subir sem o data-root.
+# Com LUKS, desabilitado no boot: quem sobe o Docker é o secure-unlock,
+# depois de abrir o volume. Sem LUKS (pi-lab) o volume monta sozinho, então
+# o Docker sobe no boot.
 - name: Instalar Docker
   ansible.builtin.include_role:
     name: geerlingguy.docker
   vars:
-    docker_service_enabled: false
+    docker_service_enabled: "{{ pi_luks_uuid is not defined }}"
     docker_users:
       - "{{ admin_user }}"
 

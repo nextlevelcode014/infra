@@ -60,6 +60,7 @@
   ansible.builtin.cron:
     name: Backup Borg da stack Arr
     user: root
+    state: "{{ 'present' if borg_backup_enabled else 'absent' }}"
     minute: "{{ arr_backup_schedule.split()[0] }}"
     hour: "{{ arr_backup_schedule.split()[1] }}"
     day: "{{ arr_backup_schedule.split()[2] }}"

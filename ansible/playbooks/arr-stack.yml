@@ -3,7 +3,7 @@
 # container gluetun, cuja netns o qBittorrent usa), que ainda sobe pelo
 # repo self-hosted. Restore é playbooks/arr-stack-restore.yml.
 - name: Configurar a stack Arr no Pi
-  hosts: rpi
+  hosts: pi_hosts
   gather_facts: true
   roles:
     - role: arr_stack

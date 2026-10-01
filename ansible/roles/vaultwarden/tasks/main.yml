@@ -20,6 +20,7 @@
   ansible.builtin.cron:
     name: Backup Borg do Vaultwarden
     user: root
+    state: "{{ 'present' if borg_backup_enabled else 'absent' }}"
     minute: "{{ vaultwarden_backup_schedule.split()[0] }}"
     hour: "{{ vaultwarden_backup_schedule.split()[1] }}"
     day: "{{ vaultwarden_backup_schedule.split()[2] }}"

@@ -1,0 +1,22 @@
+---
+# Máquinas de teste que se passam pelo Pi (pi-lab). Herdam tudo de
+# pi_hosts; aqui só o que não pode ser igual à produção.
+
+# Sem Tailscale: as portas escutam no IP da LAN.
+ts_ip: "{{ ansible_host }}"
+
+# Sem backup: cairia no repositório de produção (ver vars.yml). O
+# borg_client continua instalando o acesso, para ensaiar restore aqui.
+borg_backup_enabled: false
+
+# Config WireGuard própria: a mesma chave do Pi derrubaria o túnel dele.
+gluetun_wireguard_private_key: "{{ vault_gluetun_staging_wireguard_private_key }}"
+gluetun_wireguard_addresses: "{{ vault_gluetun_staging_wireguard_addresses }}"
+
+# Os *arr do pi-lab nascem com API keys próprias; as da produção não servem
+# aqui. Depois de subir, copie as de cada app para cá se quiser testar o
+# decluttarr.
+arr_radarr_api_key: staging
+arr_sonarr_api_key: staging
+arr_qbit_username: admin
+arr_qbit_password: staging

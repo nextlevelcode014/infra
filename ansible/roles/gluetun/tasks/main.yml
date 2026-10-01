@@ -1,0 +1,52 @@
+---
+# Gateway VPN compartilhado (ProtonVPN, WireGuard, killswitch). Redes
+# medianet e vpn_net vêm do pi_host.
+- name: Criar o diretório da stack
+  ansible.builtin.file:
+    path: "{{ gluetun_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0750"
+
+- name: Copiar o compose.yml
+  ansible.builtin.copy:
+    src: compose.yml
+    dest: "{{ gluetun_dir }}/compose.yml"
+    mode: "0644"
+
+- name: Renderizar o .env
+  ansible.builtin.template:
+    src: gluetun.env.j2
+    dest: "{{ gluetun_dir }}/.env"
+    mode: "0600"
+  no_log: true
+
+- name: Subir o gluetun
+  community.docker.docker_compose_v2:
+    project_src: "{{ gluetun_dir }}"
+    files: [compose.yml]
+    state: present
+    wait: true
+  register: gluetun_compose
+
+# A netns antiga some com o container recriado; quem estava pendurado nela
+# fica sem rede (sem vazar: o killswitch é a própria netns).
+- name: Ler os containers que dependem do gluetun
+  community.docker.docker_container_info:
+    name: "{{ item }}"
+  loop: "{{ gluetun_dependents }}"
+  register: gluetun_dependents_info
+  when: gluetun_compose is changed
+
+- name: Reiniciar os containers que dependem do gluetun
+  community.docker.docker_container:
+    name: "{{ item.item }}"
+    state: started
+    restart: true
+  loop: "{{ gluetun_dependents_info.results | default([]) }}"
+  loop_control:
+    label: "{{ item.item }}"
+  when:
+    - gluetun_compose is changed
+    - item.exists | default(false)

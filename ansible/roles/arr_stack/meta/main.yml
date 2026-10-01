@@ -3,6 +3,7 @@
 # que precisam morar no LUKS.
 dependencies:
   - role: pi_host
+  - role: gluetun   # qBittorrent usa a netns dele
   - role: borg_client
   - role: secure_links
     secure_links_paths:

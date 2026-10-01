@@ -1,14 +1,22 @@
 ---
-# Raspberry Pi 5 (ARM64). Fora do Terraform: host físico, alcançado pelo
-# nome MagicDNS da tailnet.
-rpi:
-  hosts:
-    pi:
-      ansible_host: nextlevelcode
-      ansible_user: ubuntu
-      ansible_become: true
-      # IP Tailscale do próprio Pi, lido dos fatos: as portas da stack Arr
-      # só escutam nele, e o Caddy do Proxmox chega por ali.
-      ts_ip: "{{ ansible_facts['tailscale0']['ipv4']['address'] }}"
-      # Partição LUKS (blkid da p3). Não é segredo: sem a passphrase não abre.
-      pi_luks_uuid: 7eef4654-3504-4dfe-9579-1e04b33d8897
+# Máquinas que rodam as stacks do Pi. Os playbooks do Pi miram pi_hosts;
+# para testar só no pi-lab, use --limit pi_staging.
+pi_hosts:
+  children:
+    rpi:
+      hosts:
+        # Raspberry Pi 5 (ARM64). Fora do Terraform: host físico, alcançado
+        # pelo nome MagicDNS da tailnet.
+        pi:
+          ansible_host: nextlevelcode
+          ansible_user: ubuntu
+          ansible_become: true
+          # IP Tailscale do próprio Pi, lido dos fatos: as portas das stacks
+          # só escutam nele, e o Caddy do Proxmox chega por ali.
+          ts_ip: "{{ ansible_facts['tailscale0']['ipv4']['address'] }}"
+          # Partição LUKS (blkid da p3). Não é segredo: sem a passphrase não
+          # abre. Host sem esta variável não tem LUKS (ver pi_staging).
+          pi_luks_uuid: 7eef4654-3504-4dfe-9579-1e04b33d8897
+    # Máquinas que se passam pelo Pi para teste (pi-lab, LXC x86). Os hosts
+    # vêm do inventário do Terraform, que os põe neste grupo.
+    pi_staging: {}

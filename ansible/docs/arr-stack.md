@@ -8,11 +8,13 @@ containers que já estão rodando são adotados, não duplicados.
 
 ## Dependências
 
+Entram sozinhas, pelo `meta/main.yml` do role:
+
 - **Base do Pi** (`pi_host`, ver [`pi.md`](pi.md)): LUKS aberto, Docker,
-  redes `medianet`/`vpn_net`. Entra sozinha como dependência do role.
-- **gluetun** (`self-hosted/gluetun`), que ainda não está no Ansible: o
-  qBittorrent usa a netns dele (`network_mode: container:gluetun`) e o
-  decluttarr fala com `gluetun:8090`. Precisa estar de pé antes.
+  redes `medianet`/`vpn_net`.
+- **gluetun** (ver [`gluetun.md`](gluetun.md)): o qBittorrent usa a netns
+  dele (`network_mode: container:gluetun`) e o decluttarr fala com
+  `gluetun:8090`.
 
 ## Primeira aplicação
 
@@ -27,13 +29,7 @@ Feita uma vez, à mão, porque envolve o vault e o crontab que hoje está no Pi.
    ansible-vault edit inventory/group_vars/all/vault.yml
    ```
 
-2. Conferir que o gluetun está de pé:
-
-   ```bash
-   ssh ubuntu@nextlevelcode docker ps --filter name=gluetun --format '{{.Status}}'
-   ```
-
-   Deve mostrar `Up ... (healthy)`.
+2. Seguir antes a primeira aplicação do gluetun ([`gluetun.md`](gluetun.md)).
 
 3. Ver o que vai mudar, sem aplicar:
 

@@ -12,6 +12,7 @@ O que ele faz:
 - instala `/usr/local/bin/secure-unlock` (o antigo `make unlock`);
 - põe o data-root do Docker no LUKS e impede o Docker de subir sem ele;
 - deixa o Docker **desabilitado no boot**: quem o sobe é o `secure-unlock`;
+- cria o usuário admin (`ubuntu`, uid 1000) se não existir;
 - cria as redes `medianet` e `vpn_net`;
 - instala o `disk-guard` (script, service e timer).
 
@@ -70,6 +71,60 @@ voltam sozinhos (`restart: unless-stopped`). Confira com
 Enquanto o volume estiver fechado, qualquer playbook do Pi para no começo com
 `/mnt/secure não está montado` — é a guarda, não um erro do playbook.
 
+## pi-lab — staging do Pi
+
+O `pi-lab` (LXC x86, vmid 203, `192.168.50.203`) recebe os mesmos playbooks do
+Pi para testar antes. O Terraform o põe no grupo `pi_staging`, que o
+`inventory/pi.yml` coloca sob `pi_hosts`. O que muda está em
+`group_vars/pi_staging/vars.yml`:
+
+- **sem LUKS:** `/mnt/secure` é um volume do Proxmox. Sem `pi_luks_uuid`, o
+  `pi_host` pula crypttab, fstab e `secure-unlock`, e o Docker sobe no boot;
+- **sem Tailscale:** `ts_ip` é o IP da LAN, e o `lxc.yml` aplica no pi-lab só
+  as flags do LXC (`keyctl`, `/dev/net/tun`), não a base dos outros LXCs;
+- **sem backup:** `borg_backup_enabled: false`. Um backup do pi-lab cairia no
+  repositório de produção e viraria o archive mais recente para o restore. O
+  acesso ao Borg continua instalado, para ensaiar restore aqui;
+- **WireGuard próprio** e API keys de mentira para o decluttarr.
+
+Cobre "o playbook roda e o compose sobe". Não cobre ARM64, LUKS de verdade nem
+o disco do Pi.
+
+### Preparar o pi-lab
+
+1. No repo `terraform`, aplicar o volume `/mnt/secure` e o grupo `pi_staging`
+   (recria o pi-lab):
+
+   ```bash
+   cd ../terraform && terraform plan && terraform apply
+   ```
+
+   Confira: `ansible-inventory --graph pi_staging` deve listar `pi-lab`.
+
+2. Gerar uma config WireGuard **nova** na ProtonVPN (account.protonvpn.com →
+   Downloads → WireGuard configuration) e pôr `PrivateKey` e `Address` em
+   `vault_gluetun_staging_*`. Não dá para reaproveitar a do Pi: a mesma chave
+   em duas máquinas derruba o túnel do Pi. É manual porque a ProtonVPN não tem
+   API para isso.
+
+   ```bash
+   ansible-vault edit inventory/group_vars/all/vault.yml
+   ```
+
+3. Aplicar as flags do LXC (para e sobe o container) e depois a stack:
+
+   ```bash
+   ansible-playbook playbooks/lxc.yml --ask-vault-pass --limit proxmox,pi_staging
+   ansible-playbook playbooks/arr-stack.yml --ask-vault-pass --limit pi_staging
+   ```
+
+   Confira: `ssh root@192.168.50.203 docker compose ls` lista `gluetun` e
+   `arr`, e `ssh root@192.168.50.203 docker exec gluetun wget -qO- https://ipinfo.io/ip`
+   mostra um IP da ProtonVPN, não o da sua casa.
+
+**Sempre com `--limit pi_staging`.** Sem ele, os playbooks do Pi rodam também
+no Raspberry de verdade.
+
 ## Adicionar um serviço no Pi
 
 O `arr_stack` é o modelo. Um role novo precisa de:
@@ -79,6 +134,7 @@ O `arr_stack` é o modelo. Um role novo precisa de:
    ```yaml
    dependencies:
      - role: pi_host
+     - role: gluetun              # se sair pela VPN
      - role: borg_client          # se tiver backup ou restore
      - role: secure_links         # se usar caminho fora de appdata_dir
        secure_links_paths:
@@ -90,9 +146,11 @@ O `arr_stack` é o modelo. Um role novo precisa de:
    caminhos antigos do `self-hosted` (`storage.map`) sem mexer no compose.
 2. Compose em `/opt/<serviço>` e `docker_compose_v2`, portas publicadas só em
    `{{ ts_ip }}`.
-3. Backup com o prefixo `<serviço>-*` usando `borg_repo`, `borg_passcommand`,
+3. Backup com o prefixo `<serviço>-*`, cron com
+   `state: "{{ 'present' if borg_backup_enabled else 'absent' }}"`, usando `borg_repo`, `borg_passcommand`,
    `borg_rsh`, `borg_backup_compression` e `borg_backup_retention` (todos em
    `group_vars/all/vars.yml`).
 4. Um role `<serviço>_restore` com `-e <serviço>_restore_confirmation=...`.
-5. Playbook em `playbooks/` e entrada no `site.yml`.
+5. Playbook em `playbooks/` com `hosts: pi_hosts` e entrada no `site.yml`.
+   Teste primeiro com `--limit pi_staging`.
 6. Rota no `roles/caddy/templates/Caddyfile.j2`.
