@@ -16,6 +16,17 @@
     name: "{{ caddy_apt_package }}"
     state: present
 
+# Atualizar o Caddy é decisão, não efeito colateral: a execução normal só
+# baixa quando o binário não existe (host novo). Para atualizar, rode com
+# -e caddy_upgrade=true. A API de download com plugin só entrega a última
+# versão (ignora ?version=), então não dá para fixar uma versão exata sem
+# compilar com xcaddy.
+- name: Verificar versão do binário custom local
+  ansible.builtin.command: /usr/bin/caddy.custom version
+  register: caddy_local_version
+  changed_when: false
+  failed_when: false
+
 - name: Consultar última versão do caddy no GitHub
   ansible.builtin.uri:
     url: https://api.github.com/repos/caddyserver/caddy/releases/latest
@@ -24,26 +35,14 @@
       Accept: application/vnd.github+json
   register: caddy_release
   failed_when: false
-  # GitHub limita requests anônimas; em falha de rate limit o release pode
-  # não vir. Tratamos isso como "vamos re-baixar" abaixo.
-
-- name: Registrar versão remota pretendida
-  ansible.builtin.set_fact:
-    caddy_target_version: "{{ caddy_release.json.tag_name | default('') }}"
-  when: caddy_release.status | default(0) == 200
-
-- name: Verificar versão do binário custom local
-  ansible.builtin.command: /usr/bin/caddy.custom version
-  register: caddy_local_version
-  changed_when: false
-  failed_when: false
+  when: caddy_upgrade | bool
 
 - name: Decidir se precisa baixar
   ansible.builtin.set_fact:
     caddy_needs_download: >-
       {{ caddy_local_version.rc != 0
-         or (caddy_target_version | default('')) == ''
-         or (caddy_target_version | default('')) not in caddy_local_version.stdout }}
+         or (caddy_upgrade | bool
+             and (caddy_release.json.tag_name | default('')) not in caddy_local_version.stdout) }}
 
 - name: Baixar binário custom com plugin cloudflare
   ansible.builtin.get_url:
@@ -59,6 +58,9 @@
   args:
     creates: /usr/bin/caddy.default
 
+# No --check o get_url não baixa nada; sem isto o copy falha com
+# "Source /tmp/caddy not found". O dry-run ainda mostra o download como
+# changed — é o sinal de que a aplicação vai trocar o binário.
 - name: Mover binário custom para o path final
   ansible.builtin.copy:
     src: /tmp/caddy
@@ -67,7 +69,9 @@
     owner: root
     group: root
     remote_src: true
-  when: caddy_needs_download | bool
+  when:
+    - caddy_needs_download | bool
+    - not ansible_check_mode
   # Sem restart o processo segue rodando o binário antigo (inode aberto).
   # O copy só marca changed quando o conteúdo muda, então o restart
   # só dispara quando há versão nova de fato.

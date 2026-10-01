@@ -5,3 +5,7 @@ caddy_config_dir: /etc/caddy
 caddy_env_file: /etc/caddy/cf-token.env
 caddy_systemd_drop_in: /etc/systemd/system/caddy.service.d/override.conf
 caddy_cloudflare_env_var: "CLOUDFLARE_API_TOKEN"
+
+# true para baixar a última versão do Caddy (com o plugin cloudflare). Fora
+# disso o binário instalado não muda. Ver tasks/main.yml.
+caddy_upgrade: false
