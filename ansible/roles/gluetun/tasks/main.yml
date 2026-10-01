@@ -8,6 +8,7 @@
     owner: root
     group: root
     mode: "0750"
+  register: gluetun_stack_dir_result
 
 - name: Copiar o compose.yml
   ansible.builtin.copy:
@@ -28,6 +29,9 @@
     files: [compose.yml]
     state: present
     wait: true
+  # No --check de um host novo o diretório só "seria" criado, e o compose
+  # falha com "is not a directory". Pula só nesse caso.
+  when: not (ansible_check_mode and gluetun_stack_dir_result is changed)
 
 # network_mode "container:gluetun" vira o ID do gluetun na criação do
 # container. Recriado o gluetun, quem dependia dele aponta para um ID que não

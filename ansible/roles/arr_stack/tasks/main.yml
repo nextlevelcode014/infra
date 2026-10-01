@@ -17,6 +17,7 @@
     owner: root
     group: root
     mode: "0750"
+  register: arr_stack_dir_result
 
 # Substitui o bin/render-config: o decluttarr só aceita segredo inline.
 - name: Renderizar a config do decluttarr
@@ -46,6 +47,9 @@
     project_src: "{{ arr_stack_dir }}"
     files: [compose.yml]
     state: present
+  # No --check de um host novo o diretório só "seria" criado, e o compose
+  # falha com "is not a directory". Pula só nesse caso.
+  when: not (ansible_check_mode and arr_stack_dir_result is changed)
 
 - name: Instalar script de backup da stack Arr
   ansible.builtin.template:

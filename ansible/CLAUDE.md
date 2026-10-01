@@ -104,6 +104,9 @@ Vale não repetir:
 - **NTP dentro de LXC não existe.** O template Ubuntu 26.04 não traz
   `systemd-timesyncd`, e mesmo trouxesse não funcionaria: o relógio é o do
   kernel do host. As tasks de NTP do role `common` só rodam fora de container.
+- **Ubuntu 26.04 usa chrony, não timesyncd.** No Pi o NTP é o chrony com NTS
+  (autenticado) nos servidores da Canonical. O `common` só configura o
+  timesyncd onde ele existe; o chrony fica como a distro entregou.
 - **Fatos com prefixo `ansible_` estão depreciados.** Use
   `ansible_facts.virtualization_type`; a forma antiga sai no ansible-core 2.24.
 - **Uma mesma auth key serve para os três containers.** Se ela for efêmera

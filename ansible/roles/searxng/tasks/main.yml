@@ -6,6 +6,7 @@
     owner: root
     group: root
     mode: "0750"
+  register: searxng_stack_dir_result
 
 # O container roda como uid 977 e escreve aqui (limiter.toml). Antes era um
 # chown manual depois do link-data.
@@ -40,3 +41,6 @@
     files: [compose.yml]
     state: present
     remove_orphans: true
+  # No --check de um host novo o diretório só "seria" criado, e o compose
+  # falha com "is not a directory". Pula só nesse caso.
+  when: not (ansible_check_mode and searxng_stack_dir_result is changed)
