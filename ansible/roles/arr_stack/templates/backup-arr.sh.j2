@@ -30,6 +30,9 @@ borg create \
     --exclude 'sh:**/cache' \
     --exclude 'sh:**/.cache' \
     --exclude 'sh:**/Sentry' \
+{% for path in arr_backup_excluded_app_backups %}
+    --exclude 'pp:{{ arr_backup_source }}/{{ path }}' \
+{% endfor %}
     "{{ borg_repo }}::arr-$timestamp" \
     "{{ arr_backup_source }}"
 

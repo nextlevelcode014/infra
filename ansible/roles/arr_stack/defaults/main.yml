@@ -32,6 +32,17 @@ arr_config_dirs:
 # pelo symlink): o Borg não segue link no argumento, e é esse caminho que o
 # restore espera no archive. Horário igual ao crontab antigo do Pi.
 arr_backup_source: "{{ appdata_dir }}{{ arr_media_stack_dir }}/config"
+# Backups internos de cada app (zips semanais). Com a stack parada durante o
+# backup os bancos já saem consistentes, então os zips só repetem o que o
+# Borg guarda — e, compactados, quase não deduplicam (eram 20% do archive).
+# Caminhos exatos, não glob: qbittorrent/.../BT_backup (estado dos torrents)
+# e jellyfin/.../SQLiteBackups têm "backup" no nome e precisam ficar.
+arr_backup_excluded_app_backups:
+  - radarr/Backups
+  - sonarr/Backups
+  - prowlarr/Backups
+  - bazarr/backup
+  - profilarr/backups
 arr_backup_script: "/usr/local/bin/backup-arr.sh"
 arr_backup_log_file: "/var/log/arr_backup.log"
 arr_backup_schedule: "30 2 * * *"

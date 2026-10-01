@@ -77,6 +77,7 @@ ele sobe a mesma stack a partir de outro arquivo.
 
 Diário às 02:30, `/usr/local/bin/backup-arr.sh`, log em
 `/var/log/arr_backup.log`. Para a stack, faz `borg create` da config inteira
-(`/mnt/secure/appdata/mnt/media-stack/config`, sem logs e caches), sobe a
+(`/mnt/secure/appdata/mnt/media-stack/config`, sem logs, caches e os zips de
+backup interno de cada app), sobe a
 stack, aplica a retenção 7d/4w/3m e compacta. A mídia (`data/`) não entra no
 backup. Restore em [`arr-stack-restore.md`](arr-stack-restore.md).
