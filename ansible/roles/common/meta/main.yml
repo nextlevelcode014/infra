@@ -1,0 +1,17 @@
+---
+galaxy_info:
+  author: NextLevelCode
+  description: Base de todas as máquinas do homelab (timezone e NTP)
+  license: MIT
+  min_ansible_version: "2.16"
+  platforms:
+    - name: Ubuntu
+      versions:
+        - jammy
+        - noble
+    - name: Debian
+      versions:
+        - bookworm
+        - trixie
+
+dependencies: []

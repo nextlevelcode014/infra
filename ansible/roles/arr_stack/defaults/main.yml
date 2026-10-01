@@ -1,0 +1,46 @@
+---
+# Mesmo nome de projeto Compose ("arr") do self-hosted/arr: ao aplicar pela
+# primeira vez, o Compose adota os containers que já estão rodando.
+arr_stack_dir: /opt/arr
+arr_stack_networks:
+  - medianet
+
+# Caminhos que o compose.yml usa. São symlinks para o volume LUKS, como o
+# bin/link-data do self-hosted cria a partir do storage.map.
+arr_media_stack_dir: /mnt/media-stack
+arr_media_stack_links:
+  - config
+  - data
+
+arr_config_dirs:
+  - qbittorrent
+  - jellyfin/config
+  - jellyfin/cache
+  - jellyseerr/config
+  - sonarr
+  - radarr
+  - prowlarr
+  - bazarr
+  - profilarr
+  - decluttarr
+  - dozzle
+
+# Borg — mesmo repositório, chave e senha do Forgejo e do Vaultwarden,
+# prefixo arr-*. Script herdado de self-hosted/lib/backup-arr.sh.
+arr_borg_repo: "{{ vault_forgejo_borg_repo }}"
+arr_borg_passcommand: "cat /root/.borg-pass"
+arr_borg_password_file: "/root/.borg-pass"
+arr_borg_ssh_key: "/root/.ssh/id_ed25519"
+arr_borg_host: "{{ arr_borg_repo | urlsplit('hostname') }}"
+arr_borg_rsh_options: >-
+  -o IdentitiesOnly=yes -o BatchMode=yes -o ConnectTimeout=10
+  -o ServerAliveInterval=5 -o ServerAliveCountMax=2
+
+# A config inteira, pelo caminho real (não pelo symlink): o Borg não segue
+# links no argumento, e é esse caminho que o restore espera no archive.
+arr_backup_source: "{{ appdata_dir }}{{ arr_media_stack_dir }}/config"
+arr_backup_script: "/usr/local/bin/backup-arr.sh"
+arr_backup_log_file: "/var/log/arr_backup.log"
+arr_backup_schedule: "0 2 * * *"
+arr_backup_compression: "zstd,3"
+arr_backup_retention: "--keep-daily=7 --keep-weekly=4 --keep-monthly=3"

@@ -1,5 +1,5 @@
 ---
 - name: Instalar Docker
-  hosts: raspberry
+  hosts: rpi
   roles:
     - geerlingguy.docker

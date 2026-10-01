@@ -1,0 +1,169 @@
+networks:
+  medianet:
+    name: medianet
+    external: true
+
+services:
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: qbittorrent
+    network_mode: "container:gluetun"
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=America/Sao_Paulo
+      - WEBUI_PORT=8090
+    volumes:
+      - /mnt/media-stack/config/qbittorrent:/config
+      - /mnt/media-stack/data:/mnt/media-stack/data
+    restart: unless-stopped
+
+  jellyfin:
+    image: jellyfin/jellyfin:latest
+    container_name: jellyfin
+    user: 1000:1000
+    environment:
+      - JELLYFIN_PublishedServerUrl=https://jellyfin.${APP_DOMAIN}
+    volumes:
+      - /mnt/media-stack/config/jellyfin/config:/config
+      - /mnt/media-stack/config/jellyfin/cache:/cache
+      - /mnt/media-stack/data/media:/media:ro
+    ports:
+      - "${TS_IP:?defina TS_IP no .env}:8096:8096"
+    networks:
+      - medianet
+    restart: unless-stopped
+
+  jellyseerr:
+    image: ghcr.io/seerr-team/seerr:latest
+    container_name: jellyseerr
+    init: true
+    user: 1000:1000
+    environment:
+      - LOG_LEVEL=debug
+      - TZ=America/Sao_Paulo
+      - PORT=5055
+    volumes:
+      - /mnt/media-stack/config/jellyseerr/config:/app/config
+    ports:
+      - "${TS_IP:?defina TS_IP no .env}:5055:5055"
+    networks:
+      - medianet
+    restart: unless-stopped
+
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=America/Sao_Paulo
+    volumes:
+      - /mnt/media-stack/config/sonarr:/config
+      - /mnt/media-stack/data:/mnt/media-stack/data
+    ports:
+      - "${TS_IP:?defina TS_IP no .env}:8989:8989"
+    networks:
+      - medianet
+    restart: unless-stopped
+
+  radarr:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: radarr
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=America/Sao_Paulo
+    volumes:
+      - /mnt/media-stack/config/radarr:/config
+      - /mnt/media-stack/data:/mnt/media-stack/data
+    ports:
+      - "${TS_IP:?defina TS_IP no .env}:7878:7878"
+    networks:
+      - medianet
+    restart: unless-stopped
+
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=America/Sao_Paulo
+    volumes:
+      - /mnt/media-stack/config/prowlarr:/config
+    ports:
+      - "${TS_IP:?defina TS_IP no .env}:9696:9696"
+    networks:
+      - medianet
+    restart: unless-stopped
+
+  flaresolverr:
+    image: ghcr.io/flaresolverr/flaresolverr:latest
+    container_name: flaresolverr
+    environment:
+      - LOG_LEVEL=info
+      - TZ=America/Sao_Paulo
+    networks:
+      - medianet
+    restart: unless-stopped
+
+  bazarr:
+    image: lscr.io/linuxserver/bazarr:latest
+    container_name: bazarr
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=America/Sao_Paulo
+    volumes:
+      - /mnt/media-stack/config/bazarr:/config
+      - /mnt/media-stack/data:/mnt/media-stack/data
+    ports:
+      - "${TS_IP:?defina TS_IP no .env}:6767:6767"
+    networks:
+      - medianet
+    restart: unless-stopped
+
+  profilarr:
+    image: santiagosayshey/profilarr:latest
+    container_name: profilarr
+    depends_on:
+      - sonarr
+      - radarr
+    environment:
+      - TZ=America/Sao_Paulo
+    volumes:
+      - /mnt/media-stack/config/profilarr:/config
+    ports:
+      - "${TS_IP:?defina TS_IP no .env}:6868:6868"
+    networks:
+      - medianet
+    restart: unless-stopped
+
+  decluttarr:
+    image: ghcr.io/manimatter/decluttarr:latest
+    container_name: decluttarr
+    environment:
+      - TZ=America/Sao_Paulo
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - LOG_LEVEL=INFO
+      - TEST_RUN=false
+    volumes:
+      - /mnt/media-stack/config/decluttarr/config.yaml:/app/config/config.yaml
+      - /mnt/media-stack/data:/mnt/media-stack/data
+    networks:
+      - medianet
+    restart: always
+
+  dozzle:
+    image: amir20/dozzle:latest
+    container_name: dozzle
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /mnt/media-stack/config/dozzle:/data
+    ports:
+      - "${TS_IP:?defina TS_IP no .env}:8081:8080"
+    networks:
+      - medianet
+    restart: always

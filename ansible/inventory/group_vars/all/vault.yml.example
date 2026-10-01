@@ -52,3 +52,11 @@ vault_vaultwarden_admin_token: "CHANGE-ME"
 # completo da conta Proton que vai enviar as notificações.
 vault_vaultwarden_smtp_username: "vaultwarden@nextlevelcode.pro"
 vault_vaultwarden_smtp_password: "CHANGE-ME"
+
+# Stack Arr (Pi). As API keys são geradas por cada app (Settings → General
+# → API Key) e a senha é a da WebUI do qBittorrent: nada disso configura os
+# apps, só deixa o decluttarr falar com eles.
+vault_arr_radarr_api_key: "CHANGE-ME"
+vault_arr_sonarr_api_key: "CHANGE-ME"
+vault_arr_qbit_username: "admin"
+vault_arr_qbit_password: "CHANGE-ME"

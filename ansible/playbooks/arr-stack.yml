@@ -1,0 +1,9 @@
+---
+# Stack Arr no Raspberry Pi. Depende da stack gluetun (rede vpn_net e o
+# container gluetun, cuja netns o qBittorrent usa), que ainda sobe pelo
+# repo self-hosted. Restore é playbooks/arr-stack-restore.yml.
+- name: Configurar a stack Arr no Pi
+  hosts: rpi
+  gather_facts: true
+  roles:
+    - role: arr_stack

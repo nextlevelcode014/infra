@@ -17,11 +17,12 @@ inventário — é assim mesmo. Para automatizar, existe a linha
 
 ## Inventário
 
-`ansible.cfg` aponta para o diretório `inventory/`, que junta duas fontes:
+`ansible.cfg` aponta para o diretório `inventory/`, que junta três fontes:
 
 | Arquivo | Onde rodam | Grupos |
 |---|---|---|
-| `static.ini` | hosts fixos (`pve`, `rpi5.local`) | `proxmox`, `raspberry` |
+| `static.ini` | Proxmox (`pve`, hoje comentado) | `proxmox` |
+| `pi.yml` | Raspberry Pi 5 (`nextlevelcode`, user `ubuntu`) | `rpi` |
 | `terraform.yml` | plugin `cloud.terraform`, lendo o state do terraform | `lxc` |
 
 Os containers **não** estão em arquivo nenhum: aparecem como recursos
@@ -42,12 +43,19 @@ usadas depois.
 |---|---|---|
 | `playbooks/lxc.yml` | `proxmox`, depois `lxc` | flags do container, depois a config base de todos |
 | `playbooks/caddy.yml` | `caddy` | binário custom com plugin DNS-01 + Caddyfile + drop-in |
-| `playbooks/forgejo.yml` | `forgejo` | stack do Forgejo |
+| `playbooks/forgejo.yml` | `forgejo` | stack do Forgejo + backup Borg |
+| `playbooks/vaultwarden.yml` | `vaultwarden` | stack do Vaultwarden + backup Borg |
+| `playbooks/arr-stack.yml` | `rpi` | stack Arr do Pi + backup Borg |
+| `playbooks/*-restore.yml` | o grupo do serviço | restore Borg explícito (ver `docs/`) |
 
 A config base (em `lxc.yml`) é `common` → `artis3n.tailscale.machine` →
 `geerlingguy.docker`, aplicada ao grupo `lxc` inteiro. Serviços específicos
-entram em playbook próprio, como o Caddy e o Forgejo já fazem. **Vaultwarden
-ainda não tem serviço configurado** — só recebe a base.
+entram em playbook próprio, como Caddy, Forgejo e Vaultwarden já fazem.
+
+O Pi não passa pela base de `lxc.yml`: é host físico com LUKS em
+`/mnt/secure`, e os dados chegam aos caminhos antigos por symlink (`storage.map`
+do `self-hosted`). Roles do Pi checam `mountpoint` antes de tocar em dado.
+Runbooks em `docs/arr-stack.md` e `docs/arr-stack-restore.md`.
 
 O Caddy do homelab atende `*.lab.nextlevelcode.pro`, acessível via Tailscale
 split DNS dentro da tailnet. O Caddy público (VPS) é o que serve os
@@ -62,6 +70,9 @@ domínios voltados para a internet — está fora deste repo.
 | `lxc_flags` | exceção: aplica flags do container (ver abaixo) |
 | `caddy` | binário custom (DNS-01) + Caddyfile + systemd drop-in |
 | `forgejo` | compose do Forgejo + Postgres |
+| `vaultwarden` | compose do Vaultwarden |
+| `arr_stack` | stack Arr do Pi (compose do `self-hosted/arr`) |
+| `*_restore` | restore Borg do serviço, exige `-e <svc>_restore_confirmation` |
 | `geerlingguy.docker` | vendido, instala o engine |
 | `geerlingguy.pip`, `geerlingguy.security` | vendidos, sem uso ainda |
 

@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# Gerido pelo Ansible — não editar à mão. Origem: self-hosted/lib/backup-arr.sh.
+set -euo pipefail
+
+compose_file="{{ arr_stack_dir }}/compose.yml"
+timestamp="$(date +%Y-%m-%d_%H-%M-%S)"
+
+export BORG_PASSCOMMAND="{{ arr_borg_passcommand }}"
+export BORG_RSH="ssh -i {{ arr_borg_ssh_key }} {{ arr_borg_rsh_options }}"
+
+cleanup() {
+    exit_code=$?
+    if [[ "$exit_code" -ne 0 ]]; then
+        echo "ERRO detectado (código $exit_code). Reiniciando containers..."
+        docker compose -f "$compose_file" up -d
+    fi
+}
+trap cleanup EXIT
+
+echo "[$timestamp] Iniciando backup da stack Arr..."
+# Parada para os bancos SQLite dos *arr saírem consistentes.
+docker compose -f "$compose_file" down
+
+borg create \
+    --compression "{{ arr_backup_compression }}" \
+    --exclude '*.tmp' \
+    --exclude 'sh:**/*.log' \
+    --exclude 'sh:**/log' \
+    --exclude 'sh:**/logs' \
+    --exclude 'sh:**/cache' \
+    --exclude 'sh:**/.cache' \
+    --exclude 'sh:**/Sentry' \
+    "{{ arr_borg_repo }}::arr-$timestamp" \
+    "{{ arr_backup_source }}"
+
+docker compose -f "$compose_file" up -d
+borg prune --glob-archives 'arr-*' "{{ arr_borg_repo }}" {{ arr_backup_retention }}
+borg compact "{{ arr_borg_repo }}"
+
+echo "[$(date +%H:%M:%S)] Backup concluído com sucesso!"

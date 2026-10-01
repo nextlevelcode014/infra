@@ -1,0 +1,136 @@
+---
+# Fail-closed, como o bin/up do self-hosted: sem o LUKS destrancado os
+# symlinks de /mnt/media-stack apontam para o nada, e criar pastas ali
+# escreveria config em claro na partição raiz.
+- name: Confirmar que o volume cifrado está montado
+  ansible.builtin.command:
+    argv: [mountpoint, -q, "{{ secure_mount_dir }}"]
+  changed_when: false
+
+# Sem force, igual ao bin/link-data: se o caminho for um diretório real,
+# falha em vez de apagar dados.
+- name: Garantir os symlinks de /mnt/media-stack para o volume cifrado
+  ansible.builtin.file:
+    src: "{{ appdata_dir }}{{ arr_media_stack_dir }}/{{ item }}"
+    dest: "{{ arr_media_stack_dir }}/{{ item }}"
+    state: link
+  loop: "{{ arr_media_stack_links }}"
+
+- name: Criar as pastas de configuração
+  ansible.builtin.file:
+    path: "{{ arr_media_stack_dir }}/config/{{ item }}"
+    state: directory
+    owner: "{{ puid }}"
+    group: "{{ pgid }}"
+    mode: "0755"
+  loop: "{{ arr_config_dirs }}"
+
+- name: Criar as redes externas
+  community.docker.docker_network:
+    name: "{{ item }}"
+  loop: "{{ arr_stack_networks }}"
+
+- name: Criar o diretório da stack
+  ansible.builtin.file:
+    path: "{{ arr_stack_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0750"
+
+# Substitui o bin/render-config: o decluttarr só aceita segredo inline.
+- name: Renderizar a config do decluttarr
+  ansible.builtin.template:
+    src: decluttarr.config.yaml.j2
+    dest: "{{ arr_media_stack_dir }}/config/decluttarr/config.yaml"
+    owner: "{{ puid }}"
+    group: "{{ pgid }}"
+    mode: "0600"
+  no_log: true
+  notify: Reiniciar decluttarr
+
+- name: Copiar o compose.yml
+  ansible.builtin.copy:
+    src: compose.yml
+    dest: "{{ arr_stack_dir }}/compose.yml"
+    mode: "0644"
+
+- name: Renderizar o .env
+  ansible.builtin.template:
+    src: media.env.j2
+    dest: "{{ arr_stack_dir }}/.env"
+    mode: "0600"
+
+- name: Subir a stack
+  community.docker.docker_compose_v2:
+    project_src: "{{ arr_stack_dir }}"
+    files: [compose.yml]
+    state: present
+
+- name: Instalar Borg para backups e restores
+  ansible.builtin.package:
+    name: borgbackup
+    state: present
+
+- name: Criar diretório SSH do Borg
+  ansible.builtin.file:
+    path: "{{ arr_borg_ssh_key | dirname }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: Instalar chave SSH do Borg
+  ansible.builtin.copy:
+    content: "{{ vault_forgejo_borg_ssh_private_key }}"
+    dest: "{{ arr_borg_ssh_key }}"
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+
+- name: Instalar arquivo da senha do Borg
+  ansible.builtin.copy:
+    content: "{{ vault_forgejo_borg_password }}"
+    dest: "{{ arr_borg_password_file }}"
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+
+- name: Criar arquivo known_hosts do Borg
+  ansible.builtin.file:
+    path: "{{ arr_borg_ssh_key | dirname }}/known_hosts"
+    state: touch
+    owner: root
+    group: root
+    mode: "0600"
+    modification_time: preserve
+    access_time: preserve
+
+- name: Adicionar servidor Borg ao known_hosts
+  ansible.builtin.known_hosts:
+    name: "{{ arr_borg_host }}"
+    key: "{{ arr_borg_host }} {{ vault_forgejo_borg_known_host_key }}"
+    path: "{{ arr_borg_ssh_key | dirname }}/known_hosts"
+    state: present
+
+- name: Instalar script de backup da stack Arr
+  ansible.builtin.template:
+    src: backup-arr.sh.j2
+    dest: "{{ arr_backup_script }}"
+    owner: root
+    group: root
+    mode: "0750"
+  no_log: true
+
+- name: Agendar backup da stack Arr
+  ansible.builtin.cron:
+    name: Backup Borg da stack Arr
+    user: root
+    minute: "{{ arr_backup_schedule.split()[0] }}"
+    hour: "{{ arr_backup_schedule.split()[1] }}"
+    day: "{{ arr_backup_schedule.split()[2] }}"
+    month: "{{ arr_backup_schedule.split()[3] }}"
+    weekday: "{{ arr_backup_schedule.split()[4] }}"
+    job: "{{ arr_backup_script }} >> {{ arr_backup_log_file }} 2>&1"

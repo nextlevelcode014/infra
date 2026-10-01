@@ -1,0 +1,12 @@
+---
+# Raspberry Pi 5 (ARM64). Fora do Terraform: host físico, alcançado pelo
+# nome MagicDNS da tailnet.
+rpi:
+  hosts:
+    pi:
+      ansible_host: nextlevelcode
+      ansible_user: ubuntu
+      ansible_become: true
+      # IP Tailscale do próprio Pi, lido dos fatos: as portas da stack Arr
+      # só escutam nele, e o Caddy do Proxmox chega por ali.
+      ts_ip: "{{ ansible_facts['tailscale0']['ipv4']['address'] }}"

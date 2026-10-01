@@ -1,0 +1,5 @@
+---
+- name: Reiniciar decluttarr
+  community.docker.docker_container:
+    name: decluttarr
+    restart: true

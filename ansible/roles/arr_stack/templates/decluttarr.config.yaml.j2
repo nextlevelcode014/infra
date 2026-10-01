@@ -1,0 +1,47 @@
+# Gerido pelo Ansible — não editar à mão. Origem:
+# self-hosted/arr/decluttarr.config.tmpl.yaml (antes renderizado pelo
+# bin/render-config).
+#
+# O qBittorrent vive na netns do gluetun → use "gluetun:8090".
+# O "name" de cada download client PRECISA bater com o nome do cliente
+# cadastrado no Radarr/Sonarr (aqui: qBittorrent).
+
+instances:
+  radarr:
+    - base_url: "http://radarr:7878"
+      api_key: "{{ arr_radarr_api_key }}"
+
+  sonarr:
+    - base_url: "http://sonarr:8989"
+      api_key: "{{ arr_sonarr_api_key }}"
+
+download_clients:
+  qbittorrent:
+    - base_url: "http://gluetun:8090"
+      username: "{{ arr_qbit_username }}"
+      password: "{{ arr_qbit_password }}"
+      name: "qBittorrent"
+
+general:
+  log_level: INFO
+  test_run: false
+  timer: 10
+  ssl_verification: true
+  protected_tag: "Keep"
+  obsolete_tag: "Obsolete"
+
+jobs:
+  remove_bad_files: true
+  remove_failed_downloads: true
+  remove_failed_imports: true
+  remove_metadata_missing:
+    max_strikes: 3
+  remove_missing_files: true
+  remove_orphans: true
+  remove_slow:
+    min_speed: 100
+    max_strikes: 3
+  remove_stalled: true
+  remove_unmonitored: true
+  search_missing: true
+  detect_deletions: true

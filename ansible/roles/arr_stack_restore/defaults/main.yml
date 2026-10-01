@@ -1,0 +1,33 @@
+---
+arr_restore_confirmation: ""
+# Dentro do LUKS, não em /var/tmp: no Pi a raiz não é cifrada e a config
+# tem API keys e bancos. Também é onde há espaço (a raiz tem ~14 GB).
+arr_restore_work_dir: "{{ secure_mount_dir }}/restore/arr"
+
+arr_restore_stack_dir: /opt/arr
+
+# Destino real da config: /mnt/media-stack/config é symlink para cá.
+# O restore grava aqui direto, sem passar pelo link.
+arr_restore_config_dir: "{{ appdata_dir }}/mnt/media-stack/config"
+
+# Caminho dentro do archive Borg (com a barra inicial removida). O
+# backup-arr.sh guarda a config inteira pelo caminho real.
+arr_restore_data_archive_path: "{{ arr_restore_config_dir | regex_replace('^/', '') }}"
+
+# Arquivos que precisam existir no archive para o restore seguir.
+arr_restore_required_files:
+  - sonarr/config.xml
+  - radarr/config.xml
+
+# Pastas excluídas do backup ('sh:**/cache') que o Docker precisa encontrar
+# já existentes.
+arr_restore_excluded_dirs:
+  - jellyfin/cache
+
+# Mesmo repositório, chave e senha do Forgejo e do Vaultwarden.
+arr_borg_repo: "{{ vault_forgejo_borg_repo }}"
+arr_borg_passcommand: "cat /root/.borg-pass"
+arr_borg_ssh_key: "/root/.ssh/id_ed25519"
+arr_borg_rsh_options: >-
+  -o IdentitiesOnly=yes -o BatchMode=yes -o ConnectTimeout=10
+  -o ServerAliveInterval=5 -o ServerAliveCountMax=2
