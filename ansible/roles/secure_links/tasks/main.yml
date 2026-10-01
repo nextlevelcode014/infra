@@ -13,7 +13,7 @@
     state: directory
     owner: "{{ admin_user }}"
     group: "{{ admin_user }}"
-    mode: "0775"
+    mode: "0755"
   loop: "{{ secure_links_paths }}"
 
 - name: Criar os diretórios pais dos links

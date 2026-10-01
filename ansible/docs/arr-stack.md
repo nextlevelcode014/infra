@@ -43,24 +43,17 @@ Feita uma vez, à mão, porque envolve o vault e o crontab que hoje está no Pi.
    ansible-playbook playbooks/arr-stack.yml --ask-vault-pass
    ```
 
-5. Limpar o crontab antigo. Ele chama `/usr/local/bin/backup-arr.sh` às 02:30,
-   mas o script no Pi se chamava `arr-stack-backup.sh` — **o backup do Arr não
-   estava rodando**. Agora o role instala `backup-arr.sh` e agenda o próprio
-   cron no mesmo horário; com a linha antiga, ele rodaria duas vezes.
+5. Conferir o crontab e apagar o script antigo. O role agenda o próprio cron
+   (`#Ansible: Backup Borg da stack Arr`); não pode sobrar outra linha de
+   `backup-arr`, senão o backup roda duas vezes. O `arr-stack-backup.sh` era o
+   script antigo, que nenhum cron chamava.
 
    ```bash
-   ssh -t ubuntu@nextlevelcode sudo crontab -e
-   ```
-
-   Apague a linha `30 2 * * * /usr/local/bin/backup-arr.sh ...` que **não**
-   tem o comentário `#Ansible: Backup Borg da stack Arr` acima dela. Depois:
-
-   ```bash
-   ssh ubuntu@nextlevelcode sudo rm /usr/local/bin/arr-stack-backup.sh
    ssh ubuntu@nextlevelcode sudo crontab -l | grep -c backup-arr
+   ssh ubuntu@nextlevelcode sudo rm -f /usr/local/bin/arr-stack-backup.sh
    ```
 
-   O último comando deve responder `1`.
+   O primeiro comando deve responder `1`.
 
 6. Conferir que a stack é a de `/opt/arr`:
 
