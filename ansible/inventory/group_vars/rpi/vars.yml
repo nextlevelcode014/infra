@@ -1,0 +1,15 @@
+---
+# Raspberry Pi. O volume LUKS fica em /mnt/secure e guarda tudo que é
+# sensível: dados dos serviços (appdata/), .env (env/) e o data-root do
+# Docker. Ele não abre sozinho no boot — ver docs/pi.md.
+secure_mount_dir: /mnt/secure
+appdata_dir: "{{ secure_mount_dir }}/appdata"
+
+# Dono dos arquivos dos containers (usuário ubuntu do Pi).
+puid: 1000
+pgid: 1000
+admin_user: ubuntu
+
+# A mesma do Pi e dos composes (TZ=America/Sao_Paulo). Mesmo fuso da
+# global, mas trocar só por trocar mexeria em logs e crons do host.
+timezone: America/Sao_Paulo

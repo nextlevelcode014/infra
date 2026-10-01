@@ -10,3 +10,5 @@ rpi:
       # IP Tailscale do próprio Pi, lido dos fatos: as portas da stack Arr
       # só escutam nele, e o Caddy do Proxmox chega por ali.
       ts_ip: "{{ ansible_facts['tailscale0']['ipv4']['address'] }}"
+      # Partição LUKS (blkid da p3). Não é segredo: sem a passphrase não abre.
+      pi_luks_uuid: 7eef4654-3504-4dfe-9579-1e04b33d8897

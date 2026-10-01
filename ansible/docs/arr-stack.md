@@ -6,13 +6,13 @@
 mora: `/opt/arr`. O nome do projeto Compose continua `arr`, então os
 containers que já estão rodando são adotados, não duplicados.
 
-## Dependências que continuam no `self-hosted`
+## Dependências
 
-- **gluetun** (`self-hosted/gluetun`): o qBittorrent usa a netns dele
-  (`network_mode: container:gluetun`) e o decluttarr fala com
-  `gluetun:8090`. Precisa estar de pé antes.
-- **LUKS destrancado** (`make unlock`): o role recusa rodar sem
-  `/mnt/secure` montado.
+- **Base do Pi** (`pi_host`, ver [`pi.md`](pi.md)): LUKS aberto, Docker,
+  redes `medianet`/`vpn_net`. Entra sozinha como dependência do role.
+- **gluetun** (`self-hosted/gluetun`), que ainda não está no Ansible: o
+  qBittorrent usa a netns dele (`network_mode: container:gluetun`) e o
+  decluttarr fala com `gluetun:8090`. Precisa estar de pé antes.
 
 ## Primeira aplicação
 
@@ -47,21 +47,24 @@ Feita uma vez, à mão, porque envolve o vault e o crontab que hoje está no Pi.
    ansible-playbook playbooks/arr-stack.yml --ask-vault-pass
    ```
 
-5. Tirar a linha do arr do crontab antigo. O role instala o script no mesmo
-   caminho (`/usr/local/bin/backup-arr.sh`) e agenda o próprio cron; com as
-   duas linhas, o backup roda duas vezes às 02h.
+5. Limpar o crontab antigo. Ele chama `/usr/local/bin/backup-arr.sh` às 02:30,
+   mas o script no Pi se chamava `arr-stack-backup.sh` — **o backup do Arr não
+   estava rodando**. Agora o role instala `backup-arr.sh` e agenda o próprio
+   cron no mesmo horário; com a linha antiga, ele rodaria duas vezes.
 
    ```bash
-   ssh ubuntu@nextlevelcode sudo crontab -l | grep backup-arr
    ssh -t ubuntu@nextlevelcode sudo crontab -e
    ```
 
-   Apague a linha **sem** o comentário `#Ansible: Backup Borg da stack Arr`
-   acima dela. Confira que sobrou uma:
+   Apague a linha `30 2 * * * /usr/local/bin/backup-arr.sh ...` que **não**
+   tem o comentário `#Ansible: Backup Borg da stack Arr` acima dela. Depois:
 
    ```bash
+   ssh ubuntu@nextlevelcode sudo rm /usr/local/bin/arr-stack-backup.sh
    ssh ubuntu@nextlevelcode sudo crontab -l | grep -c backup-arr
    ```
+
+   O último comando deve responder `1`.
 
 6. Conferir que a stack é a de `/opt/arr`:
 
@@ -76,7 +79,7 @@ ele sobe a mesma stack a partir de outro arquivo.
 
 ## Backup
 
-Diário às 02h, `/usr/local/bin/backup-arr.sh`, log em
+Diário às 02:30, `/usr/local/bin/backup-arr.sh`, log em
 `/var/log/arr_backup.log`. Para a stack, faz `borg create` da config inteira
 (`/mnt/secure/appdata/mnt/media-stack/config`, sem logs e caches), sobe a
 stack, aplica a retenção 7d/4w/3m e compacta. A mídia (`data/`) não entra no

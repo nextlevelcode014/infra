@@ -6,25 +6,9 @@ vaultwarden_bind_port: 8080
 vaultwarden_admin_token: "{{ vault_vaultwarden_admin_token }}"
 vaultwarden_signups_allowed: "false"
 
-# Borg — mesmo repositório do Forgejo (mesma chave SSH), prefixo
-# vaultwarden-*. Os arquivos /root/.borg-pass e /root/.ssh/id_ed25519 são
-# instalados pelo role `vaultwarden` de forma idempotente; o role
-# `forgejo` instala os mesmos arquivos, então em LXCs com os dois
-# serviços a segunda execução é no-op.
-vaultwarden_borg_repo: "{{ vault_forgejo_borg_repo }}"
-vaultwarden_borg_passcommand: "cat /root/.borg-pass"
-vaultwarden_borg_password_file: "/root/.borg-pass"
-vaultwarden_borg_ssh_key: "/root/.ssh/id_ed25519"
-vaultwarden_borg_host: "{{ vaultwarden_borg_repo | urlsplit('hostname') }}"
-vaultwarden_borg_rsh_options: >-
-  -o IdentitiesOnly=yes -o BatchMode=yes -o ConnectTimeout=10
-  -o ServerAliveInterval=5 -o ServerAliveCountMax=2
-
 vaultwarden_backup_script: "/usr/local/bin/backup-vaultwarden.sh"
 vaultwarden_backup_log_file: "/var/log/vaultwarden_backup.log"
 vaultwarden_backup_schedule: "0 2 * * *"
-vaultwarden_backup_compression: "zstd,3"
-vaultwarden_backup_retention: "--keep-daily=7 --keep-weekly=4 --keep-monthly=3"
 
 # SMTP
 vaultwarden_smtp_host: "smtp.protonmail.ch"

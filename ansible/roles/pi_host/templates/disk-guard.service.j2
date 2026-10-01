@@ -1,0 +1,10 @@
+# Gerido pelo Ansible — não editar à mão. Limiares em roles/pi_host/defaults.
+[Unit]
+Description=Guarda de espaço livre do volume cifrado (para o {{ pi_disk_guard_container }} antes de encher)
+# Sem o volume montado o script sai limpo, mas isto evita rodar à toa no boot.
+RequiresMountsFor={{ secure_mount_dir }}
+After=docker.service
+
+[Service]
+Type=oneshot
+ExecStart={{ pi_disk_guard_script }}

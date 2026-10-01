@@ -9,8 +9,8 @@ db_name="forgejo"
 db_dump="/tmp/forgejo_db_dump.sql"
 timestamp="$(date +%Y-%m-%d_%H-%M-%S)"
 
-export BORG_PASSCOMMAND="{{ forgejo_borg_passcommand }}"
-export BORG_RSH="ssh -i {{ forgejo_borg_ssh_key }} {{ forgejo_borg_rsh_options }}"
+export BORG_PASSCOMMAND="{{ borg_passcommand }}"
+export BORG_RSH="{{ borg_rsh }}"
 
 cleanup() {
     exit_code=$?
@@ -27,16 +27,16 @@ docker exec "$db_container" pg_dump -U "$db_user" "$db_name" > "$db_dump"
 docker compose -f "$compose_file" down
 
 borg create \
-    --compression "{{ forgejo_backup_compression }}" \
+    --compression "{{ borg_backup_compression }}" \
     --exclude '*.tmp' \
     --exclude '*.log' \
     --exclude 'cache/*' \
-    "{{ forgejo_borg_repo }}::forgejo-$timestamp" \
+    "{{ borg_repo }}::forgejo-$timestamp" \
     "$data_dir" \
     "$db_dump"
 
 docker compose -f "$compose_file" up -d
-borg prune --glob-archives 'forgejo-*' "{{ forgejo_borg_repo }}" {{ forgejo_backup_retention }}
-borg compact "{{ forgejo_borg_repo }}"
+borg prune --glob-archives 'forgejo-*' "{{ borg_repo }}" {{ borg_backup_retention }}
+borg compact "{{ borg_repo }}"
 
 echo "[$(date +%Y-%m-%d_%H-%M-%S)] Backup concluído com sucesso!"

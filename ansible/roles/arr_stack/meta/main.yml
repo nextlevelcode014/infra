@@ -1,0 +1,10 @@
+---
+# Receita de todo serviço do Pi: base do host, cliente Borg e os caminhos
+# que precisam morar no LUKS.
+dependencies:
+  - role: pi_host
+  - role: borg_client
+  - role: secure_links
+    secure_links_paths:
+      - /mnt/media-stack/config
+      - /mnt/media-stack/data

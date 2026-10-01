@@ -1,0 +1,35 @@
+---
+# Fail-closed: sem o LUKS montado o alvo não existe, e criar o diretório
+# real agora gravaria dado sensível em claro na raiz.
+- name: Confirmar que o volume cifrado está montado
+  ansible.builtin.command:
+    argv: [mountpoint, -q, "{{ secure_mount_dir }}"]
+  changed_when: false
+  check_mode: false
+
+- name: Criar os diretórios reais no volume cifrado
+  ansible.builtin.file:
+    path: "{{ appdata_dir }}{{ item }}"
+    state: directory
+    owner: "{{ admin_user }}"
+    group: "{{ admin_user }}"
+    mode: "0775"
+  loop: "{{ secure_links_paths }}"
+
+- name: Criar os diretórios pais dos links
+  ansible.builtin.file:
+    path: "{{ item | dirname }}"
+    state: directory
+    owner: "{{ admin_user }}"
+    group: "{{ admin_user }}"
+    mode: "0775"
+  loop: "{{ secure_links_paths }}"
+
+# Sem force, igual ao bin/link-data: se o caminho já for um diretório real,
+# falha em vez de apagar dados. Mova à mão e rode de novo.
+- name: Criar os symlinks para o volume cifrado
+  ansible.builtin.file:
+    src: "{{ appdata_dir }}{{ item }}"
+    dest: "{{ item }}"
+    state: link
+  loop: "{{ secure_links_paths }}"

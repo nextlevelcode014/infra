@@ -11,9 +11,9 @@
 - name: Validar variáveis necessárias do Borg
   ansible.builtin.assert:
     that:
-      - forgejo_borg_repo | length > 0
-      - forgejo_borg_passcommand | length > 0
-      - forgejo_borg_ssh_key | length > 0
+      - borg_repo | length > 0
+      - borg_passcommand | length > 0
+      - borg_ssh_key | length > 0
       - forgejo_dir is defined
     fail_msg: "Configure o repositório Borg, o passcommand, a chave SSH e forgejo_dir."
 
@@ -46,10 +46,10 @@
       - "1"
       - --format
       - "{archive}{NL}"
-      - "{{ forgejo_borg_repo }}"
+      - "{{ borg_repo }}"
   environment:
-    BORG_PASSCOMMAND: "{{ forgejo_borg_passcommand }}"
-    BORG_RSH: "ssh -i {{ forgejo_borg_ssh_key }} {{ forgejo_borg_rsh_options }}"
+    BORG_PASSCOMMAND: "{{ borg_passcommand }}"
+    BORG_RSH: "{{ borg_rsh }}"
   register: forgejo_restore_archive_result
   changed_when: false
 
@@ -88,14 +88,14 @@
     argv:
       - borg
       - extract
-      - "{{ forgejo_borg_repo }}::{{ forgejo_restore_archive }}"
+      - "{{ borg_repo }}::{{ forgejo_restore_archive }}"
       - "{{ forgejo_restore_data_archive_path }}"
       - "{{ forgejo_restore_dump_archive_path }}"
   args:
     chdir: "{{ forgejo_restore_work_dir }}/extracted"
   environment:
-    BORG_PASSCOMMAND: "{{ forgejo_borg_passcommand }}"
-    BORG_RSH: "ssh -i {{ forgejo_borg_ssh_key }} {{ forgejo_borg_rsh_options }}"
+    BORG_PASSCOMMAND: "{{ borg_passcommand }}"
+    BORG_RSH: "{{ borg_rsh }}"
   no_log: true
 
 - name: Validar dados e dump extraídos

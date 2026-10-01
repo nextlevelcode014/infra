@@ -1,0 +1,6 @@
+---
+# Caminhos absolutos que o serviço usa e que devem morar no LUKS. Cada um
+# vira symlink para {{ appdata_dir }}<caminho>, como o bin/link-data do
+# self-hosted fazia a partir do storage.map. Passado pelo role que depende
+# deste (meta/main.yml), não definido aqui.
+secure_links_paths: []

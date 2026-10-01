@@ -45,20 +45,18 @@ vaultwarden_domain: "vault.lab.nextlevelcode.pro"
 vaultwarden_dir: "/opt/vaultwarden"
 vaultwarden_admin_token: "{{ vault_vaultwarden_admin_token }}"
 
-# Raspberry Pi
-# O volume LUKS fica em /mnt/secure; os dados dos serviços vivem em
-# appdata/ e chegam aos caminhos antigos por symlink (storage.map e
-# bin/link-data do repo self-hosted).
-secure_mount_dir: /mnt/secure
-appdata_dir: /mnt/secure/appdata
-
-puid: 1000
-pgid: 1000
-
-# Stack Arr (Pi)
-# Mesmo domínio do Caddy do homelab: jellyfin.lab.nextlevelcode.pro etc.
-app_domain: "{{ caddy_domain }}"
-arr_radarr_api_key: "{{ vault_arr_radarr_api_key }}"
-arr_sonarr_api_key: "{{ vault_arr_sonarr_api_key }}"
-arr_qbit_username: "{{ vault_arr_qbit_username }}"
-arr_qbit_password: "{{ vault_arr_qbit_password }}"
+# Borg — um repositório para todos os serviços, cada um com seu prefixo
+# (forgejo-*, vaultwarden-*, arr-*). Chave e senha são instaladas pelo role
+# borg_client; backups e restores leem daqui. Os segredos continuam no vault
+# com o nome antigo (vault_forgejo_borg_*), da época em que só o Forgejo usava.
+borg_repo: "{{ vault_forgejo_borg_repo }}"
+borg_host: "{{ borg_repo | urlsplit('hostname') }}"
+borg_password_file: /root/.borg-pass
+borg_passcommand: "cat {{ borg_password_file }}"
+borg_ssh_key: /root/.ssh/id_ed25519
+borg_rsh_options: >-
+  -o IdentitiesOnly=yes -o BatchMode=yes -o ConnectTimeout=10
+  -o ServerAliveInterval=5 -o ServerAliveCountMax=2
+borg_rsh: "ssh -i {{ borg_ssh_key }} {{ borg_rsh_options }}"
+borg_backup_compression: "zstd,3"
+borg_backup_retention: "--keep-daily=7 --keep-weekly=4 --keep-monthly=3"

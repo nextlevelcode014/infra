@@ -1,0 +1,13 @@
+# Gerido pelo Ansible — não editar à mão.
+[Unit]
+Description=Verifica a cada 5 min o espaço livre do volume cifrado
+
+[Timer]
+# 2 min após o boot e depois a cada 5 min. Um torrent não enche 100 GB em 5 min
+# na banda desta casa, então a janela é folgada.
+OnBootSec=2min
+OnUnitActiveSec=5min
+Unit=disk-guard.service
+
+[Install]
+WantedBy=timers.target

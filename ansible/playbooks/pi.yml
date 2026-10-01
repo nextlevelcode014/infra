@@ -1,0 +1,10 @@
+---
+# Base do Raspberry Pi: LUKS registrado, Docker com data-root cifrado,
+# redes compartilhadas e disk-guard. Os playbooks de serviço do Pi já puxam
+# este role como dependência; este playbook existe para preparar o host
+# sem subir serviço nenhum.
+- name: Configurar o Raspberry Pi
+  hosts: rpi
+  gather_facts: true
+  roles:
+    - role: pi_host

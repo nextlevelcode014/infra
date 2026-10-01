@@ -1,0 +1,26 @@
+---
+# Base do Raspberry Pi: tudo que o BOOTSTRAP.md do self-hosted fazia à mão
+# antes de subir um serviço. Serviços do Pi dependem deste role
+# (meta/main.yml), então ele roda antes de qualquer um deles.
+
+pi_packages:
+  - git
+  - rsync
+  - cryptsetup
+
+# Nome do mapeamento em /etc/crypttab. O UUID (pi_luks_uuid) vem do
+# inventário: é da partição, não do repo.
+pi_luks_name: secure
+
+# Redes externas compartilhadas entre stacks (gluetun, arr, searxng).
+pi_docker_networks:
+  - medianet
+  - vpn_net
+
+pi_unlock_script: /usr/local/bin/secure-unlock
+
+# Guarda de espaço livre do volume cifrado (GB).
+pi_disk_guard_script: /usr/local/bin/disk-guard
+pi_disk_guard_stop_gb: 100
+pi_disk_guard_warn_gb: 150
+pi_disk_guard_container: qbittorrent

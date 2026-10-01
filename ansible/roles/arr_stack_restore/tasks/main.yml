@@ -13,13 +13,14 @@
   ansible.builtin.command:
     argv: [mountpoint, -q, "{{ secure_mount_dir }}"]
   changed_when: false
+  check_mode: false
 
 - name: Validar variáveis necessárias do Borg
   ansible.builtin.assert:
     that:
-      - arr_borg_repo | length > 0
-      - arr_borg_passcommand | length > 0
-      - arr_borg_ssh_key | length > 0
+      - borg_repo | length > 0
+      - borg_passcommand | length > 0
+      - borg_ssh_key | length > 0
     fail_msg: "Configure o repositório Borg, o passcommand e a chave SSH."
 
 - name: Verificar dependências do restore
@@ -51,10 +52,10 @@
       - "1"
       - --format
       - "{archive}{NL}"
-      - "{{ arr_borg_repo }}"
+      - "{{ borg_repo }}"
   environment:
-    BORG_PASSCOMMAND: "{{ arr_borg_passcommand }}"
-    BORG_RSH: "ssh -i {{ arr_borg_ssh_key }} {{ arr_borg_rsh_options }}"
+    BORG_PASSCOMMAND: "{{ borg_passcommand }}"
+    BORG_RSH: "{{ borg_rsh }}"
   register: arr_restore_archive_result
   changed_when: false
 
@@ -85,13 +86,13 @@
     argv:
       - borg
       - extract
-      - "{{ arr_borg_repo }}::{{ arr_restore_archive }}"
+      - "{{ borg_repo }}::{{ arr_restore_archive }}"
       - "{{ arr_restore_data_archive_path }}"
   args:
     chdir: "{{ arr_restore_work_dir }}/extracted"
   environment:
-    BORG_PASSCOMMAND: "{{ arr_borg_passcommand }}"
-    BORG_RSH: "ssh -i {{ arr_borg_ssh_key }} {{ arr_borg_rsh_options }}"
+    BORG_PASSCOMMAND: "{{ borg_passcommand }}"
+    BORG_RSH: "{{ borg_rsh }}"
   no_log: true
   changed_when: true
 

@@ -6,13 +6,3 @@ vaultwarden_restore_work_dir: "/var/tmp/vaultwarden-restore"
 # self-hosted/ legada: home/ubuntu/self-hosted/vaultwarden/vw-data
 # Novo LXC:           opt/vaultwarden/vw-data
 vaultwarden_restore_data_archive_path: "opt/vaultwarden/vw-data"
-
-# Mesmo repositório, mesma chave e senha do Forgejo. O .env do
-# Vaultwarden não entra no archive — é o seed que reconstrói tudo e fica
-# protegido pelo Ansible Vault, separado do serviço.
-vaultwarden_borg_repo: "{{ vault_forgejo_borg_repo }}"
-vaultwarden_borg_passcommand: "{{ vault_forgejo_borg_passcommand }}"
-vaultwarden_borg_ssh_key: "{{ vault_forgejo_borg_ssh_key }}"
-vaultwarden_borg_rsh_options: >-
-  -o IdentitiesOnly=yes -o BatchMode=yes -o ConnectTimeout=10
-  -o ServerAliveInterval=5 -o ServerAliveCountMax=2

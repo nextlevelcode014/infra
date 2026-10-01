@@ -1,0 +1,38 @@
+#!/bin/sh
+# Gerido pelo Ansible — não editar à mão. Origem: self-hosted/bin/disk-guard.
+#
+# Impede que downloads encham o volume cifrado, que é compartilhado por TODOS
+# os serviços — inclusive o data-root do Docker e os bancos. Abaixo de
+# DISK_GUARD_STOP GB para o container; abaixo de DISK_GUARD_WARN só avisa no
+# journal. Rodado pelo disk-guard.timer.
+set -eu
+
+mount_dir="{{ secure_mount_dir }}"
+STOP_GB=${DISK_GUARD_STOP:-{{ pi_disk_guard_stop_gb }}}
+WARN_GB=${DISK_GUARD_WARN:-{{ pi_disk_guard_warn_gb }}}
+CONTAINER=${DISK_GUARD_CONTAINER:-{{ pi_disk_guard_container }}}
+
+mountpoint -q "$mount_dir" || { echo "!! $mount_dir não montado — nada a vigiar" >&2; exit 0; }
+
+# Espaço livre em GB (df -BG devolve '123G'; tira o sufixo).
+free_gb=$(df -BG --output=avail "$mount_dir" | tail -1 | tr -dc '0-9')
+[ -n "$free_gb" ] || { echo "erro: não consegui ler o espaço livre de $mount_dir" >&2; exit 1; }
+
+if [ "$free_gb" -lt "$STOP_GB" ]; then
+  # 'docker stop' num container já parado é no-op, então isto é idempotente.
+  if docker ps --format '{{ '{{' }}.Names{{ '}}' }}' | grep -qx "$CONTAINER"; then
+    echo "!! $mount_dir com ${free_gb}GB livres (< ${STOP_GB}GB) — parando $CONTAINER" >&2
+    docker stop "$CONTAINER" >/dev/null
+    echo "!! $CONTAINER parado. Libere espaço e suba de novo com: docker start $CONTAINER" >&2
+  else
+    echo "!! $mount_dir com ${free_gb}GB livres (< ${STOP_GB}GB) e $CONTAINER já parado" >&2
+  fi
+  exit 0
+fi
+
+if [ "$free_gb" -lt "$WARN_GB" ]; then
+  echo "!! $mount_dir com ${free_gb}GB livres — abaixo do aviso de ${WARN_GB}GB" >&2
+  exit 0
+fi
+
+echo "==> $mount_dir com ${free_gb}GB livres — ok"

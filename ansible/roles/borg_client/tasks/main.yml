@@ -1,0 +1,41 @@
+---
+# Cliente do repositório Borg compartilhado. Entra como dependência
+# (meta/main.yml) de todo role que faz backup ou restore; o Ansible roda
+# uma vez só por play, mesmo com vários serviços no mesmo host.
+- name: Instalar Borg
+  ansible.builtin.package:
+    name: borgbackup
+    state: present
+
+- name: Criar diretório SSH do Borg
+  ansible.builtin.file:
+    path: "{{ borg_ssh_key | dirname }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: Instalar chave SSH do Borg
+  ansible.builtin.copy:
+    content: "{{ vault_forgejo_borg_ssh_private_key }}"
+    dest: "{{ borg_ssh_key }}"
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+
+- name: Instalar arquivo da senha do Borg
+  ansible.builtin.copy:
+    content: "{{ vault_forgejo_borg_password }}"
+    dest: "{{ borg_password_file }}"
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+
+- name: Adicionar servidor Borg ao known_hosts
+  ansible.builtin.known_hosts:
+    name: "{{ borg_host }}"
+    key: "{{ borg_host }} {{ vault_forgejo_borg_known_host_key }}"
+    path: "{{ borg_ssh_key | dirname }}/known_hosts"
+    state: present

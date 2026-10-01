@@ -1,0 +1,153 @@
+---
+- name: Instalar pacotes base
+  ansible.builtin.apt:
+    name: "{{ pi_packages }}"
+    state: present
+
+# --- LUKS -------------------------------------------------------------------
+# Criar a partição cifrada (luksFormat + mkfs) é manual e acontece uma vez:
+# precisa da passphrase, que não pode viver em lugar nenhum daqui. Ver
+# docs/pi.md. Aqui só se registra o mapeamento, com noauto para o boot não
+# travar pedindo senha.
+
+- name: Registrar o volume cifrado no crypttab
+  ansible.builtin.lineinfile:
+    path: /etc/crypttab
+    regexp: '^{{ pi_luks_name }}\s'
+    line: "{{ pi_luks_name }} UUID={{ pi_luks_uuid }} none luks,noauto"
+    create: true
+    mode: "0644"
+
+- name: Registrar o ponto de montagem no fstab
+  ansible.builtin.lineinfile:
+    path: /etc/fstab
+    regexp: '^/dev/mapper/{{ pi_luks_name }}\s'
+    line: "/dev/mapper/{{ pi_luks_name }}  {{ secure_mount_dir }}  ext4  noauto  0  2"
+
+- name: Instalar o script de destravar o volume
+  ansible.builtin.template:
+    src: secure-unlock.sh.j2
+    dest: "{{ pi_unlock_script }}"
+    owner: root
+    group: root
+    mode: "0755"
+
+# Daqui para baixo tudo depende do volume aberto.
+- name: Confirmar que o volume cifrado está montado
+  ansible.builtin.command:
+    argv: [mountpoint, -q, "{{ secure_mount_dir }}"]
+  changed_when: false
+  check_mode: false
+  register: pi_secure_mounted
+  failed_when: false
+
+- name: Exigir o volume cifrado destravado
+  ansible.builtin.assert:
+    that: pi_secure_mounted.rc == 0
+    fail_msg: >-
+      {{ secure_mount_dir }} não está montado. Entre no Pi e rode
+      `{{ pi_unlock_script }}` (pede a passphrase do LUKS), depois rode
+      o playbook de novo.
+
+# Não recursivo: só a raiz, para o admin gravar appdata/ e env/ sem sudo.
+# O data-root do Docker (docker/) continua de root.
+- name: Ajustar o dono da raiz do volume cifrado
+  ansible.builtin.file:
+    path: "{{ secure_mount_dir }}"
+    state: directory
+    owner: "{{ admin_user }}"
+    group: "{{ admin_user }}"
+
+- name: Criar o diretório de dados dos serviços
+  ansible.builtin.file:
+    path: "{{ appdata_dir }}"
+    state: directory
+    owner: "{{ admin_user }}"
+    group: "{{ admin_user }}"
+    mode: "0775"
+
+# --- Docker -----------------------------------------------------------------
+# data-root no volume cifrado cifra também os volumes nomeados e as
+# imagens. containerd-snapshotter:false é ESSENCIAL: o Docker >=25 guarda as
+# imagens em /var/lib/containerd (na raiz!) ignorando o data-root; com o
+# snapshotter desligado (overlay2) elas também vão para o volume cifrado.
+# A chave é uma válvula de escape temporária do Docker — rever em upgrades.
+# Conteúdo idêntico ao do BOOTSTRAP.md, para não reiniciar o Docker à toa.
+
+- name: Criar diretório de config do Docker
+  ansible.builtin.file:
+    path: /etc/docker
+    state: directory
+    mode: "0755"
+
+- name: Configurar o data-root do Docker no volume cifrado
+  ansible.builtin.copy:
+    dest: /etc/docker/daemon.json
+    mode: "0644"
+    content: |
+      {
+        "data-root": "{{ secure_mount_dir }}/docker",
+        "features": { "containerd-snapshotter": false }
+      }
+  notify: Reiniciar Docker
+
+- name: Criar diretório de drop-in do Docker
+  ansible.builtin.file:
+    path: /etc/systemd/system/docker.service.d
+    state: directory
+    mode: "0755"
+
+- name: Impedir o Docker de subir sem o volume cifrado
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/docker.service.d/require-secure.conf
+    mode: "0644"
+    content: |
+      [Unit]
+      RequiresMountsFor={{ secure_mount_dir }}
+  notify: Recarregar systemd
+
+# Desabilitado no boot: quem sobe o Docker é o secure-unlock, depois de
+# abrir o volume. Habilitado, ele tentaria subir sem o data-root.
+- name: Instalar Docker
+  ansible.builtin.include_role:
+    name: geerlingguy.docker
+  vars:
+    docker_service_enabled: false
+    docker_users:
+      - "{{ admin_user }}"
+
+- name: Criar as redes Docker compartilhadas
+  community.docker.docker_network:
+    name: "{{ item }}"
+  loop: "{{ pi_docker_networks }}"
+
+# --- Guarda de espaço livre -------------------------------------------------
+# O /mnt/secure é de todos (data-root do Docker, Postgres). Se os downloads
+# o encherem, cai tudo; o qBittorrent só reage depois que a escrita falha.
+
+- name: Instalar o disk-guard
+  ansible.builtin.template:
+    src: disk-guard.sh.j2
+    dest: "{{ pi_disk_guard_script }}"
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Instalar as units do disk-guard
+  ansible.builtin.template:
+    src: "{{ item }}.j2"
+    dest: "/etc/systemd/system/{{ item }}"
+    mode: "0644"
+  loop:
+    - disk-guard.service
+    - disk-guard.timer
+  notify: Recarregar systemd
+
+- name: Aplicar mudanças de units antes de ativar o timer
+  ansible.builtin.meta: flush_handlers
+
+- name: Ativar o timer do disk-guard
+  ansible.builtin.systemd_service:
+    name: disk-guard.timer
+    state: started
+    enabled: true

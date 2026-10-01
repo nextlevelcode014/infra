@@ -21,12 +21,11 @@ vault_tailscale_authkey: "tskey-auth-CHANGE-ME"
 # exclusiva para este stack.
 vault_forgejo_db_password: "CHANGE-ME"
 
-# Acesso independente ao repositório Borg usado pelo backup do Forgejo.
-# O Pi de recuperação precisa desses valores sem depender do Forgejo ou
-# Vaultwarden restaurado.
+# Repositório Borg único de todos os serviços (prefixo por serviço). O nome
+# "forgejo" é histórico. Caminhos e opções que não são segredo ficam em
+# vars.yml (borg_*). O Pi de recuperação precisa destes valores sem depender
+# do Forgejo ou do Vaultwarden.
 vault_forgejo_borg_repo: "ssh://host.repo.borgbase.com/./repo"
-vault_forgejo_borg_passcommand: "cat /root/.borg-pass"
-vault_forgejo_borg_ssh_key: "/root/.ssh/id_ed25519"
 vault_forgejo_borg_password: |-
   CHANGE-ME
 vault_forgejo_borg_ssh_private_key: |

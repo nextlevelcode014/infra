@@ -1,0 +1,29 @@
+#!/bin/sh
+# Gerido pelo Ansible — não editar à mão. Origem: self-hosted/bin/unlock.
+#
+# Destrava o volume LUKS de dados e sobe o Docker. Rode UMA vez a cada boot
+# (pede a passphrase). Idempotente: se já estiver montado, não faz nada.
+set -eu
+
+name="{{ pi_luks_name }}"
+mount_dir="{{ secure_mount_dir }}"
+
+if mountpoint -q "$mount_dir"; then
+  echo "==> volume '$name' já montado em $mount_dir"
+  exit 0
+fi
+
+echo "==> destravando '$name' (vai pedir a passphrase)…"
+sudo cryptdisks_start "$name"
+
+echo "==> montando $mount_dir"
+sudo mount "$mount_dir"
+
+# O volume monta root:root; a raiz volta para o admin (não recursivo).
+sudo chown "{{ admin_user }}:{{ admin_user }}" "$mount_dir"
+
+# O data-root do Docker vive no volume cifrado: só agora o daemon pode subir.
+echo "==> subindo o Docker (data-root em $mount_dir/docker)"
+sudo systemctl start docker
+
+echo "==> pronto"

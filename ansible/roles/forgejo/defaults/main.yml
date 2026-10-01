@@ -1,16 +1,6 @@
-forgejo_borg_repo: "{{ vault_forgejo_borg_repo }}"
-forgejo_borg_passcommand: "cat /root/.borg-pass"
-forgejo_borg_password_file: "/root/.borg-pass"
-forgejo_borg_ssh_key: "/root/.ssh/id_ed25519"
-forgejo_borg_host: "{{ forgejo_borg_repo | urlsplit('hostname') }}"
-forgejo_borg_rsh_options: >-
-  -o IdentitiesOnly=yes -o BatchMode=yes -o ConnectTimeout=10
-  -o ServerAliveInterval=5 -o ServerAliveCountMax=2
 forgejo_backup_script: "/usr/local/bin/backup_forgejo.sh"
 forgejo_backup_log_file: "/var/log/forgejo_backup.log"
 forgejo_backup_schedule: "0 2 * * *"
-forgejo_backup_compression: "zstd,3"
-forgejo_backup_retention: "--keep-daily=7 --keep-weekly=4 --keep-monthly=3"
 
 forgejo_image: "codeberg.org/forgejo/forgejo:15-rootless"
 forgejo_db_image: "postgres:16-alpine"

@@ -45,6 +45,7 @@ usadas depois.
 | `playbooks/caddy.yml` | `caddy` | binário custom com plugin DNS-01 + Caddyfile + drop-in |
 | `playbooks/forgejo.yml` | `forgejo` | stack do Forgejo + backup Borg |
 | `playbooks/vaultwarden.yml` | `vaultwarden` | stack do Vaultwarden + backup Borg |
+| `playbooks/pi.yml` | `rpi` | base do Pi (LUKS, Docker, redes, disk-guard) |
 | `playbooks/arr-stack.yml` | `rpi` | stack Arr do Pi + backup Borg |
 | `playbooks/*-restore.yml` | o grupo do serviço | restore Borg explícito (ver `docs/`) |
 
@@ -53,9 +54,14 @@ A config base (em `lxc.yml`) é `common` → `artis3n.tailscale.machine` →
 entram em playbook próprio, como Caddy, Forgejo e Vaultwarden já fazem.
 
 O Pi não passa pela base de `lxc.yml`: é host físico com LUKS em
-`/mnt/secure`, e os dados chegam aos caminhos antigos por symlink (`storage.map`
-do `self-hosted`). Roles do Pi checam `mountpoint` antes de tocar em dado.
-Runbooks em `docs/arr-stack.md` e `docs/arr-stack-restore.md`.
+`/mnt/secure`. A base dele é o role `pi_host`, e **todo role de serviço do Pi
+o declara em `meta/main.yml`** junto com `borg_client` e, se precisar,
+`secure_links`. Assim cada playbook de serviço prepara o host sozinho. A
+receita para um serviço novo está em `docs/pi.md`.
+
+O Ansible configura o Pi inteiro, menos o que exige a passphrase do LUKS ou
+login interativo (Tailscale no host, `luksFormat`, `secure-unlock` a cada
+boot) — esses passos estão em `docs/pi.md`.
 
 O Caddy do homelab atende `*.lab.nextlevelcode.pro`, acessível via Tailscale
 split DNS dentro da tailnet. O Caddy público (VPS) é o que serve os
@@ -71,6 +77,9 @@ domínios voltados para a internet — está fora deste repo.
 | `caddy` | binário custom (DNS-01) + Caddyfile + systemd drop-in |
 | `forgejo` | compose do Forgejo + Postgres |
 | `vaultwarden` | compose do Vaultwarden |
+| `pi_host` | base do Pi: LUKS no crypttab/fstab, `secure-unlock`, Docker com data-root cifrado, redes, disk-guard |
+| `secure_links` | symlinks de caminhos antigos para o LUKS (o `bin/link-data`); recebe `secure_links_paths` |
+| `borg_client` | Borg + chave + senha + known_hosts; dependência de todo role com backup/restore |
 | `arr_stack` | stack Arr do Pi (compose do `self-hosted/arr`) |
 | `*_restore` | restore Borg do serviço, exige `-e <svc>_restore_confirmation` |
 | `geerlingguy.docker` | vendido, instala o engine |
@@ -100,6 +109,11 @@ Vale não repetir:
   Para env var inline use `/usr/bin/env VAR=x comando`.
 
 ## Segredos
+
+Borg é um repositório só, com prefixo por serviço. O que não é segredo
+(caminho da chave, passcommand, opções de SSH, retenção, compressão) fica em
+`borg_*` no `group_vars/all/vars.yml`; o vault guarda só repo, senha, chave
+e known_host (ainda com o nome histórico `vault_forgejo_borg_*`).
 
 Em `inventory/group_vars/all/vault.yml` (cifrado, fora do git): token do
 Proxmox, auth key do Tailscale e senha do Postgres do Forgejo. O template do

@@ -23,11 +23,3 @@ arr_restore_required_files:
 # já existentes.
 arr_restore_excluded_dirs:
   - jellyfin/cache
-
-# Mesmo repositório, chave e senha do Forgejo e do Vaultwarden.
-arr_borg_repo: "{{ vault_forgejo_borg_repo }}"
-arr_borg_passcommand: "cat /root/.borg-pass"
-arr_borg_ssh_key: "/root/.ssh/id_ed25519"
-arr_borg_rsh_options: >-
-  -o IdentitiesOnly=yes -o BatchMode=yes -o ConnectTimeout=10
-  -o ServerAliveInterval=5 -o ServerAliveCountMax=2

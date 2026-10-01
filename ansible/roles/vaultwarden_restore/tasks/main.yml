@@ -12,9 +12,9 @@
 - name: Validar variáveis necessárias do Borg
   ansible.builtin.assert:
     that:
-      - vaultwarden_borg_repo | length > 0
-      - vaultwarden_borg_passcommand | length > 0
-      - vaultwarden_borg_ssh_key | length > 0
+      - borg_repo | length > 0
+      - borg_passcommand | length > 0
+      - borg_ssh_key | length > 0
       - vaultwarden_dir is defined
     fail_msg: "Configure o repositório Borg, o passcommand, a chave SSH e vaultwarden_dir."
 
@@ -47,10 +47,10 @@
       - "1"
       - --format
       - "{archive}{NL}"
-      - "{{ vaultwarden_borg_repo }}"
+      - "{{ borg_repo }}"
   environment:
-    BORG_PASSCOMMAND: "{{ vaultwarden_borg_passcommand }}"
-    BORG_RSH: "ssh -i {{ vaultwarden_borg_ssh_key }} {{ vaultwarden_borg_rsh_options }}"
+    BORG_PASSCOMMAND: "{{ borg_passcommand }}"
+    BORG_RSH: "{{ borg_rsh }}"
   register: vaultwarden_restore_archive_result
   changed_when: false
 
@@ -89,13 +89,13 @@
     argv:
       - borg
       - extract
-      - "{{ vaultwarden_borg_repo }}::{{ vaultwarden_restore_archive }}"
+      - "{{ borg_repo }}::{{ vaultwarden_restore_archive }}"
       - "{{ vaultwarden_restore_data_archive_path }}"
   args:
     chdir: "{{ vaultwarden_restore_work_dir }}/extracted"
   environment:
-    BORG_PASSCOMMAND: "{{ vaultwarden_borg_passcommand }}"
-    BORG_RSH: "ssh -i {{ vaultwarden_borg_ssh_key }} {{ vaultwarden_borg_rsh_options }}"
+    BORG_PASSCOMMAND: "{{ borg_passcommand }}"
+    BORG_RSH: "{{ borg_rsh }}"
   no_log: true
 
 - name: Validar dados extraídos
