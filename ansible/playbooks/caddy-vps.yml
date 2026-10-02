@@ -1,0 +1,9 @@
+---
+# Caddy da VPS: serve os domínios públicos (forge) e os sites privados que
+# moram nela (uptime.lab). Separado do caddy.yml para um nunca esbarrar no
+# outro: um erro aqui afeta os sites públicos.
+- name: Configurar o Caddy da VPS
+  hosts: vps
+  gather_facts: true
+  roles:
+    - role: caddy

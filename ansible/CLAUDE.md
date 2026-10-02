@@ -17,12 +17,13 @@ inventário — é assim mesmo. Para automatizar, existe a linha
 
 ## Inventário
 
-`ansible.cfg` aponta para o diretório `inventory/`, que junta três fontes:
+`ansible.cfg` aponta para o diretório `inventory/`, que junta quatro fontes:
 
 | Arquivo | Onde rodam | Grupos |
 |---|---|---|
 | `static.ini` | Proxmox (`pve`) | `proxmox` |
 | `pi.yml` | Raspberry Pi 5 (`nextlevelcode`, user `ubuntu`) e o grupo das máquinas que se passam por ele | `pi_hosts` → `rpi`, `pi_staging` |
+| `vps.yml` | VPS da Hetzner (`hetzner`, user `hetzner`, Tailscale SSH) | `vps` |
 | `terraform.yml` | plugin `cloud.terraform`, lendo o state do terraform | `lxc` |
 
 Os containers **não** estão em arquivo nenhum: aparecem como recursos
@@ -54,6 +55,8 @@ usadas depois.
 | `playbooks/fmd.yml` | `pi_hosts` | FMD do Pi: Funnel público para emergência + fmd.lab pelo Caddy, backup Borg |
 | `playbooks/exit-node.yml` | `rpi` | exit node Tailscale saindo pela ProtonVPN (nunca no pi-lab) |
 | `playbooks/nextcloud.yml` | `rpi` | mastercontainer do Nextcloud AIO + coturn + `tailscale serve` do host |
+| `playbooks/caddy-vps.yml` | `vps` | Caddy da VPS: domínios públicos (forge) + sites privados em `*.lab` que moram nela |
+| `playbooks/uptime-kuma.yml` | `vps` | Uptime Kuma na VPS (fora de casa), em `uptime.lab` pelo Caddy da VPS |
 | `playbooks/immich.yml` | `pi_hosts` | Immich do Pi (backup Borg pronto, desligado até ampliar a cota) |
 | `playbooks/pi-completo.yml` | `pi_hosts` | Pi inteiro na ordem certa; com `-e pi_restaurar_tudo=RESTAURAR_PI` traz os dados do Borg antes (`docs/pi-reconstrucao.md`) |
 | `playbooks/pi-lab-limpar.yml` | `pi_staging` | depois de um ensaio: derruba as stacks, apaga os dados restaurados e as credenciais do Borg do pi-lab |
@@ -78,7 +81,11 @@ boot) — esses passos estão em `docs/pi.md`.
 
 O Caddy do homelab atende `*.lab.nextlevelcode.pro`, acessível via Tailscale
 split DNS dentro da tailnet. O Caddy público (VPS) é o que serve os
-domínios voltados para a internet — está fora deste repo.
+domínios voltados para a internet, e também é gerido aqui
+(`playbooks/caddy-vps.yml`, `Caddyfile.vps.j2`): os domínios públicos e os
+sites privados que moram na VPS. Um site privado na VPS precisa de um registro
+A específico na Cloudflare apontando para o IP Tailscale dela, porque o
+curinga `*.lab` aponta para o Caddy do Proxmox. VPS nova: `docs/vps.md`.
 
 ## Roles
 
@@ -87,7 +94,7 @@ domínios voltados para a internet — está fora deste repo.
 | `common` | timezone + NTP de máquina física |
 | `artis3n.tailscale.machine` | instala e sobe na tailnet, com `--ssh` |
 | `lxc_flags` | exceção: aplica flags do container (ver abaixo) |
-| `caddy` | binário custom (DNS-01) + Caddyfile + systemd drop-in |
+| `caddy` | binário custom (DNS-01) + Caddyfile + systemd drop-in; `caddy_caddyfile_template` escolhe o Caddyfile do host (Proxmox ou VPS) |
 | `forgejo` | compose do Forgejo + Postgres |
 | `vaultwarden` | compose do Vaultwarden |
 | `pi_host` | base do Pi: LUKS no crypttab/fstab, `secure-unlock`, Docker com data-root cifrado, redes, disk-guard |
@@ -100,6 +107,7 @@ domínios voltados para a internet — está fora deste repo.
 | `fmd` | FMD do Pi; sidecar com Funnel opcional (`fmd_tailscale_sidecar`) |
 | `exit_node` | exit node `vpn-exit` (compose do `self-hosted/exit-node`, sem mudança) |
 | `nextcloud` | mastercontainer do AIO (os outros containers são do próprio AIO), coturn e o serve do host |
+| `uptime_kuma` | Uptime Kuma + Docker na VPS, sem o usuário no grupo `docker` |
 | `immich` | Immich do Pi, acesso só pelo Caddy; `immich_backup_enabled` liga o backup |
 | `borg_restore` | miolo dos restores do Pi: escolhe o archive (prefixo + máquina de origem), extrai no LUKS e valida |
 | `*_restore` | restore Borg do serviço, exige `-e <svc>_restore_confirmation`; `-e restore_on_pi=true` restaura no Pi de recuperação |

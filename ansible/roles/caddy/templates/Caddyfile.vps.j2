@@ -1,0 +1,39 @@
+# Gerido pelo Ansible — não editar à mão. Caddy da VPS.
+{
+	email {{ caddy_email }}
+}
+
+# --- Domínios públicos ------------------------------------------------------
+*.nextlevelcode.pro {
+	tls {
+		dns cloudflare {env.{{ caddy_cloudflare_env_var }}}
+	}
+
+	@forge host forge.nextlevelcode.pro
+	handle @forge {
+		reverse_proxy {{ caddy_vps_forgejo_upstream }}
+	}
+
+	handle {
+		respond 404
+	}
+}
+
+# --- Sites privados (só tailnet) --------------------------------------------
+# O DNS público aponta estes nomes para o IP Tailscale da VPS, que a internet
+# não alcança. Mesmo assim, quem chegar pelo IP público com o nome certo no
+# SNI tem a conexão cortada: só vale origem da tailnet.
+(so_tailnet) {
+	@fora_da_tailnet not remote_ip 100.64.0.0/10 fd7a:115c:a1e0::/48
+	abort @fora_da_tailnet
+}
+{% for site in caddy_vps_private_sites %}
+
+{{ site.host }}.{{ caddy_domain }} {
+	tls {
+		dns cloudflare {env.{{ caddy_cloudflare_env_var }}}
+	}
+	import so_tailnet
+	reverse_proxy {{ site.upstream }}
+}
+{% endfor %}

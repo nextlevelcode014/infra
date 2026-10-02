@@ -9,3 +9,13 @@ caddy_cloudflare_env_var: "CLOUDFLARE_API_TOKEN"
 # true para baixar a última versão do Caddy (com o plugin cloudflare). Fora
 # disso o binário instalado não muda. Ver tasks/main.yml.
 caddy_upgrade: false
+
+# Qual Caddyfile este host usa. O do Proxmox (padrão) serve o *.lab; o da VPS
+# (Caddyfile.vps.j2) serve os domínios públicos e os sites privados que moram
+# nela.
+caddy_caddyfile_template: Caddyfile.j2
+
+# Token da Cloudflare do DNS-01. Cada Caddy tem o seu: dá para revogar um sem
+# derrubar o outro, e a auditoria da Cloudflare mostra qual deles agiu. A VPS
+# sobrescreve com vault_caddy_vps_cloudflare_token (group_vars/vps).
+caddy_cloudflare_token: "{{ vault_caddy_cloudflare_token }}"

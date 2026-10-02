@@ -1,0 +1,13 @@
+---
+uptime_kuma_dir: /opt/uptime-kuma
+uptime_kuma_image: louislam/uptime-kuma:2
+
+# Só em 127.0.0.1: quem publica é o Caddy da VPS, em
+# uptime.lab.nextlevelcode.pro, aceitando só origem da tailnet.
+uptime_kuma_port: 3001
+
+# Backup Borg do banco (SQLite, poucos MB) no repositório compartilhado,
+# prefixo uptime-kuma-*. Para o container por alguns segundos.
+uptime_kuma_backup_script: /usr/local/bin/backup-uptime-kuma.sh
+uptime_kuma_backup_log_file: /var/log/uptime_kuma_backup.log
+uptime_kuma_backup_schedule: "0 3 * * *"

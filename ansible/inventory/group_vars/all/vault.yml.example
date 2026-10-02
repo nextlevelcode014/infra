@@ -40,6 +40,11 @@ vault_forgejo_borg_known_host_key: "ssh-ed25519 AAAA..."
 # atendem — mínimo: nextlevelcode.pro e lab.nextlevelcode.pro.
 vault_caddy_cloudflare_token: "CHANGE-ME"
 
+# Token da Cloudflare do Caddy da VPS, separado do do Proxmox: dá para revogar
+# um sem derrubar o outro. Mesmo escopo (Zone:DNS:Edit em nextlevelcode.pro).
+# Hoje está em /etc/caddy/cf-token.env na VPS.
+vault_caddy_vps_cloudflare_token: "CHANGE-ME"
+
 # Hash argon2 do token admin do Vaultwarden (painel /admin). Gere com:
 #   docker run --rm vaultwarden/server /vaultwarden hash
 # Vai parar em texto no {{ vaultwarden_dir }}/docker-compose.yml do

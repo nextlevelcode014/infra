@@ -1,0 +1,10 @@
+---
+# VPS da Hetzner, fora de casa. O Caddy público dela continua fora deste repo;
+# aqui entra só o que é configurado por playbook (hoje, o Uptime Kuma).
+# Acesso pelo Tailscale SSH com o usuário hetzner (sudo sem senha).
+vps:
+  hosts:
+    hetzner:
+      ansible_host: hetzner.<tailnet>.ts.net
+      ansible_user: hetzner
+      ansible_become: true

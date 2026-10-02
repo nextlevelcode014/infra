@@ -1,0 +1,56 @@
+---
+# Usuário fora do grupo docker de propósito: estar nele equivale a root sem
+# senha. Na VPS, docker roda com sudo.
+- name: Instalar Docker
+  ansible.builtin.include_role:
+    name: geerlingguy.docker
+  vars:
+    docker_users: []
+
+- name: Criar o diretório do Uptime Kuma
+  ansible.builtin.file:
+    path: "{{ uptime_kuma_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0750"
+  register: uptime_kuma_dir_result
+
+- name: Renderizar o compose.yml
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: "{{ uptime_kuma_dir }}/compose.yml"
+    mode: "0644"
+
+- name: Subir o Uptime Kuma
+  community.docker.docker_compose_v2:
+    project_src: "{{ uptime_kuma_dir }}"
+    files: [compose.yml]
+    state: present
+  # No --check de um host novo o diretório só "seria" criado, e o compose
+  # falha com "is not a directory". Pula só nesse caso.
+  when: not (ansible_check_mode and uptime_kuma_dir_result is changed)
+
+# O acesso é pelo Caddy da VPS (uptime.lab.nextlevelcode.pro, só tailnet),
+# configurado pelo playbooks/caddy-vps.yml.
+
+# --- Backup -----------------------------------------------------------------
+- name: Instalar script de backup do Uptime Kuma
+  ansible.builtin.template:
+    src: backup-uptime-kuma.sh.j2
+    dest: "{{ uptime_kuma_backup_script }}"
+    owner: root
+    group: root
+    mode: "0750"
+
+- name: Agendar backup do Uptime Kuma
+  ansible.builtin.cron:
+    name: Backup Borg do Uptime Kuma
+    user: root
+    state: "{{ 'present' if borg_backup_enabled else 'absent' }}"
+    minute: "{{ uptime_kuma_backup_schedule.split()[0] }}"
+    hour: "{{ uptime_kuma_backup_schedule.split()[1] }}"
+    day: "{{ uptime_kuma_backup_schedule.split()[2] }}"
+    month: "{{ uptime_kuma_backup_schedule.split()[3] }}"
+    weekday: "{{ uptime_kuma_backup_schedule.split()[4] }}"
+    job: "{{ uptime_kuma_backup_script }} >> {{ uptime_kuma_backup_log_file }} 2>&1"

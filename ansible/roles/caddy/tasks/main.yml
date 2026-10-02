@@ -100,7 +100,7 @@
 
 - name: Renderizar Caddyfile
   ansible.builtin.template:
-    src: Caddyfile.j2
+    src: "{{ caddy_caddyfile_template }}"
     dest: "{{ caddy_config_dir }}/Caddyfile"
     owner: root
     group: caddy
@@ -112,7 +112,7 @@
     # ele seta a variável e dá exec no caddy.
     # O env file (cf-token.env) ainda não existe neste ponto — ele é
     # escrito logo abaixo.
-    validate: "/usr/bin/env {{ caddy_cloudflare_env_var }}={{ vault_caddy_cloudflare_token }} caddy validate --adapter caddyfile --config %s"
+    validate: "/usr/bin/env {{ caddy_cloudflare_env_var }}={{ caddy_cloudflare_token }} caddy validate --adapter caddyfile --config %s"
   no_log: true
   # Mudança só de config não precisa derrubar conexões: reload é graceful.
   # Binário e env file continuam com Restart (reload não relê EnvironmentFile).
@@ -126,7 +126,7 @@
     mode: "0640"
     content: |
       # Gerido pelo Ansible — não editar à mão
-      {{ caddy_cloudflare_env_var }}={{ vault_caddy_cloudflare_token }}
+      {{ caddy_cloudflare_env_var }}={{ caddy_cloudflare_token }}
   no_log: true
   notify: Restart caddy
 

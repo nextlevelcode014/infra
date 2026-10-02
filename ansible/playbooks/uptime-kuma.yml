@@ -1,0 +1,8 @@
+---
+# Monitor fora de casa: na VPS, para continuar avisando se o Pi, o Proxmox ou
+# a internet de casa caírem.
+- name: Configurar o Uptime Kuma na VPS
+  hosts: vps
+  gather_facts: true
+  roles:
+    - role: uptime_kuma

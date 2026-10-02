@@ -1,0 +1,13 @@
+---
+# Caddy da VPS: domínios públicos + sites privados que moram nela.
+caddy_caddyfile_template: Caddyfile.vps.j2
+# Token próprio da VPS, separado do do Proxmox (ver roles/caddy/defaults).
+caddy_cloudflare_token: "{{ vault_caddy_vps_cloudflare_token }}"
+caddy_vps_forgejo_upstream: <ip-tailscale-do-forgejo>:3000
+
+# Sites só da tailnet, servidos pela VPS em <host>.lab.nextlevelcode.pro. Cada
+# um precisa de um registro A específico na Cloudflare apontando para o IP
+# Tailscale da VPS (o curinga *.lab aponta para o Caddy do Proxmox).
+caddy_vps_private_sites:
+  - host: uptime
+    upstream: 127.0.0.1:3001

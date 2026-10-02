@@ -1,0 +1,10 @@
+# Gerido pelo Ansible — não editar à mão.
+services:
+  uptime-kuma:
+    image: {{ uptime_kuma_image }}
+    container_name: uptime-kuma
+    restart: unless-stopped
+    volumes:
+      - {{ uptime_kuma_dir }}/data:/app/data
+    ports:
+      - "127.0.0.1:{{ uptime_kuma_port }}:3001"
