@@ -5,6 +5,12 @@ caddy_caddyfile_template: Caddyfile.vps.j2
 caddy_cloudflare_token: "{{ vault_caddy_vps_cloudflare_token }}"
 caddy_vps_forgejo_upstream: <ip-tailscale-do-forgejo>:3000
 
+# Status page pública do Uptime Kuma em status.nextlevelcode.pro: só a página
+# com este slug passa, o resto do Uptime Kuma continua só na tailnet. A página
+# é criada à mão na interface (docs/uptime-kuma.md).
+caddy_vps_status_page_slug: infra
+caddy_vps_status_page_upstream: 127.0.0.1:3001
+
 # Sites só da tailnet, servidos pela VPS em <host>.lab.nextlevelcode.pro. Cada
 # um precisa de um registro A específico na Cloudflare apontando para o IP
 # Tailscale da VPS (o curinga *.lab aponta para o Caddy do Proxmox).

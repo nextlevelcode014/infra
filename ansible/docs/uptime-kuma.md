@@ -146,6 +146,39 @@ e reaplicar `playbooks/uptime-kuma.yml`. Item que sai da lista tem o monitor
   sincronização desfaz a mudança. Monitor criado à mão fica, e o AutoKuma não
   mexe nele.
 
+## Status page pública
+
+`https://status.nextlevelcode.pro` mostra a status page de slug `infra` para a
+internet. O Caddy da VPS só deixa passar os caminhos da página (lista em
+`Caddyfile.vps.j2`); login, painel e `/socket.io` dão 404, e o painel completo
+continua só em `uptime.lab`, pela tailnet. O DNS já está coberto pelo curinga
+`*.nextlevelcode.pro`, que aponta para o IP público da VPS.
+
+1. **Criar a página** em `https://uptime.lab.nextlevelcode.pro` (*Status Pages
+   → New Status Page*), slug `infra`, e adicionar os monitores. É manual porque
+   o AutoKuma 2.0.0 só cria status page, não atualiza, e referencia os
+   monitores pelo id numérico. A página fica no `kuma.db`, que vai para o Borg.
+   Monitor novo no `monitors.yml` **não** entra na página sozinho: adicione-o
+   aqui também. Trocar o slug pede trocar `caddy_vps_status_page_slug` em
+   `inventory/group_vars/vps/vars.yml`.
+
+2. **Aplicar o Caddy da VPS:**
+
+   ```bash
+   ansible-playbook playbooks/caddy-vps.yml --ask-vault-pass --check --diff
+   ansible-playbook playbooks/caddy-vps.yml --ask-vault-pass
+   ```
+
+   Confira (de qualquer lugar; o nome resolve para o IP público):
+
+   ```bash
+   for p in / /status/infra /api/status-page/infra /api/status-page/heartbeat/infra /dashboard /socket.io/ /metrics /api/badge/1/status; do
+     printf '%-36s %s\n' "$p" "$(curl -s -o /dev/null -w '%{http_code}' https://status.nextlevelcode.pro$p)"
+   done
+   ```
+
+   `/` dá `302`; os três da página, `200`; os quatro últimos, `404`.
+
 ## Restore
 
 Não há role de restore. À mão, com o container parado: `borg extract` do

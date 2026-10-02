@@ -13,6 +13,25 @@
 	handle @forge {
 		reverse_proxy {{ caddy_vps_forgejo_upstream }}
 	}
+{% if caddy_vps_status_page_slug is defined %}
+
+	# Status page pública do Uptime Kuma. Lista do que PODE passar: o painel,
+	# o login e o /socket.io ficam de fora, e rota nova que o Uptime Kuma
+	# ganhar numa atualização nasce fechada. "/" leva direto para a página.
+	@status host status.nextlevelcode.pro
+	handle @status {
+		@pagina path /status/{{ caddy_vps_status_page_slug }} /api/status-page/{{ caddy_vps_status_page_slug }} /api/status-page/{{ caddy_vps_status_page_slug }}/* /api/status-page/heartbeat/{{ caddy_vps_status_page_slug }} /assets/* /upload/* /icon.svg /favicon.ico
+		handle @pagina {
+			reverse_proxy {{ caddy_vps_status_page_upstream }}
+		}
+		handle / {
+			redir * /status/{{ caddy_vps_status_page_slug }}
+		}
+		handle {
+			respond 404
+		}
+	}
+{% endif %}
 
 	handle {
 		respond 404

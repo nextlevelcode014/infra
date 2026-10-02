@@ -55,7 +55,7 @@ usadas depois.
 | `playbooks/fmd.yml` | `pi_hosts` | FMD do Pi: Funnel público para emergência + fmd.lab pelo Caddy, backup Borg |
 | `playbooks/exit-node.yml` | `rpi` | exit node Tailscale saindo pela ProtonVPN (nunca no pi-lab) |
 | `playbooks/nextcloud.yml` | `rpi` | mastercontainer do Nextcloud AIO + coturn + `tailscale serve` do host |
-| `playbooks/caddy-vps.yml` | `vps` | Caddy da VPS: domínios públicos (forge) + sites privados em `*.lab` que moram nela |
+| `playbooks/caddy-vps.yml` | `vps` | Caddy da VPS: domínios públicos (forge, status page do Uptime Kuma) + sites privados em `*.lab` que moram nela |
 | `playbooks/uptime-kuma.yml` | `vps` | Uptime Kuma na VPS (fora de casa), em `uptime.lab` pelo Caddy da VPS |
 | `playbooks/immich.yml` | `pi_hosts` | Immich do Pi (backup Borg pronto, desligado até ampliar a cota) |
 | `playbooks/pi-completo.yml` | `pi_hosts` | Pi inteiro na ordem certa; com `-e pi_restaurar_tudo=RESTAURAR_PI` traz os dados do Borg antes (`docs/pi-reconstrucao.md`) |

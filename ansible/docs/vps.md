@@ -2,7 +2,7 @@
 
 A VPS fica fora de casa e serve duas coisas:
 
-- o **Caddy público** (`*.nextlevelcode.pro`, hoje o `forge`) e os **sites
+- o **Caddy público** (`*.nextlevelcode.pro`, hoje o `forge` e o `status`) e os **sites
   privados** que moram nela (`uptime.lab`, só da tailnet), pelo
   `playbooks/caddy-vps.yml`;
 - o **Uptime Kuma** (`playbooks/uptime-kuma.yml`, ver `docs/uptime-kuma.md`).
