@@ -48,6 +48,7 @@
     src: docker-compose.yml.j2
     dest: "{{ vaultwarden_dir }}/docker-compose.yml"
     mode: "0640"
+  register: vaultwarden_compose_render
   notify: Reiniciar Vaultwarden
 
 - name: Subir os serviços
@@ -63,11 +64,17 @@
 - name: Baixar as imagens (standby)
   community.docker.docker_compose_v2_pull:
     project_src: "{{ vaultwarden_dir }}"
-  when: vaultwarden_standby
+  # No --check o compose só "seria" renderizado e o módulo falha sem ele.
+  when:
+    - vaultwarden_standby
+    - not (ansible_check_mode and vaultwarden_compose_render is changed)
 
 - name: Manter os serviços parados (standby)
   community.docker.docker_compose_v2:
     project_src: "{{ vaultwarden_dir }}"
     state: absent
     remove_orphans: true
-  when: vaultwarden_standby
+  # No --check o compose só "seria" renderizado e o módulo falha sem ele.
+  when:
+    - vaultwarden_standby
+    - not (ansible_check_mode and vaultwarden_compose_render is changed)
