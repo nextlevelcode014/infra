@@ -1,0 +1,10 @@
+---
+# Confirmação explícita: -e adguard_restore_confirmation=RESTORE_ADGUARD, ou
+# a da reconstrução do Pi inteiro (pi-completo.yml): -e pi_restaurar_tudo=RESTAURAR_PI.
+adguard_restore_confirmation: "{{ 'RESTORE_ADGUARD' if (pi_restaurar_tudo | default('')) == 'RESTAURAR_PI' else '' }}"
+adguard_restore_work_dir: "{{ secure_mount_dir }}/restore/adguard"
+adguard_restore_source_host: ubuntu
+
+# Mesmos caminhos do role adguard (o backup guarda pelo caminho real).
+adguard_restore_data_dir: "{{ appdata_dir }}/adguard"
+adguard_restore_stack_dir: /opt/adguard

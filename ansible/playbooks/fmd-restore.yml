@@ -1,0 +1,7 @@
+---
+# Operação destrutiva e explícita. O deploy normal é playbooks/fmd.yml.
+- name: Restaurar o FMD a partir do Borg
+  hosts: pi_hosts
+  gather_facts: false
+  roles:
+    - role: fmd_restore

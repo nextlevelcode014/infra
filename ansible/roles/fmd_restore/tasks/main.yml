@@ -1,0 +1,67 @@
+---
+- name: Exigir confirmação explícita do restore
+  ansible.builtin.assert:
+    that: fmd_restore_confirmation == "RESTORE_FMD"
+    fail_msg: >-
+      Restore bloqueado. Use -e fmd_restore_confirmation=RESTORE_FMD
+      (ou -e pi_restaurar_tudo=RESTAURAR_PI na reconstrução do Pi).
+
+- name: Extrair o backup do FMD
+  ansible.builtin.include_role:
+    name: borg_restore
+  vars:
+    borg_restore_prefix: fmd
+    borg_restore_source_host: "{{ fmd_restore_source_host }}"
+    borg_restore_work_dir: "{{ fmd_restore_work_dir }}"
+    borg_restore_paths: >-
+      {{ [fmd_restore_data_dir ~ '/fmddata']
+         + ([fmd_restore_data_dir ~ '/tailscale-state'] if fmd_restore_tailscale_state | bool else []) }}
+    borg_restore_required_files:
+      - "{{ fmd_restore_data_dir }}/fmddata/db/fmd.sqlite"
+
+- name: Ver se o estado do sidecar veio no archive
+  ansible.builtin.stat:
+    path: "{{ fmd_restore_work_dir }}/extracted/{{ (fmd_restore_data_dir ~ '/tailscale-state') | regex_replace('^/', '') }}"
+  register: fmd_restore_ts_state
+
+- name: Verificar se a stack já existe na máquina
+  ansible.builtin.stat:
+    path: "{{ fmd_restore_stack_dir }}/compose.yml"
+  register: fmd_restore_stack_file
+
+- name: Parar o FMD antes de substituir os dados
+  community.docker.docker_compose_v2:
+    project_src: "{{ fmd_restore_stack_dir }}"
+    files: [compose.yml]
+    state: stopped
+  when: fmd_restore_stack_file.stat.exists
+
+- name: Substituir os dados pelos do backup
+  ansible.builtin.shell: |
+    set -eu
+    rm -rf "{{ fmd_restore_data_dir }}/{{ item }}"
+    mkdir -p "{{ fmd_restore_data_dir }}"
+    cp -a "{{ fmd_restore_work_dir }}/extracted/{{ (fmd_restore_data_dir ~ '/' ~ item) | regex_replace('^/', '') }}" "{{ fmd_restore_data_dir }}/{{ item }}"
+  loop: "{{ ['fmddata'] + (['tailscale-state'] if (fmd_restore_tailscale_state | bool and fmd_restore_ts_state.stat.exists) else []) }}"
+  changed_when: true
+
+# O container roda como uid 1000 e precisa escrever no banco.
+- name: Ajustar o dono do banco
+  ansible.builtin.file:
+    path: "{{ fmd_restore_data_dir }}/fmddata/db"
+    state: directory
+    recurse: true
+    owner: "1000"
+    group: "1000"
+
+- name: Subir o FMD restaurado
+  community.docker.docker_compose_v2:
+    project_src: "{{ fmd_restore_stack_dir }}"
+    files: [compose.yml]
+    state: present
+  when: fmd_restore_stack_file.stat.exists
+
+- name: Remover a área temporária
+  ansible.builtin.file:
+    path: "{{ fmd_restore_work_dir }}"
+    state: absent

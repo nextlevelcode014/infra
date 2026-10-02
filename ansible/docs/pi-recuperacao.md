@@ -91,6 +91,8 @@ Confira:
 Anote a duração de cada restore. Para limpar:
 
 ```bash
-ansible-playbook playbooks/pi-recuperacao.yml --ask-vault-pass --limit pi_staging
-ssh root@192.168.50.203 'rm -rf /mnt/secure/appdata/forgejo/forgejo /mnt/secure/appdata/forgejo/postgres /mnt/secure/appdata/vaultwarden/vw-data'
+ansible-playbook playbooks/pi-lab-limpar.yml --ask-vault-pass
 ```
+
+Derruba todas as stacks, apaga os dados restaurados e tira a chave e a senha
+do Borg do pi-lab. A base (Docker, redes, imagens) fica, para o próximo ensaio.

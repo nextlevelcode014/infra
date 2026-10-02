@@ -1,0 +1,54 @@
+---
+- name: Exigir confirmação explícita do restore
+  ansible.builtin.assert:
+    that: adguard_restore_confirmation == "RESTORE_ADGUARD"
+    fail_msg: >-
+      Restore bloqueado. Use -e adguard_restore_confirmation=RESTORE_ADGUARD
+      (ou -e pi_restaurar_tudo=RESTAURAR_PI na reconstrução do Pi).
+
+- name: Extrair o backup do AdGuard
+  ansible.builtin.include_role:
+    name: borg_restore
+  vars:
+    borg_restore_prefix: adguard
+    borg_restore_source_host: "{{ adguard_restore_source_host }}"
+    borg_restore_work_dir: "{{ adguard_restore_work_dir }}"
+    borg_restore_paths:
+      - "{{ adguard_restore_data_dir }}/conf"
+      - "{{ adguard_restore_data_dir }}/work"
+    borg_restore_required_files:
+      - "{{ adguard_restore_data_dir }}/conf/AdGuardHome.yaml"
+
+- name: Verificar se a stack já existe na máquina
+  ansible.builtin.stat:
+    path: "{{ adguard_restore_stack_dir }}/compose.yml"
+  register: adguard_restore_stack_file
+
+# A partir daqui o DNS da casa fica fora até subir de novo.
+- name: Parar o AdGuard antes de substituir os dados
+  community.docker.docker_compose_v2:
+    project_src: "{{ adguard_restore_stack_dir }}"
+    files: [compose.yml]
+    state: stopped
+  when: adguard_restore_stack_file.stat.exists
+
+- name: Substituir conf e work pelos do backup
+  ansible.builtin.shell: |
+    set -eu
+    rm -rf "{{ adguard_restore_data_dir }}/{{ item }}"
+    mkdir -p "{{ adguard_restore_data_dir }}"
+    cp -a "{{ adguard_restore_work_dir }}/extracted/{{ (adguard_restore_data_dir ~ '/' ~ item) | regex_replace('^/', '') }}" "{{ adguard_restore_data_dir }}/{{ item }}"
+  loop: [conf, work]
+  changed_when: true
+
+- name: Subir o AdGuard restaurado
+  community.docker.docker_compose_v2:
+    project_src: "{{ adguard_restore_stack_dir }}"
+    files: [compose.yml]
+    state: present
+  when: adguard_restore_stack_file.stat.exists
+
+- name: Remover a área temporária
+  ansible.builtin.file:
+    path: "{{ adguard_restore_work_dir }}"
+    state: absent

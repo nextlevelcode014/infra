@@ -43,3 +43,8 @@ vaultwarden_smtp_password: staging-nao-e-segredo
 # e com token de cadastro de mentira (nunca vazio: vazio = cadastro aberto).
 fmd_tailscale_sidecar: false
 fmd_registration_token: staging-nao-e-segredo
+
+# pi-completo.yml no pi-lab: não restaura a stack Arr. O arr-stack.yml roda logo
+# depois e subiria a config de produção inteira (qBittorrent baixaria os
+# torrents de novo). O restore do Arr se ensaia sozinho (docs/arr-stack-restore.md).
+pi_completo_restaurar_arr: false

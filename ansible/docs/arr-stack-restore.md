@@ -90,10 +90,10 @@ O restore deixa a stack **parada** (`arr_restore_start_stack: false` no
    (sem mídia, os itens aparecem indisponíveis); Jellyseerr (`5055`) com os
    pedidos. Em *System → Status* dos *arr, nenhum erro de banco corrompido.
 
-4. Limpar: parar a stack e apagar a config de produção do pi-lab.
+4. Limpar:
 
    ```bash
-   ssh root@192.168.50.203 'docker compose -f /opt/arr/compose.yml down && rm -rf /mnt/secure/appdata/mnt/media-stack/config/*'
+   ansible-playbook playbooks/pi-lab-limpar.yml --ask-vault-pass
    ```
 
    **Não rode `arr-stack.yml` no pi-lab antes de limpar**: ele sobe a stack

@@ -1,0 +1,34 @@
+---
+# Pi inteiro, na ordem certa, para um Pi novo ou reformatado (runbook em
+# docs/pi-reconstrucao.md). Sem -e pi_restaurar_tudo=RESTAURAR_PI ele só
+# aplica a config e os serviços sobem vazios; com ele, os dados voltam do Borg
+# ANTES de cada serviço subir pela primeira vez.
+#
+# Sempre com --limit rpi (ou pi_staging para ensaiar). Forgejo e Vaultwarden
+# entram em standby e NÃO são restaurados aqui: eles só sobem no desastre
+# (docs/pi-recuperacao.md).
+
+- import_playbook: pi.yml
+
+# --- Dados de volta (só com a confirmação) ---------------------------------
+- import_playbook: arr-stack-restore.yml
+  # pi_completo_restaurar_arr: false no pi-lab, porque o arr-stack.yml logo
+  # abaixo subiria a config de produção inteira, qBittorrent incluído.
+  when:
+    - (pi_restaurar_tudo | default('')) == 'RESTAURAR_PI'
+    - pi_completo_restaurar_arr | default(true) | bool
+- import_playbook: adguard-restore.yml
+  when: (pi_restaurar_tudo | default('')) == 'RESTAURAR_PI'
+- import_playbook: fmd-restore.yml
+  when: (pi_restaurar_tudo | default('')) == 'RESTAURAR_PI'
+
+# --- Serviços ---------------------------------------------------------------
+- import_playbook: gluetun.yml
+- import_playbook: arr-stack.yml
+- import_playbook: searxng.yml
+- import_playbook: adguard.yml
+- import_playbook: fmd.yml
+- import_playbook: immich.yml
+- import_playbook: exit-node.yml
+- import_playbook: nextcloud.yml
+- import_playbook: pi-recuperacao.yml

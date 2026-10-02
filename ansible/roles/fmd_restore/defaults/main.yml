@@ -1,0 +1,15 @@
+---
+# Confirmação explícita: -e fmd_restore_confirmation=RESTORE_FMD, ou a da
+# reconstrução do Pi inteiro (pi-completo.yml): -e pi_restaurar_tudo=RESTAURAR_PI.
+fmd_restore_confirmation: "{{ 'RESTORE_FMD' if (pi_restaurar_tudo | default('')) == 'RESTAURAR_PI' else '' }}"
+fmd_restore_work_dir: "{{ secure_mount_dir }}/restore/fmd"
+fmd_restore_source_host: ubuntu
+
+# Mesmos caminhos do role fmd.
+fmd_restore_data_dir: "{{ appdata_dir }}/fmd"
+fmd_restore_stack_dir: /opt/fmd
+
+# O estado do sidecar (identidade do nó e certificado do Funnel) volta junto,
+# se estiver no archive: assim o Funnel continua em fmd.<tailnet>.ts.net. No
+# pi-lab o sidecar é desligado e o estado não é restaurado.
+fmd_restore_tailscale_state: "{{ fmd_tailscale_sidecar | default(true) }}"

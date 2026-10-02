@@ -2,7 +2,8 @@
 # Gerido pelo Ansible — não editar à mão.
 #
 # Para só o fmd (o sidecar e o Funnel continuam) enquanto o Borg copia o
-# SQLite, que está em modo WAL. São alguns segundos.
+# SQLite, que está em modo WAL. São alguns segundos. O estado do sidecar vai
+# junto: num Pi reconstruído, o Funnel volta com a mesma URL.
 set -euo pipefail
 
 compose_file="{{ fmd_dir }}/compose.yml"
@@ -26,7 +27,8 @@ docker compose -f "$compose_file" stop fmd
 borg create --lock-wait {{ borg_lock_wait }} \
     --compression "{{ borg_backup_compression }}" \
     "{{ borg_repo }}::fmd-$timestamp" \
-    "{{ fmd_data_dir }}/fmddata"
+    "{{ fmd_data_dir }}/fmddata"{% if fmd_tailscale_sidecar %} \
+    "{{ fmd_data_dir }}/tailscale-state"{% endif %}
 
 docker compose -f "$compose_file" start fmd
 borg prune --lock-wait {{ borg_lock_wait }} --glob-archives 'fmd-*' "{{ borg_repo }}" {{ borg_backup_retention }}

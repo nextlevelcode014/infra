@@ -1,0 +1,80 @@
+---
+# Limpa o pi-lab depois de um ensaio: derruba todas as stacks, apaga os dados
+# restaurados (que podem ser de produção) e tira as credenciais do Borg.
+# Fica a base (Docker, redes, imagens), para o próximo ensaio ser rápido.
+#
+#   ansible-playbook playbooks/pi-lab-limpar.yml --ask-vault-pass
+#
+# Só roda em pi_staging, e se recusa a rodar em qualquer host do rpi.
+- name: Limpar o pi-lab depois de um ensaio
+  hosts: pi_staging
+  gather_facts: false
+  tasks:
+    - name: Recusar qualquer host que não seja só de staging
+      ansible.builtin.assert:
+        that:
+          - "'pi_staging' in group_names"
+          - "'rpi' not in group_names"
+        fail_msg: "{{ inventory_hostname }} não é só de staging; a limpeza apaga dados."
+
+    - name: Achar as stacks em /opt
+      ansible.builtin.find:
+        paths: /opt
+        patterns: [compose.yml, docker-compose.yml]
+        depth: 2
+        recurse: true
+      register: pi_lab_stacks
+
+    - name: Derrubar cada stack, com os volumes dela
+      ansible.builtin.command:
+        argv: [docker, compose, -f, "{{ item.path }}", down, --volumes, --remove-orphans]
+        chdir: "{{ item.path | dirname }}"
+      loop: "{{ pi_lab_stacks.files }}"
+      loop_control:
+        label: "{{ item.path | dirname }}"
+      changed_when: true
+
+    - name: Apagar as stacks de /opt
+      ansible.builtin.file:
+        path: "{{ item.path | dirname }}"
+        state: absent
+      loop: "{{ pi_lab_stacks.files }}"
+      loop_control:
+        label: "{{ item.path | dirname }}"
+
+    # Tudo o que os serviços e os restores gravaram fica sob appdata_dir (e
+    # /mnt/media-stack, que é link para lá). A área de restore também.
+    - name: Achar os dados no volume
+      ansible.builtin.find:
+        paths: ["{{ appdata_dir }}", "{{ secure_mount_dir }}/restore"]
+        file_type: any
+        hidden: true
+      register: pi_lab_data
+
+    - name: Apagar os dados (podem ser de produção)
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ pi_lab_data.files }}"
+      loop_control:
+        label: "{{ item.path }}"
+
+    - name: Apagar volumes Docker que sobraram
+      ansible.builtin.command:
+        argv: [docker, volume, prune, --all, --force]
+      changed_when: true
+
+    - name: Tirar as credenciais do Borg
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ borg_password_file }}"
+        - "{{ borg_ssh_key }}"
+
+    - name: Conferir que não sobrou container
+      ansible.builtin.command:
+        argv: [docker, ps, --all, --quiet]
+      register: pi_lab_left
+      changed_when: false
+      failed_when: pi_lab_left.stdout | length > 0

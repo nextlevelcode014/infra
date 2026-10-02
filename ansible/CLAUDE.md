@@ -55,6 +55,8 @@ usadas depois.
 | `playbooks/exit-node.yml` | `rpi` | exit node Tailscale saindo pela ProtonVPN (nunca no pi-lab) |
 | `playbooks/nextcloud.yml` | `rpi` | mastercontainer do Nextcloud AIO + coturn + `tailscale serve` do host |
 | `playbooks/immich.yml` | `pi_hosts` | Immich do Pi (backup Borg pronto, desligado até ampliar a cota) |
+| `playbooks/pi-completo.yml` | `pi_hosts` | Pi inteiro na ordem certa; com `-e pi_restaurar_tudo=RESTAURAR_PI` traz os dados do Borg antes (`docs/pi-reconstrucao.md`) |
+| `playbooks/pi-lab-limpar.yml` | `pi_staging` | depois de um ensaio: derruba as stacks, apaga os dados restaurados e as credenciais do Borg do pi-lab |
 | `playbooks/*-restore.yml` | o grupo do serviço | restore Borg explícito (ver `docs/`) |
 
 A config base (em `lxc.yml`) é `common` → `artis3n.tailscale.machine` →
@@ -67,7 +69,8 @@ O Pi não passa pela base de `lxc.yml`: é host físico com LUKS em
 o declara em `meta/main.yml`** junto com `borg_client` e, se precisar,
 `secure_links`. Assim cada playbook de serviço prepara o host sozinho. A
 receita para um serviço novo e o staging (`pi-lab`, sempre com
-`--limit pi_staging`) estão em `docs/pi.md`.
+`--limit pi_staging`) estão em `docs/pi.md`. Ensaio com dados de produção
+termina sempre com `playbooks/pi-lab-limpar.yml`.
 
 O Ansible configura o Pi inteiro, menos o que exige a passphrase do LUKS ou
 login interativo (Tailscale no host, `luksFormat`, `secure-unlock` a cada
@@ -98,6 +101,7 @@ domínios voltados para a internet — está fora deste repo.
 | `exit_node` | exit node `vpn-exit` (compose do `self-hosted/exit-node`, sem mudança) |
 | `nextcloud` | mastercontainer do AIO (os outros containers são do próprio AIO), coturn e o serve do host |
 | `immich` | Immich do Pi, acesso só pelo Caddy; `immich_backup_enabled` liga o backup |
+| `borg_restore` | miolo dos restores do Pi: escolhe o archive (prefixo + máquina de origem), extrai no LUKS e valida |
 | `*_restore` | restore Borg do serviço, exige `-e <svc>_restore_confirmation`; `-e restore_on_pi=true` restaura no Pi de recuperação |
 | `geerlingguy.docker` | vendido, instala o engine |
 | `geerlingguy.pip`, `geerlingguy.security` | vendidos, sem uso ainda |

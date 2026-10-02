@@ -1,0 +1,85 @@
+---
+- name: Confirmar que o volume cifrado está montado
+  ansible.builtin.command:
+    argv: [mountpoint, -q, "{{ secure_mount_dir }}"]
+  changed_when: false
+  check_mode: false
+
+- name: Listar os archives {{ borg_restore_prefix }}-*
+  ansible.builtin.command:
+    argv:
+      - borg
+      - --lock-wait
+      - "{{ borg_lock_wait }}"
+      - list
+      - --prefix
+      - "{{ borg_restore_prefix }}-"
+      - --format
+      - "{hostname} {archive}{NL}"
+      - "{{ borg_repo }}"
+  environment:
+    BORG_PASSCOMMAND: "{{ borg_passcommand }}"
+    BORG_RSH: "{{ borg_rsh }}"
+  register: borg_restore_list
+  changed_when: false
+  check_mode: false
+
+# O prefixo sozinho não basta: outra máquina com backup do mesmo serviço
+# cria archives com o mesmo prefixo no mesmo repositório.
+- name: Escolher o archive mais recente da máquina de origem
+  ansible.builtin.set_fact:
+    borg_restore_archive: >-
+      {{ borg_restore_list.stdout_lines
+         | select('match', '^' ~ borg_restore_source_host ~ ' ' ~ borg_restore_prefix ~ '-[^/ ]+$')
+         | map('regex_replace', '^[^ ]+ ', '')
+         | list | last | default('') }}
+
+- name: Exigir um archive da máquina de origem
+  ansible.builtin.assert:
+    that: borg_restore_archive | length > 0
+    fail_msg: >-
+      Nenhum archive {{ borg_restore_prefix }}-* feito por
+      '{{ borg_restore_source_host }}'. Com o prefixo:
+      {{ borg_restore_list.stdout_lines | join(', ') }}
+
+- name: Limpar a área temporária de uma execução anterior
+  ansible.builtin.file:
+    path: "{{ borg_restore_work_dir }}/extracted"
+    state: absent
+
+- name: Criar a área temporária
+  ansible.builtin.file:
+    path: "{{ borg_restore_work_dir }}/extracted"
+    state: directory
+    mode: "0700"
+
+# Caminho que não existe no archive (ex.: tailscale-state de um backup
+# antigo) não é erro: o borg avisa e segue. O que é obrigatório é validado
+# logo abaixo.
+- name: Extrair o archive {{ borg_restore_archive }}
+  ansible.builtin.command:
+    argv: "{{ ['borg', 'extract', '--lock-wait', borg_lock_wait | string,
+               borg_repo ~ '::' ~ borg_restore_archive]
+              + (borg_restore_paths | map('regex_replace', '^/', '') | list) }}"
+    chdir: "{{ borg_restore_work_dir }}/extracted"
+  environment:
+    BORG_PASSCOMMAND: "{{ borg_passcommand }}"
+    BORG_RSH: "{{ borg_rsh }}"
+  register: borg_restore_extract
+  # rc 1 = aviso (ex.: um caminho opcional não estava no archive)
+  failed_when: borg_restore_extract.rc not in [0, 1]
+  changed_when: true
+  no_log: true
+
+- name: Conferir os arquivos obrigatórios
+  ansible.builtin.stat:
+    path: "{{ borg_restore_work_dir }}/extracted/{{ item | regex_replace('^/', '') }}"
+  loop: "{{ borg_restore_required_files }}"
+  register: borg_restore_required
+
+- name: Bloquear restore incompleto
+  ansible.builtin.assert:
+    that: borg_restore_required.results | rejectattr('stat.exists') | list | length == 0
+    fail_msg: >-
+      O archive {{ borg_restore_archive }} não tem:
+      {{ borg_restore_required.results | rejectattr('stat.exists') | map(attribute='item') | join(', ') }}

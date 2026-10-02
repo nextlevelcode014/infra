@@ -1,5 +1,7 @@
 ---
-arr_restore_confirmation: ""
+# Confirmação explícita: -e arr_restore_confirmation=RESTORE_ARR, ou a da
+# reconstrução do Pi inteiro (pi-completo.yml): -e pi_restaurar_tudo=RESTAURAR_PI.
+arr_restore_confirmation: "{{ 'RESTORE_ARR' if (pi_restaurar_tudo | default('')) == 'RESTAURAR_PI' else '' }}"
 # Dentro do LUKS, não em /var/tmp: no Pi a raiz não é cifrada e a config
 # tem API keys e bancos. Também é onde há espaço (a raiz tem ~14 GB).
 arr_restore_work_dir: "{{ secure_mount_dir }}/restore/arr"
