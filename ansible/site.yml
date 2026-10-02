@@ -9,3 +9,4 @@
 - import_playbook: playbooks/searxng.yml
 - import_playbook: playbooks/immich.yml
 - import_playbook: playbooks/adguard.yml
+- import_playbook: playbooks/fmd.yml

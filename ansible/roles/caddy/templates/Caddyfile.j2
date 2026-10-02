@@ -75,6 +75,13 @@
         reverse_proxy nextlevelcode:8084
     }
 
+    # O FMD exige HTTPS (Web Crypto); o Caddy entrega. O acesso público de
+    # emergência continua pelo Funnel, em fmd.<tailnet>.ts.net.
+    @fmd host fmd.{{ caddy_domain }}
+    handle @fmd {
+        reverse_proxy nextlevelcode:8085
+    }
+
     @searxng host searxng.{{ caddy_domain }}
     handle @searxng {
         reverse_proxy nextlevelcode:8082

@@ -1,0 +1,57 @@
+# Gerido pelo Ansible — não editar à mão. Origem: self-hosted/fmd/compose.yml.
+# Mudanças: dados no LUKS, porta {{ fmd_web_port }} no IP Tailscale para o
+# Caddy (fmd.lab), e o sidecar opcional (fmd_tailscale_sidecar).
+services:
+{% if fmd_tailscale_sidecar %}
+  # Sidecar Tailscale: é ele que tem identidade de rede. O fmd roda DENTRO
+  # desta netns, então a porta para o Caddy é publicada aqui.
+  fmd-tailscale:
+    image: tailscale/tailscale:latest
+    container_name: fmd-tailscale
+    hostname: fmd
+    environment:
+      - TS_AUTHKEY=${TS_AUTHKEY}
+      - TS_STATE_DIR=/var/lib/tailscale
+      - TS_SERVE_CONFIG=/config/ts-serve.json
+      # tag:public habilita o Funnel (443 exposta à internet); a policy da
+      # tailnet já concede "funnel" a essa tag.
+      - TS_EXTRA_ARGS=--advertise-tags=tag:containers,tag:public
+    volumes:
+      - {{ fmd_data_dir }}/tailscale-state:/var/lib/tailscale
+      - ./ts-serve.json:/config/ts-serve.json:ro
+      - /dev/net/tun:/dev/net/tun
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    ports:
+      - "{{ ts_ip }}:{{ fmd_web_port }}:8080"
+    restart: unless-stopped
+
+{% endif %}
+  fmd:
+    image: {{ fmd_image }}
+    container_name: fmd
+    restart: unless-stopped
+{% if fmd_tailscale_sidecar %}
+    network_mode: service:fmd-tailscale
+    depends_on:
+      - fmd-tailscale
+{% else %}
+    ports:
+      - "{{ ts_ip }}:{{ fmd_web_port }}:8080"
+{% endif %}
+    environment:
+      # Tudo por env com prefixo FMD_ (viper). Env VAZIA cai no default:
+      # token vazio = cadastro ABERTO.
+      - FMD_REGISTRATIONTOKEN=${FMD_REGISTRATIONTOKEN}
+      - FMD_MAXSAVEDLOC=${FMD_MAXSAVEDLOC:-500}
+      - FMD_MAXSAVEDPIC=${FMD_MAXSAVEDPIC:-10}
+      # RemoteIpHeader fica no default de propósito: o IP remoto só vai para
+      # o log, e a trava de login (5 erros = 10 min) é por usuário.
+    volumes:
+      - {{ fmd_data_dir }}/fmddata/db/:/var/lib/fmd-server/db/
+    # O binário só escreve no diretório do banco, então o rootfs pode ser
+    # read-only sem tmpfs. Testado na 0.16.0.
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]

@@ -79,3 +79,9 @@ vault_searxng_secret_key: "CHANGE-ME"
 # Immich. Senha do Postgres SÓ com letras e números: o .env é env_file e o
 # Compose interpola '$' nele (o Postgres receberia outra senha, em silêncio).
 vault_immich_db_password: "CHANGE-ME"
+
+# FMD. Auth key do sidecar (só usada se o estado do nó se perder) e o token de
+# cadastro: o serviço é público pelo Funnel, e vazio = qualquer um cria conta.
+# Gere com: openssl rand -base64 32
+vault_fmd_ts_authkey: "tskey-auth-CHANGE-ME"
+vault_fmd_registration_token: "CHANGE-ME"

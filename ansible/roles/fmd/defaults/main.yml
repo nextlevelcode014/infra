@@ -1,0 +1,37 @@
+---
+# Mesmo nome de projeto Compose ("fmd") do self-hosted: ao aplicar pela
+# primeira vez, o Compose adota os containers.
+fmd_dir: /opt/fmd
+fmd_image: registry.gitlab.com/fmd-foss/fmd-server:0.16.0
+
+# Banco (SQLite em WAL) e estado do sidecar no LUKS. No self-hosted o
+# link-data nunca foi aplicado ao FMD, e os dois ficavam na raiz em claro;
+# a cópia para cá é manual, uma vez (docs/fmd.md).
+fmd_data_dir: "{{ appdata_dir }}/fmd"
+
+# Onde o self-hosted deixava os dados (na raiz, em claro). Se ainda houver
+# banco lá e nenhum aqui, o role para: subir sem a cópia criaria um FMD
+# vazio e um nó Tailscale novo (sem o Funnel atual).
+fmd_legacy_dir: /home/ubuntu/self-hosted/fmd
+
+# Sidecar Tailscale com Funnel: fmd.<tailnet>.ts.net fica PÚBLICO de
+# propósito, para abrir o FMD de qualquer aparelho numa emergência sem
+# depender da tailnet. Desligado no pi-lab (entraria na tailnet como outro
+# "fmd", com Funnel). O uso normal é pelo Caddy, em fmd.lab.
+fmd_tailscale_sidecar: true
+fmd_ts_authkey: "{{ vault_fmd_ts_authkey }}"
+
+# Exposto na internet pelo Funnel: vazio NÃO fecha o cadastro (o viper
+# ignora env vazia e cai no default, que é aberto).
+fmd_registration_token: "{{ vault_fmd_registration_token }}"
+fmd_max_saved_loc: 500
+fmd_max_saved_pic: 10
+
+# Porta para o Caddy, no IP Tailscale do Pi.
+fmd_web_port: 8085
+
+# Backup Borg no repositório compartilhado, prefixo fmd-*. Para só o fmd
+# (não o sidecar) por alguns segundos: SQLite em WAL.
+fmd_backup_script: /usr/local/bin/backup-fmd.sh
+fmd_backup_log_file: /var/log/fmd_backup.log
+fmd_backup_schedule: "50 2 * * *"

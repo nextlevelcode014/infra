@@ -64,7 +64,7 @@ borg_backup_retention: "--keep-daily=7 --keep-weekly=4 --keep-monthly=3"
 # um processo escrever por vez, e o padrão (1 s) fazia o backup que chegasse
 # depois falhar com "Failed to create/acquire the lock". Os horários também são
 # escalonados (forgejo 02:00, vaultwarden 02:15, arr 02:30, adguard 02:45,
-# immich 03:30).
+# fmd 02:50, immich 03:30).
 borg_lock_wait: 600
 # Desligado nas máquinas de teste: um backup delas cairia no repositório de
 # produção com o mesmo prefixo e viraria "o mais recente" para o restore.

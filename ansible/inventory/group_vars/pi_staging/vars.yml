@@ -38,3 +38,8 @@ immich_db_password: stagingnaoesegredo
 forgejo_db_password: stagingnaoesegredo
 vaultwarden_admin_token: staging-nao-e-segredo
 vaultwarden_smtp_password: staging-nao-e-segredo
+
+# FMD no pi-lab: sem sidecar (entraria na tailnet como outro "fmd", com Funnel)
+# e com token de cadastro de mentira (nunca vazio: vazio = cadastro aberto).
+fmd_tailscale_sidecar: false
+fmd_registration_token: staging-nao-e-segredo

@@ -1,0 +1,95 @@
+---
+- name: Procurar dados do FMD no caminho antigo
+  ansible.builtin.stat:
+    path: "{{ fmd_legacy_dir }}/fmddata/db/fmd.sqlite"
+  register: fmd_legacy_db
+
+- name: Procurar o banco no volume cifrado
+  ansible.builtin.stat:
+    path: "{{ fmd_data_dir }}/fmddata/db/fmd.sqlite"
+  register: fmd_current_db
+
+- name: Exigir a cópia dos dados antigos antes de subir
+  ansible.builtin.assert:
+    that: not (fmd_legacy_db.stat.exists and not fmd_current_db.stat.exists)
+    fail_msg: >-
+      Há um banco do FMD em {{ fmd_legacy_dir }} e nenhum em {{ fmd_data_dir }}.
+      Copie os dados antes (docs/fmd.md, "Migrar os dados"); subir agora criaria
+      um FMD vazio e um nó Tailscale novo.
+
+- name: Criar o diretório da stack
+  ansible.builtin.file:
+    path: "{{ fmd_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0750"
+  register: fmd_stack_dir_result
+
+# O container roda como uid 1000 e precisa escrever no banco; sem isso o
+# SQLite falha e o container reinicia em loop (era um chown manual).
+- name: Criar o diretório do banco no volume cifrado
+  ansible.builtin.file:
+    path: "{{ fmd_data_dir }}/fmddata/db"
+    state: directory
+    owner: "1000"
+    group: "1000"
+    mode: "0755"
+
+- name: Criar o diretório de estado do sidecar no volume cifrado
+  ansible.builtin.file:
+    path: "{{ fmd_data_dir }}/tailscale-state"
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+  when: fmd_tailscale_sidecar
+
+- name: Copiar o ts-serve.json
+  ansible.builtin.copy:
+    src: ts-serve.json
+    dest: "{{ fmd_dir }}/ts-serve.json"
+    mode: "0644"
+
+- name: Renderizar o compose.yml
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: "{{ fmd_dir }}/compose.yml"
+    mode: "0644"
+
+- name: Renderizar o .env
+  ansible.builtin.template:
+    src: fmd.env.j2
+    dest: "{{ fmd_dir }}/.env"
+    mode: "0600"
+  no_log: true
+
+- name: Subir o FMD
+  community.docker.docker_compose_v2:
+    project_src: "{{ fmd_dir }}"
+    files: [compose.yml]
+    state: present
+    remove_orphans: true
+  # No --check de um host novo o diretório só "seria" criado, e o compose
+  # falha com "is not a directory". Pula só nesse caso.
+  when: not (ansible_check_mode and fmd_stack_dir_result is changed)
+
+- name: Instalar script de backup do FMD
+  ansible.builtin.template:
+    src: backup-fmd.sh.j2
+    dest: "{{ fmd_backup_script }}"
+    owner: root
+    group: root
+    mode: "0750"
+
+- name: Agendar backup do FMD
+  ansible.builtin.cron:
+    name: Backup Borg do FMD
+    user: root
+    state: "{{ 'present' if borg_backup_enabled else 'absent' }}"
+    minute: "{{ fmd_backup_schedule.split()[0] }}"
+    hour: "{{ fmd_backup_schedule.split()[1] }}"
+    day: "{{ fmd_backup_schedule.split()[2] }}"
+    month: "{{ fmd_backup_schedule.split()[3] }}"
+    weekday: "{{ fmd_backup_schedule.split()[4] }}"
+    job: "{{ fmd_backup_script }} >> {{ fmd_backup_log_file }} 2>&1"

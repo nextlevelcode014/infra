@@ -1,0 +1,6 @@
+---
+- name: Configurar o FMD
+  hosts: pi_hosts
+  gather_facts: true
+  roles:
+    - role: fmd
