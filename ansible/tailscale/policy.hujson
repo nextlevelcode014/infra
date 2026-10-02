@@ -1,0 +1,265 @@
+// Política de acesso (ACL) da tailnet — cópia de referência.
+//
+// O console do Tailscale é quem aplica; este arquivo é o que foi revisado em PR.
+// Mudou aqui → cole no console depois do merge. Mudou no console → traga pra cá.
+// Passo a passo em tailscale/README.md.
+{
+    "groups": {},
+
+    "ipsets": {},
+
+    // IPs Tailscale dos desktops de administração. Ficam sem tag (user-owned).
+    "hosts": {
+        "infra-admin-1": "<ip-tailscale-do-desktop>",
+    },
+
+    "grants": [
+        // --- Pessoas -------------------------------------------------------
+        // Admin/owner: acesso total aos próprios dispositivos sem tag.
+        {
+            "src": ["autogroup:admin", "autogroup:owner"],
+            "dst": ["autogroup:self"],
+            "ip":  ["*"],
+        },
+        // Exit nodes (vpn-exit, Mullvad).
+        {
+            "src": ["autogroup:member"],
+            "dst": ["autogroup:internet"],
+            "ip":  ["*"],
+        },
+        // Serviços web: só HTTPS, pelos dois Caddys (Proxmox: *.lab; VPS:
+        // uptime.lab e o *.lab em contingência).
+        {
+            "src": ["autogroup:member"],
+            "dst": ["tag:caddy", "tag:caddy-vps"],
+            "ip":  ["tcp:443"],
+        },
+        // Pi direto: DNS do AdGuard e o coturn do Talk (TURN/STUN + relay; o
+        // intervalo é nextcloud_turn_min/max_port no repo ansible).
+        {
+            "src": ["autogroup:member"],
+            "dst": ["tag:pi"],
+            "ip":  ["tcp:53", "udp:53", "udp:3479", "tcp:3479", "udp:49160-49200"],
+        },
+        // SSH do Git, só no LXC do Forgejo.
+        {
+            "src": ["autogroup:member"],
+            "dst": ["tag:forgejo"],
+            "ip":  ["tcp:2222"],
+        },
+        // FMD pelo nome da tailnet (fmd.<tailnet>.ts.net). De fora da tailnet,
+        // o mesmo nome chega pelo Funnel, que não passa por aqui.
+        {
+            "src": ["autogroup:member"],
+            "dst": ["tag:public"],
+            "ip":  ["tcp:443"],
+        },
+
+        // --- Administração: só pelos desktops listados em "hosts" ------------
+        {
+            "src": ["infra-admin-1"],
+            "dst": ["tag:proxmox-lxc", "tag:caddy", "tag:pi", "tag:vps"],
+            "ip":  ["tcp:22"],
+        },
+        {
+            "src": ["infra-admin-1"],
+            "dst": ["tag:proxmox"],
+            "ip":  ["tcp:22", "tcp:443", "tcp:8006"],
+        },
+        // Interface do Nextcloud AIO (tailscale serve do host do Pi).
+        {
+            "src": ["infra-admin-1"],
+            "dst": ["tag:pi"],
+            "ip":  ["tcp:8080"],
+        },
+
+        // --- Caddy do Proxmox -> backends -------------------------------------
+        // Forgejo (3000) e Vaultwarden (8080) nos LXCs.
+        {
+            "src": ["tag:caddy"],
+            "dst": ["tag:proxmox-lxc"],
+            "ip":  ["tcp:3000", "tcp:8080"],
+        },
+        // Portas publicadas no IP Tailscale do Pi, uma por rota do Caddyfile.
+        {
+            "src": ["tag:caddy"],
+            "dst": ["tag:pi"],
+            "ip": [
+                "tcp:8096",  // jellyfin
+                "tcp:5055",  // jellyseerr
+                "tcp:8989",  // sonarr
+                "tcp:7878",  // radarr
+                "tcp:9696",  // prowlarr
+                "tcp:6767",  // bazarr
+                "tcp:6868",  // profilarr
+                "tcp:8090",  // qbittorrent (publicada pelo gluetun)
+                "tcp:8081",  // dozzle
+                "tcp:8082",  // searxng (publicada pelo gluetun)
+                "tcp:8084",  // adguard (web)
+                "tcp:8085",  // fmd (publicada pelo sidecar)
+                "tcp:2283",  // immich
+                "tcp:11000", // nextcloud (apache do AIO)
+            ],
+        },
+        // O Nextcloud testa o próprio HPB pelo domínio, que passa pelo Caddy.
+        {
+            "src": ["tag:pi"],
+            "dst": ["tag:caddy"],
+            "ip":  ["tcp:443"],
+        },
+
+        // --- VPS --------------------------------------------------------------
+        // Caddy público -> Forgejo de produção (forge.nextlevelcode.pro).
+        {
+            "src": ["tag:caddy-vps"],
+            "dst": ["tag:forgejo"],
+            "ip":  ["tcp:3000"],
+        },
+        // Uptime Kuma: *.lab pelo Caddy, DNS do AdGuard, ping e SSH do Forgejo.
+        {
+            "src": ["tag:vps"],
+            "dst": ["tag:caddy"],
+            "ip":  ["tcp:443"],
+        },
+        {
+            "src": ["tag:vps"],
+            "dst": ["tag:pi"],
+            "ip":  ["tcp:53", "udp:53"],
+        },
+        {
+            "src": ["tag:vps"],
+            "dst": ["tag:pi", "tag:proxmox"],
+            "ip":  ["icmp:*"],
+        },
+        {
+            "src": ["tag:vps"],
+            "dst": ["tag:forgejo"],
+            "ip":  ["tcp:2222"],
+        },
+
+        // CONTINGÊNCIA — INATIVO. Com o Proxmox fora e Forgejo/Vaultwarden
+        // restaurados no Pi (docs/pi-recuperacao.md), descomentar no console —
+        // e tirar tag:pi:3000/8083 do deny de tag:caddy-vps nos tests:
+        // {
+        //   "src": ["tag:caddy-vps"],
+        //   "dst": ["tag:pi"],
+        //   "ip":  ["tcp:3000", "tcp:8083"],
+        // },
+        // {
+        //   "src": ["autogroup:member"],
+        //   "dst": ["tag:pi"],
+        //   "ip":  ["tcp:2222"],
+        // },
+    ],
+
+    "ssh": [
+        {
+            "src":    ["autogroup:admin", "autogroup:owner"],
+            "dst":    ["autogroup:self"],
+            "users":  ["autogroup:nonroot"],
+            "action": "accept",
+        },
+        // Infra: identidade humana + reautenticação (check). O grant de rede
+        // acima limita quais dispositivos chegam à porta 22.
+        {
+            "src":    ["autogroup:admin", "autogroup:owner"],
+            "dst":    ["tag:proxmox-lxc", "tag:caddy"],
+            "users":  ["root"],
+            "action": "check",
+        },
+        {
+            "src":    ["autogroup:admin", "autogroup:owner"],
+            "dst":    ["tag:pi"],
+            "users":  ["ubuntu"],
+            "action": "check",
+        },
+        {
+            "src":    ["autogroup:admin", "autogroup:owner"],
+            "dst":    ["tag:vps"],
+            "users":  ["hetzner"],
+            "action": "check",
+        },
+        {
+            "src":    ["autogroup:admin", "autogroup:owner"],
+            "dst":    ["tag:proxmox"],
+            "users":  ["autogroup:nonroot", "root"],
+            "action": "check",
+        },
+    ],
+
+    "autoApprovers": {
+        "exitNode": ["autogroup:admin", "autogroup:owner"],
+        // Reinstalar o Proxmox não exige reaprovar a rota no console.
+        "routes": {"10.10.10.0/24": ["tag:proxmox"]},
+    },
+
+    "tagOwners": {
+        // Nós Tailscale em container: o sidecar do FMD e o exit node.
+        "tag:containers": ["autogroup:admin"],
+        // Opt-in do Funnel (fmd): só funciona junto com AllowFunnel no
+        // ts-serve.json do serviço.
+        "tag:public": ["autogroup:admin"],
+        // Subnet router do Proxmox. Tag em vez de conta de usuário: nó com tag
+        // não expira a chave (com conta, a sub-rede some a cada 180 dias).
+        "tag:proxmox":     ["autogroup:admin"],
+        "tag:proxmox-lxc": ["autogroup:admin"],
+        "tag:forgejo":     ["autogroup:admin"],
+        "tag:caddy":       ["autogroup:admin"],
+        "tag:pi":          ["autogroup:admin"],
+        "tag:vps":         ["autogroup:admin"],
+        "tag:caddy-vps":   ["autogroup:admin"],
+    },
+
+    "nodeAttrs": [
+        // Funnel só para quem optou explicitamente via tag.
+        {"target": ["tag:public"], "attr": ["funnel"]},
+    ],
+
+    // Rodam a cada save no console: se uma edição reabrir um acesso, o save
+    // falha em vez de passar despercebido.
+    "tests": [
+        // Nós em container (FMD, exit node) não alcançam nada da infra.
+        {
+            "src": "tag:containers",
+            "deny": [
+                "tag:pi:22",
+                "tag:pi:6868",
+                "tag:vps:22",
+                "tag:proxmox:22",
+                "tag:proxmox:8006",
+                "tag:proxmox-lxc:8080",
+                "10.10.10.1:22",
+                "10.10.10.1:8006",
+            ],
+        },
+        {
+            "src":  "tag:public",
+            "deny": ["tag:pi:22", "tag:pi:53", "tag:caddy:443"],
+        },
+        // O Caddy do Proxmox alcança os backends, e só eles.
+        {
+            "src":    "tag:caddy",
+            "accept": ["tag:pi:6868", "tag:pi:11000", "tag:proxmox-lxc:3000", "tag:proxmox-lxc:8080"],
+            "deny":   ["tag:pi:22", "tag:pi:53", "tag:proxmox:8006"],
+        },
+        // O Caddy público só chega no Forgejo; o Vaultwarden não é público.
+        // Os denies do Pi saem durante a contingência (ver grants).
+        {
+            "src":    "tag:caddy-vps",
+            "accept": ["tag:forgejo:3000"],
+            "deny":   ["tag:proxmox-lxc:8080", "tag:pi:3000", "tag:pi:8083"],
+        },
+        // O monitor alcança o que monitora, e não administra nada.
+        {
+            "src":    "tag:vps",
+            "accept": ["tag:caddy:443", "tag:pi:53", "tag:forgejo:2222"],
+            "deny":   ["tag:pi:22", "tag:proxmox:22", "tag:proxmox:8006"],
+        },
+        // O Pi só fala com o Caddy (HPB do Nextcloud).
+        {
+            "src":    "tag:pi",
+            "accept": ["tag:caddy:443"],
+            "deny":   ["tag:proxmox:22", "tag:proxmox-lxc:22", "tag:vps:22"],
+        },
+    ],
+}

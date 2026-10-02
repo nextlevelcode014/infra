@@ -140,6 +140,13 @@ Vale não repetir:
   `No such file or directory: 'VAR=x'` (procura um binário com esse nome).
   Para env var inline use `/usr/bin/env VAR=x comando`.
 
+## ACL do Tailscale
+
+`tailscale/policy.hujson` é a cópia revisada da política da tailnet; quem
+aplica é o console, colando à mão depois do merge (`tailscale/README.md`).
+Serviço novo com porta fora da 443, ou rota nova no Caddy, quase sempre pede um
+grant lá — sem ele o serviço sobe e fica inacessível sem erro.
+
 ## Segredos
 
 Borg é um repositório só, com prefixo por serviço. O que não é segredo
