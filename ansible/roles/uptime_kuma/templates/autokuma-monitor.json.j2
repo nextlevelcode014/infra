@@ -1,0 +1,4 @@
+{{ uptime_kuma_monitor_defaults
+   | combine(item | dict2items | rejectattr('key', 'in', ['id', 'group']) | items2dict)
+   | combine({'parent_name': item.group, 'notification_name_list': [uptime_kuma_notification_id]})
+   | to_nice_json }}

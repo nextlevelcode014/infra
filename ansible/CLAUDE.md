@@ -107,7 +107,7 @@ curinga `*.lab` aponta para o Caddy do Proxmox. VPS nova: `docs/vps.md`.
 | `fmd` | FMD do Pi; sidecar com Funnel opcional (`fmd_tailscale_sidecar`) |
 | `exit_node` | exit node `vpn-exit` (compose do `self-hosted/exit-node`, sem mudança) |
 | `nextcloud` | mastercontainer do AIO (os outros containers são do próprio AIO), coturn e o serve do host |
-| `uptime_kuma` | Uptime Kuma + Docker na VPS, sem o usuário no grupo `docker` |
+| `uptime_kuma` | Uptime Kuma + AutoKuma + Docker na VPS, sem o usuário no grupo `docker`; monitores em `group_vars/vps/monitors.yml` |
 | `immich` | Immich do Pi, acesso só pelo Caddy; `immich_backup_enabled` liga o backup |
 | `borg_restore` | miolo dos restores do Pi: escolhe o archive (prefixo + máquina de origem), extrai no LUKS e valida |
 | `*_restore` | restore Borg do serviço, exige `-e <svc>_restore_confirmation`; `-e restore_on_pi=true` restaura no Pi de recuperação |
@@ -135,6 +135,21 @@ Vale não repetir:
 - **Uma mesma auth key serve para os três containers.** Se ela for efêmera
   ou de uso único, só o primeiro host sobe. O role `artis3n.tailscale.machine`
   já cuida do `no_log`; não precisa repetir.
+- **O Compose interpola `$` no `.env` e no `env_file`.** Uma senha com `$v7`
+  vira a variável `v7` (vazia) e chega cortada, com só um aviso ("The "v7"
+  variable is not set"). Em template que gera `.env` ou valor do compose, use
+  `| replace('$', '$$')`. Já pegou o `ADMIN_TOKEN` do Vaultwarden e a senha do
+  admin do Uptime Kuma (AutoKuma com `authIncorrectCreds`).
+- **O AutoKuma trata todo valor como template Tera** (mesma sintaxe `{% %}` /
+  `{{ }}` do Liquid e do Jinja). Valor com essa sintaxe precisa ir em
+  `{% raw %}…{% endraw %}`; senão a entidade falha ao parsear e o AutoKuma
+  **despeja o arquivo inteiro no log, com segredos**. Pegou o corpo do e-mail
+  (Liquid) e vazou o token SMTP.
+- **O AutoKuma compara o `config` do aviso pela contagem de campos.** Campo que
+  o Uptime Kuma acrescenta sozinho e o arquivo não tem (o `applyExisting`, que
+  ele grava sempre como `false`) faz o aviso ser regravado a cada 5 s, para
+  sempre. E a mescla é rasa: o `config` do arquivo substitui o do banco
+  inteiro, então tirar um campo do arquivo o **apaga** no Uptime Kuma.
 - **O `validate` de `copy`/`template` não passa por shell.** O Ansible faz
   `shlex.split` + `execvp`, então `VAR=x comando` falha com
   `No such file or directory: 'VAR=x'` (procura um binário com esse nome).

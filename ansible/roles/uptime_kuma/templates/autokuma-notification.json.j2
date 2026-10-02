@@ -1,0 +1,29 @@
+{# customBody vem de um arquivo com Liquid ({{ }}, {% %}). O Jinja não
+   reprocessa o lookup, mas o AutoKuma trata cada valor como template Tera, que
+   usa a mesma sintaxe: sem o raw, ele tenta interpretar o Liquid, falha e o
+   aviso não é criado (e os monitores que o referenciam também não).
+
+   applyExisting: o Uptime Kuma 2 grava sempre applyExisting=false no config.
+   O AutoKuma só considera o aviso igual se o config tiver os mesmos campos;
+   sem ele aqui, a contagem nunca bate e o aviso é regravado a cada 5 s. Tem
+   que ser false: true religaria o aviso em todo monitor a cada atualização. #}
+{{ {
+  'type': 'notification',
+  'name': 'E-mail',
+  'active': true,
+  'is_default': true,
+  'config': {
+    'type': 'smtp',
+    'name': 'E-mail',
+    'smtpHost': uptime_kuma_smtp.host,
+    'smtpPort': uptime_kuma_smtp.port,
+    'smtpSecure': false,
+    'smtpUsername': uptime_kuma_smtp.username,
+    'smtpPassword': uptime_kuma_smtp.password,
+    'smtpFrom': uptime_kuma_smtp.from,
+    'smtpTo': uptime_kuma_smtp.to,
+    'htmlBody': true,
+    'customBody': '{% raw %}' ~ lookup('ansible.builtin.file', 'email-body.html') ~ '{% endraw %}',
+    'applyExisting': false,
+  }
+} | to_nice_json }}

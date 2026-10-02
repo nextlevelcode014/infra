@@ -22,6 +22,73 @@
     dest: "{{ uptime_kuma_dir }}/compose.yml"
     mode: "0644"
 
+# --- AutoKuma ---------------------------------------------------------------
+- name: Criar os diretórios do AutoKuma
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0750"
+  loop:
+    - "{{ uptime_kuma_dir }}/autokuma"
+    - "{{ uptime_kuma_dir }}/autokuma/data"
+    - "{{ uptime_kuma_monitors_dir }}"
+
+- name: Renderizar o .env do AutoKuma (admin do Uptime Kuma)
+  ansible.builtin.template:
+    src: autokuma.env.j2
+    dest: "{{ uptime_kuma_dir }}/.env"
+    mode: "0600"
+  no_log: true
+
+# Um .json por entidade; o nome do arquivo é o ID que o AutoKuma usa.
+- name: Gerar o aviso por e-mail
+  ansible.builtin.template:
+    src: autokuma-notification.json.j2
+    dest: "{{ uptime_kuma_monitors_dir }}/{{ uptime_kuma_notification_id }}.json"
+    mode: "0600"
+  no_log: true
+
+- name: Gerar os grupos
+  ansible.builtin.template:
+    src: autokuma-group.json.j2
+    dest: "{{ uptime_kuma_monitors_dir }}/{{ item.id }}.json"
+    mode: "0644"
+  loop: "{{ uptime_kuma_groups }}"
+  loop_control:
+    label: "{{ item.id }}"
+
+- name: Gerar os monitores
+  ansible.builtin.template:
+    src: autokuma-monitor.json.j2
+    dest: "{{ uptime_kuma_monitors_dir }}/{{ item.id }}.json"
+    mode: "0644"
+  loop: "{{ uptime_kuma_monitors }}"
+  loop_control:
+    label: "{{ item.id }}"
+
+# Monitor que saiu da lista: o arquivo some e o AutoKuma apaga o monitor
+# (AUTOKUMA__ON_DELETE=delete).
+- name: Achar arquivos de entidades
+  ansible.builtin.find:
+    paths: "{{ uptime_kuma_monitors_dir }}"
+    patterns: ["*.json"]
+  register: uptime_kuma_entity_files
+
+- name: Apagar entidades que saíram da lista
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ uptime_kuma_entity_files.files }}"
+  loop_control:
+    label: "{{ item.path | basename }}"
+  when: >-
+    (item.path | basename | splitext | first)
+    not in ([uptime_kuma_notification_id]
+            + (uptime_kuma_groups | map(attribute='id') | list)
+            + (uptime_kuma_monitors | map(attribute='id') | list))
+
 - name: Subir o Uptime Kuma
   community.docker.docker_compose_v2:
     project_src: "{{ uptime_kuma_dir }}"

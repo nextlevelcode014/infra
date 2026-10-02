@@ -99,3 +99,12 @@ vault_exit_node_wireguard_private_key: "CHANGE-ME"
 # Segredo do coturn (TURN do Nextcloud Talk). Hoje está em
 # /mnt/secure/env/nextcloud.env no Pi (TURN_SECRET).
 vault_nextcloud_turn_secret: "CHANGE-ME"
+
+# Uptime Kuma: o admin criado no primeiro acesso (o AutoKuma entra com ele) e
+# o SMTP do aviso por e-mail. O username do SMTP é o endereço Proton que envia;
+# a senha é um token SMTP (Proton → Settings → IMAP/SMTP → SMTP tokens).
+vault_uptime_kuma_username: "admin"
+vault_uptime_kuma_password: "CHANGE-ME"
+vault_uptime_kuma_smtp_username: "monitor@nextlevelcode.pro"
+vault_uptime_kuma_smtp_password: "CHANGE-ME"
+vault_uptime_kuma_smtp_to: "voce@exemplo.com"

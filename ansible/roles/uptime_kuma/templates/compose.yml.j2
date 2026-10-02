@@ -4,7 +4,31 @@ services:
     image: {{ uptime_kuma_image }}
     container_name: uptime-kuma
     restart: unless-stopped
+    # DNS público, não o MagicDNS do host: a VPS só resolve na tailnet os nós
+    # que ela enxerga, e o monitor do Funnel (fmd.<tailnet>.ts.net) tem que ver
+    # o que a internet vê. Os *.lab também são públicos.
+    dns:
+      - 9.9.9.9
+      - 1.1.1.1
     volumes:
       - {{ uptime_kuma_dir }}/data:/app/data
     ports:
       - "127.0.0.1:{{ uptime_kuma_port }}:3001"
+
+  # Cria e atualiza os monitores a partir dos arquivos que o Ansible gera.
+  # Sem o socket do Docker: só a fonte de arquivos fica ligada.
+  autokuma:
+    image: {{ uptime_kuma_autokuma_image }}
+    container_name: autokuma
+    restart: unless-stopped
+    depends_on:
+      - uptime-kuma
+    env_file: .env
+    environment:
+      AUTOKUMA__KUMA__URL: http://uptime-kuma:3001
+      AUTOKUMA__STATIC_MONITORS: /monitors
+      AUTOKUMA__DOCKER__ENABLED: "false"
+      AUTOKUMA__ON_DELETE: delete
+    volumes:
+      - {{ uptime_kuma_dir }}/autokuma/data:/data
+      - {{ uptime_kuma_monitors_dir }}:/monitors:ro

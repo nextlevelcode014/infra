@@ -11,3 +11,37 @@ uptime_kuma_port: 3001
 uptime_kuma_backup_script: /usr/local/bin/backup-uptime-kuma.sh
 uptime_kuma_backup_log_file: /var/log/uptime_kuma_backup.log
 uptime_kuma_backup_schedule: "0 3 * * *"
+
+# --- AutoKuma: monitores por arquivo ----------------------------------------
+# O AutoKuma (container ao lado) lê um .json por entidade em
+# uptime_kuma_monitors_dir e cria/atualiza grupos, monitores e o aviso no
+# Uptime Kuma. O nome do arquivo é o ID. Arquivo que some = entidade apagada.
+# A lista do que monitorar fica no inventário (group_vars/vps/monitors.yml).
+uptime_kuma_autokuma_image: ghcr.io/bigboot/autokuma:2.0.0
+uptime_kuma_monitors_dir: "{{ uptime_kuma_dir }}/autokuma/monitors"
+
+# Admin do Uptime Kuma, criado no primeiro acesso: o AutoKuma entra com ele.
+uptime_kuma_admin_username: "{{ vault_uptime_kuma_username }}"
+uptime_kuma_admin_password: "{{ vault_uptime_kuma_password }}"
+
+# Valores aplicados a todo monitor (cada um pode sobrescrever). Com
+# max_retries 2, um container parado alguns segundos pelo backup não vira
+# e-mail.
+uptime_kuma_monitor_defaults:
+  interval: 60
+  retry_interval: 60
+  max_retries: 2
+
+uptime_kuma_groups: []
+uptime_kuma_monitors: []
+
+# Aviso por e-mail (SMTP da Proton), ligado em todo monitor. O corpo é o
+# files/email-body.html (Liquid do Uptime Kuma).
+uptime_kuma_notification_id: email
+uptime_kuma_smtp:
+  host: smtp.protonmail.ch
+  port: 587
+  username: "{{ vault_uptime_kuma_smtp_username }}"
+  password: "{{ vault_uptime_kuma_smtp_password }}"
+  from: "{{ vault_uptime_kuma_smtp_username }}"
+  to: "{{ vault_uptime_kuma_smtp_to }}"

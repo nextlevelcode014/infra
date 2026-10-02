@@ -10,6 +10,7 @@ ou a internet de casa caírem, o monitor continua de pé e avisa.
 | Container | `louislam/uptime-kuma:2`, ouvindo só em `127.0.0.1:3001` |
 | Dados | `/opt/uptime-kuma/data` (SQLite: monitores, avisos, histórico) |
 | Backup | Borg no repositório compartilhado, prefixo `uptime-kuma-*`, 03:00 |
+| Monitores e aviso | **AutoKuma** (`ghcr.io/bigboot/autokuma:2.0.0`), a partir de `inventory/group_vars/vps/monitors.yml` |
 | Docker | instalado pelo `geerlingguy.docker`, **sem** o usuário `hetzner` no grupo `docker` (use `sudo docker`) |
 
 Ele é servido pelo Caddy **da VPS**, não pelo do Proxmox: se o Proxmox cai, o
@@ -34,8 +35,11 @@ Caddy do Proxmox. O Caddy da VPS só aceita conexões da tailnet nesse site.
    | seus dispositivos | VPS (`hetzner`) | `tcp:443` | abrir o Uptime Kuma |
    | VPS (`hetzner`) | `tag:caddy` | `tcp:443` | monitorar os `*.lab` |
    | VPS (`hetzner`) | Pi | `udp:53`, `tcp:53` | monitorar o DNS do AdGuard |
+   | VPS (`hetzner`) | Pi, Proxmox | `icmp` | os monitores de ping |
+   | VPS (`hetzner`) | `forgejo-lxc` | `tcp:2222` | o SSH do Forgejo |
 
-   Acrescente o que mais for monitorar por porta (ex.: `forgejo-lxc:2222`).
+   Monitor novo de ping ou porta para outro host precisa da regra
+   correspondente; os HTTP pelos `*.lab` já passam pela regra do `tag:caddy`.
 
 3. **Caddy da VPS.** Antes, o token da Cloudflare da VPS (separado do do
    Proxmox) vai para o vault:
@@ -81,18 +85,34 @@ Caddy do Proxmox. O Caddy da VPS só aceita conexões da tailnet nesse site.
 
    O `id -nG` não deve listar `docker`.
 
-5. **Primeiro acesso** em `https://uptime.lab.nextlevelcode.pro`: o Uptime Kuma
-   pede para criar o usuário admin. É manual porque ele não aceita esse
-   usuário por variável de ambiente.
+5. **Primeiro acesso** em `https://uptime.lab.nextlevelcode.pro`: escolha
+   **SQLite** e crie o usuário admin. É manual porque o Uptime Kuma não aceita
+   esse usuário por variável de ambiente. Use o mesmo usuário e senha que vão
+   para o vault (passo 6): o AutoKuma entra com eles.
 
-6. **Aviso por e-mail** (*Settings → Notifications → Setup Notification →
-   SMTP*):
+6. **Vault e AutoKuma.** O aviso por e-mail e os monitores são criados pelo
+   AutoKuma, a partir de arquivos que o Ansible gera:
 
-   - host `smtp.protonmail.ch`, porta `587`, segurança STARTTLS;
-   - usuário e senha: um **token SMTP** da Proton (em *Settings → IMAP/SMTP →
-     SMTP tokens*), de preferência para um endereço só do monitor;
-   - marque *Default enabled* e *Apply on all existing monitors*;
-   - *Test* tem que chegar na sua caixa.
+   ```bash
+   ansible-vault edit inventory/group_vars/all/vault.yml
+   ```
+
+   | Chave | O quê |
+   |---|---|
+   | `vault_uptime_kuma_username` / `_password` | o admin do passo 5 |
+   | `vault_uptime_kuma_smtp_username` | o endereço Proton que envia (ex.: `monitor@nextlevelcode.pro`) |
+   | `vault_uptime_kuma_smtp_password` | um **token SMTP** da Proton (*Settings → IMAP/SMTP → SMTP tokens*) |
+   | `vault_uptime_kuma_smtp_to` | quem recebe |
+
+   ```bash
+   ansible-playbook playbooks/uptime-kuma.yml --ask-vault-pass
+   ```
+
+   Confira na interface: os grupos (Raspberry Pi, Proxmox, Público), os
+   monitores da lista e o aviso **E-mail** ligado em todos. Em
+   *Settings → Notifications*, clique em *Test* no **E-mail**: tem que chegar
+   (no formato **● AVISO**, porque o teste não traz o estado). Se você criou
+   um aviso à mão antes, apague-o: ficaria duplicado.
 
 7. **Primeiro backup:**
 
@@ -102,19 +122,29 @@ Caddy do Proxmox. O Caddy da VPS só aceita conexões da tailnet nesse site.
 
 ## O que monitorar
 
-Sugestão de partida (*Add New Monitor*):
+A lista fica em `inventory/group_vars/vps/monitors.yml`. Cada item vira um
+arquivo `.json` em `/opt/uptime-kuma/autokuma/monitors`, e o AutoKuma cria ou
+atualiza o monitor. Para acrescentar um serviço:
 
-| Monitor | Tipo | Alvo |
-|---|---|---|
-| Caddy + serviços | HTTP(s) | `https://jellyfin.lab.nextlevelcode.pro`, `immich.lab`, `nextcloud.lab/status.php`, `vault.lab/alive`, `searxng.lab`, `adguard.lab`, `fmd.lab` |
-| Forgejo público | HTTP(s) | `https://forge.nextlevelcode.pro` |
-| FMD (Funnel) | HTTP(s) | `https://fmd.<tailnet>.ts.net` |
-| DNS do AdGuard | DNS | servidor `<ts_ip>`, nome `nextlevelcode.pro` |
-| Pi | Ping | `nextlevelcode.<tailnet>.ts.net` |
-| Proxmox | Ping | `proxmox.<tailnet>.ts.net` |
+```yaml
+- {id: meu-servico, group: pi, type: http, name: Meu serviço, url: "https://meu-servico.lab.nextlevelcode.pro"}
+```
 
-Um monitor HTTP que retorna 302 (tela de login) conta como "up"; ajuste
-*Accepted Status Codes* se precisar.
+e reaplicar `playbooks/uptime-kuma.yml`. Item que sai da lista tem o monitor
+**apagado**. Os tipos usados são `http`, `dns`, `ping` e `port` (campos em
+<https://autokuma.bigboot.dev/dev/entity-types/>).
+
+- O container resolve por **DNS público** (Quad9 e Cloudflare), não pelo
+  MagicDNS: assim o monitor do Funnel vê o que a internet vê. Por isso ping e
+  porta usam o IP Tailscale; os `*.lab` são públicos e resolvem normalmente.
+- Sonarr, Radarr e Prowlarr usam `/ping`: a raiz redireciona para
+  `http://…/login` (eles não sabem que estão atrás de HTTPS), na porta 80, que
+  a VPS não alcança.
+- Todo monitor tem `max_retries: 2` (`uptime_kuma_monitor_defaults`): um
+  container parado alguns segundos pelo backup não vira e-mail.
+- **Não edite pela interface os monitores do AutoKuma:** a próxima
+  sincronização desfaz a mudança. Monitor criado à mão fica, e o AutoKuma não
+  mexe nele.
 
 ## Restore
 

@@ -1,0 +1,54 @@
+---
+# O que o Uptime Kuma monitora. O role uptime_kuma transforma cada item num
+# arquivo para o AutoKuma, que cria ou atualiza o monitor sozinho. Serviço
+# novo = uma linha aqui e reaplicar playbooks/uptime-kuma.yml. Item que sai da
+# lista tem o monitor apagado.
+#
+# id: único, vira o nome do arquivo. group: o id de um grupo abaixo. O resto
+# são campos do monitor no AutoKuma (url, hostname, port, accepted_statuscodes,
+# interval, max_retries...). Ping e porta usam o IP Tailscale: o container
+# resolve por DNS público (ver o compose), que não conhece a tailnet.
+#
+# Os *arr usam /ping: a raiz redireciona para http://<host>/login (eles não
+# sabem que estão atrás de HTTPS), na porta 80, que a VPS não alcança.
+
+uptime_kuma_groups:
+  - id: pi
+    name: Raspberry Pi
+  - id: proxmox
+    name: Proxmox
+  - id: publico
+    name: Público (internet)
+
+uptime_kuma_monitors:
+  # --- Raspberry Pi ---------------------------------------------------------
+  - {id: pi-ping, group: pi, type: ping, name: "Pi (ping)", hostname: <ts_ip>}
+  - id: adguard-dns
+    group: pi
+    type: dns
+    name: AdGuard (DNS)
+    hostname: nextlevelcode.pro
+    dns_resolve_server: <ts_ip>
+    dns_resolve_type: A
+    port: 53
+  - {id: adguard, group: pi, type: http, name: AdGuard, url: "https://adguard.lab.nextlevelcode.pro"}
+  - {id: jellyfin, group: pi, type: http, name: Jellyfin, url: "https://jellyfin.lab.nextlevelcode.pro"}
+  - {id: jellyseerr, group: pi, type: http, name: Jellyseerr, url: "https://jellyseerr.lab.nextlevelcode.pro"}
+  - {id: sonarr, group: pi, type: http, name: Sonarr, url: "https://sonarr.lab.nextlevelcode.pro/ping"}
+  - {id: radarr, group: pi, type: http, name: Radarr, url: "https://radarr.lab.nextlevelcode.pro/ping"}
+  - {id: prowlarr, group: pi, type: http, name: Prowlarr, url: "https://prowlarr.lab.nextlevelcode.pro/ping"}
+  - {id: bazarr, group: pi, type: http, name: Bazarr, url: "https://bazarr.lab.nextlevelcode.pro"}
+  - {id: qbittorrent, group: pi, type: http, name: qBittorrent, url: "https://qbittorrent.lab.nextlevelcode.pro"}
+  - {id: searxng, group: pi, type: http, name: SearXNG, url: "https://searxng.lab.nextlevelcode.pro"}
+  - {id: immich, group: pi, type: http, name: Immich, url: "https://immich.lab.nextlevelcode.pro/api/server/ping"}
+  - {id: nextcloud, group: pi, type: http, name: Nextcloud, url: "https://nextcloud.lab.nextlevelcode.pro/status.php"}
+  - {id: fmd, group: pi, type: http, name: FMD, url: "https://fmd.lab.nextlevelcode.pro"}
+
+  # --- Proxmox --------------------------------------------------------------
+  - {id: proxmox-ping, group: proxmox, type: ping, name: "Proxmox (ping)", hostname: <proxmox_host>}
+  - {id: vaultwarden, group: proxmox, type: http, name: Vaultwarden, url: "https://vault.lab.nextlevelcode.pro/alive"}
+  - {id: forgejo-ssh, group: proxmox, type: port, name: "Forgejo (SSH)", hostname: <ip-tailscale-do-forgejo>, port: 2222}
+
+  # --- Público: o que a internet vê -----------------------------------------
+  - {id: forge, group: publico, type: http, name: "Forgejo (forge.nextlevelcode.pro)", url: "https://forge.nextlevelcode.pro"}
+  - {id: fmd-funnel, group: publico, type: http, name: "FMD (Funnel)", url: "https://fmd.<tailnet>.ts.net"}
