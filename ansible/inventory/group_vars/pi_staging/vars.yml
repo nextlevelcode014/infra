@@ -27,3 +27,8 @@ searxng_secret_key: staging-nao-e-segredo
 # Restore de ensaio: a config é a de produção. Subir tudo faria o
 # qBittorrent baixar de novo os torrents e os *arr dispararem buscas.
 arr_restore_start_stack: false
+
+# Immich no pi-lab: sem sidecar (entraria na tailnet como outro "immich") e
+# com senha de banco de mentira (só letras e números, como a real).
+immich_tailscale_sidecar: false
+immich_db_password: stagingnaoesegredo

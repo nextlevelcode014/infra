@@ -1,0 +1,83 @@
+---
+- name: Criar o diretório da stack
+  ansible.builtin.file:
+    path: "{{ immich_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0750"
+  register: immich_stack_dir_result
+
+- name: Copiar os arquivos estáticos da stack
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: "{{ immich_dir }}/{{ item }}"
+    mode: "0644"
+  loop:
+    - hwaccel.ml.yml
+    - ts-serve.json
+
+- name: Renderizar o compose.yml
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: "{{ immich_dir }}/compose.yml"
+    mode: "0644"
+
+- name: Renderizar o .env
+  ansible.builtin.template:
+    src: immich.env.j2
+    dest: "{{ immich_dir }}/.env"
+    mode: "0600"
+  no_log: true
+
+- name: Subir o Immich
+  community.docker.docker_compose_v2:
+    project_src: "{{ immich_dir }}"
+    files: [compose.yml]
+    state: present
+    remove_orphans: true
+  # No --check de um host novo o diretório só "seria" criado, e o compose
+  # falha com "is not a directory". Pula só nesse caso.
+  when: not (ansible_check_mode and immich_stack_dir_result is changed)
+
+# --- Backup -----------------------------------------------------------------
+# Repositório próprio (omarchy), com senha própria. O borg_client já instalou
+# o Borg e a chave SSH.
+
+- name: Instalar a senha do repositório Borg do Immich
+  ansible.builtin.copy:
+    content: "{{ immich_borg_password }}"
+    dest: "{{ immich_borg_password_file }}"
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+  when: borg_backup_enabled
+
+- name: Adicionar o host do repositório do Immich ao known_hosts
+  ansible.builtin.known_hosts:
+    name: "{{ immich_borg_host }}"
+    key: "{{ immich_borg_host }} {{ immich_borg_known_host_key }}"
+    path: "{{ borg_ssh_key | dirname }}/known_hosts"
+    state: present
+  when: borg_backup_enabled
+
+- name: Instalar script de backup do Immich
+  ansible.builtin.template:
+    src: backup-immich.sh.j2
+    dest: "{{ immich_backup_script }}"
+    owner: root
+    group: root
+    mode: "0750"
+
+- name: Agendar backup do Immich
+  ansible.builtin.cron:
+    name: Backup Borg do Immich
+    user: root
+    state: "{{ 'present' if borg_backup_enabled else 'absent' }}"
+    minute: "{{ immich_backup_schedule.split()[0] }}"
+    hour: "{{ immich_backup_schedule.split()[1] }}"
+    day: "{{ immich_backup_schedule.split()[2] }}"
+    month: "{{ immich_backup_schedule.split()[3] }}"
+    weekday: "{{ immich_backup_schedule.split()[4] }}"
+    job: "{{ immich_backup_script }} >> {{ immich_backup_log_file }} 2>&1"

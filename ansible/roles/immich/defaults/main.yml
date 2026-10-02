@@ -1,0 +1,34 @@
+---
+# Mesmo nome de projeto Compose ("immich") do self-hosted: ao aplicar pela
+# primeira vez, o Compose adota os containers e os volumes nomeados.
+immich_dir: /opt/immich
+
+# Fixada como em produção: o dump do banco só restaura na mesma versão.
+immich_version: v3
+
+# Fotos/vídeos e banco ficam direto no LUKS, sem symlink.
+immich_upload_location: "{{ appdata_dir }}/immich/upload"
+immich_db_data_location: "{{ appdata_dir }}/immich/postgres"
+immich_db_username: postgres
+immich_db_database_name: immich
+# Só letras e números: o .env é env_file e o Compose interpola '$' nele.
+immich_db_password: "{{ vault_immich_db_password }}"
+
+# Sidecar Tailscale (immich.<tailnet>.ts.net), mantido enquanto os apps do
+# celular não trocam para immich.lab.nextlevelcode.pro. Desligado no pi-lab.
+immich_tailscale_sidecar: true
+immich_ts_authkey: "{{ vault_immich_ts_authkey }}"
+immich_ts_tailnet: <tailnet>.ts.net
+
+# Backup Borg em repositório PRÓPRIO, no computador de trabalho (omarchy), e
+# não no repo compartilhado: são ~30 GB de fotos. Só roda com o omarchy
+# ligado. A chave SSH é a do borg_client (/root/.ssh/id_ed25519), autorizada
+# no omarchy só para `borg serve` nesta pasta (ver docs/immich.md).
+immich_borg_repo: "ssh://sia@omarchy/home/sia/immich-backup-temp"
+immich_borg_host: omarchy
+immich_borg_known_host_key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMdQrVLtnt49zOp/p60r2aDCjGinojwsmiG072Rg/BY8"
+immich_borg_password_file: /root/.borg-immich-pass
+immich_borg_password: "{{ vault_immich_borg_password }}"
+immich_backup_script: /usr/local/bin/backup-immich.sh
+immich_backup_log_file: /var/log/immich_backup.log
+immich_backup_schedule: "30 3 * * *"

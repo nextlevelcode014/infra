@@ -1,0 +1,6 @@
+---
+- name: Configurar o Immich
+  hosts: pi_hosts
+  gather_facts: true
+  roles:
+    - role: immich

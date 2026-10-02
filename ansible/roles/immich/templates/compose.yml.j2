@@ -1,0 +1,114 @@
+# Gerido pelo Ansible — não editar à mão. Origem: self-hosted/immich/compose.yml.
+# Mudanças: a porta 2283 publicada no IP Tailscale (para o Caddy do Proxmox) e o
+# sidecar Tailscale opcional (immich_tailscale_sidecar).
+#
+# Base oficial: https://github.com/immich-app/immich/releases/latest/download/docker-compose.yml
+
+name: immich
+
+services:
+{% if immich_tailscale_sidecar %}
+  tailscale:
+    image: tailscale/tailscale:latest
+    container_name: immich_tailscale
+    hostname: immich
+    environment:
+      - TS_AUTHKEY=${TS_AUTHKEY}
+      - TS_STATE_DIR=/var/lib/tailscale
+      - TS_SERVE_CONFIG=/config/ts-serve.json
+      - TS_USERSPACE=false
+    volumes:
+      - tailscale-state:/var/lib/tailscale
+      - ./ts-serve.json:/config/ts-serve.json:ro
+      - /dev/net/tun:/dev/net/tun
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    restart: always
+{% endif %}
+
+  immich-server:
+    container_name: immich_server
+    image: ghcr.io/immich-app/immich-server:${IMMICH_VERSION:-release}
+    # extends:
+    #   file: hwaccel.transcoding.yml
+    #   service: cpu # set to one of [nvenc, quicksync, rkmpp, vaapi, vaapi-wsl] for accelerated transcoding
+    volumes:
+      # Do not edit the next line. If you want to change the media storage location on your system, edit the value of UPLOAD_LOCATION in the .env file
+      - ${UPLOAD_LOCATION}:/data
+      - /etc/localtime:/etc/localtime:ro
+    env_file:
+      - .env
+    # Só no IP Tailscale: o Caddy do Proxmox chega por ali.
+    ports:
+      - "${TS_IP:?defina TS_IP no .env}:2283:2283"
+    depends_on:
+      - redis
+      - database
+    restart: always
+    healthcheck:
+      disable: false
+
+  immich-machine-learning:
+    container_name: immich_machine_learning
+    # Pi 5 (arm64) não tem GPU com aceleração de ML suportada (nem NVIDIA/Mali/Rockchip),
+    # então usa a imagem CPU (sem sufixo) + o service no-op `cpu` do hwaccel.ml.yml.
+    # A imagem -cuda nem tem manifest arm64 — o pull falharia. Para acelerar noutro
+    # host, troque o sufixo (-cuda/-openvino/-armnn/-rknn) e o `service:` correspondente.
+    image: ghcr.io/immich-app/immich-machine-learning:${IMMICH_VERSION:-release}
+    extends:
+      file: hwaccel.ml.yml
+      service: cpu
+    volumes:
+      - model-cache:/cache
+    env_file:
+      - .env
+    # Teto de RAM: ocioso ele fica em ~250 MB (descarrega os modelos após 300s),
+    # mas ao rodar um job carrega CLIP + reconhecimento facial e pica na casa de
+    # 1,5-2,5 GB. A Pi tem 7,7 GB e o Nextcloud AIO ao lado, então sem teto um
+    # pico grande faz o OOM killer do host escolher a vítima — que pode ser o
+    # Postgres. Com o limite, quem morre é só este container (e o `restart:
+    # always` o traz de volta). Se algum job passar a falhar sempre no mesmo
+    # ponto, é sinal de teto apertado: suba para 3g e confira com
+    # `docker inspect immich_machine_learning --format '{% raw %}{{.State.OOMKilled}}{% endraw %}'`.
+    #
+    # Medido em 28/07/2026 numa importação real: pico de 1397 MB (68% do teto),
+    # sem OOM. O consumo é dominado pelos pesos do modelo, não pelo volume de
+    # fotos — mais fotos não sobem o pico, mas trocar por um modelo CLIP maior
+    # sobe o piso de uma vez e exige remedir antes de manter os 2g.
+    mem_limit: 2g
+    restart: always
+    healthcheck:
+      disable: false
+
+  redis:
+    container_name: immich_redis
+    image: docker.io/valkey/valkey:9@sha256:3eeb09785cd61ec8e3be35f8804c8892080f3ca21934d628abc24ee4ed1698f6
+    healthcheck:
+      test: redis-cli ping || exit 1
+    restart: always
+
+  database:
+    container_name: immich_postgres
+    image: ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0@sha256:bcf63357191b76a916ae5eb93464d65c07511da41e3bf7a8416db519b40b1c23
+    environment:
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_DB: ${DB_DATABASE_NAME}
+      POSTGRES_INITDB_ARGS: '--data-checksums'
+      # Uncomment the DB_STORAGE_TYPE: 'HDD' var if your database isn't stored on SSDs
+      # DB_STORAGE_TYPE: 'HDD'
+    volumes:
+      # Do not edit the next line. If you want to change the database storage location on your system, edit the value of DB_DATA_LOCATION in the .env file
+      - ${DB_DATA_LOCATION}:/var/lib/postgresql/data
+    shm_size: 128mb
+    restart: always
+    healthcheck:
+      disable: false
+
+
+volumes:
+  model-cache:
+{% if immich_tailscale_sidecar %}
+  tailscale-state:
+{% endif %}

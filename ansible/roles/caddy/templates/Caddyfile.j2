@@ -63,6 +63,13 @@
         reverse_proxy nextlevelcode:8081
     }
 
+    # Immich: uploads grandes e WebSocket passam pelo reverse_proxy sem
+    # ajuste (o Caddy não limita corpo nem corta WebSocket por padrão).
+    @immich host immich.{{ caddy_domain }}
+    handle @immich {
+        reverse_proxy nextlevelcode:2283
+    }
+
     @searxng host searxng.{{ caddy_domain }}
     handle @searxng {
         reverse_proxy nextlevelcode:8082
