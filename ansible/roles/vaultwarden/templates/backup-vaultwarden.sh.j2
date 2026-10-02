@@ -20,7 +20,7 @@ trap cleanup EXIT
 echo "[$timestamp] Iniciando backup do Vaultwarden..."
 docker compose -f "$compose_file" down
 
-borg create \
+borg create --lock-wait {{ borg_lock_wait }} \
     --compression "{{ borg_backup_compression }}" \
     --exclude '*.tmp' \
     --exclude '*.log' \
@@ -29,7 +29,7 @@ borg create \
     "$data_dir"
 
 docker compose -f "$compose_file" up -d
-borg prune --glob-archives 'vaultwarden-*' "{{ borg_repo }}" {{ borg_backup_retention }}
-borg compact "{{ borg_repo }}"
+borg prune --lock-wait {{ borg_lock_wait }} --glob-archives 'vaultwarden-*' "{{ borg_repo }}" {{ borg_backup_retention }}
+borg compact --lock-wait {{ borg_lock_wait }} "{{ borg_repo }}"
 
 echo "[$(date +%H:%M:%S)] Backup concluído com sucesso!"

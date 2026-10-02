@@ -25,13 +25,13 @@ echo "[$(date +%H:%M:%S)] Dump: $(du -h "$upload_location/database-backup/immich
 
 # Sem --compression: fotos e vídeos já vêm comprimidos. Thumbs e vídeos
 # re-encodados o Immich gera de novo a partir dos originais.
-borg create \
+borg create --lock-wait {{ borg_lock_wait }} \
     --exclude "$upload_location/thumbs/" \
     --exclude "$upload_location/encoded-video/" \
     "{{ borg_repo }}::immich-$timestamp" \
     "$upload_location"
 
-borg prune --glob-archives 'immich-*' "{{ borg_repo }}" {{ borg_backup_retention }}
-borg compact "{{ borg_repo }}"
+borg prune --lock-wait {{ borg_lock_wait }} --glob-archives 'immich-*' "{{ borg_repo }}" {{ borg_backup_retention }}
+borg compact --lock-wait {{ borg_lock_wait }} "{{ borg_repo }}"
 
 echo "[$(date +%H:%M:%S)] Backup concluído com sucesso!"

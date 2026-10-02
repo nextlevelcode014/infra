@@ -21,7 +21,7 @@ echo "[$timestamp] Iniciando backup da stack Arr..."
 # Parada para os bancos SQLite dos *arr saírem consistentes.
 docker compose -f "$compose_file" down
 
-borg create \
+borg create --lock-wait {{ borg_lock_wait }} \
     --compression "{{ borg_backup_compression }}" \
     --exclude '*.tmp' \
     --exclude 'sh:**/*.log' \
@@ -37,7 +37,7 @@ borg create \
     "{{ arr_backup_source }}"
 
 docker compose -f "$compose_file" up -d
-borg prune --glob-archives 'arr-*' "{{ borg_repo }}" {{ borg_backup_retention }}
-borg compact "{{ borg_repo }}"
+borg prune --lock-wait {{ borg_lock_wait }} --glob-archives 'arr-*' "{{ borg_repo }}" {{ borg_backup_retention }}
+borg compact --lock-wait {{ borg_lock_wait }} "{{ borg_repo }}"
 
 echo "[$(date +%H:%M:%S)] Backup concluído com sucesso!"
