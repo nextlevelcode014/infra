@@ -17,8 +17,10 @@ uptime_kuma_groups:
     name: Raspberry Pi
   - id: proxmox
     name: Proxmox
+  # O id ficou "publico" de quando o grupo tinha esse nome: trocar o id faz o
+  # AutoKuma apagar o grupo e criar outro, e o histórico dele se perde.
   - id: publico
-    name: Público (internet)
+    name: VPS
 
 uptime_kuma_monitors:
   # --- Raspberry Pi ---------------------------------------------------------
@@ -43,12 +45,14 @@ uptime_kuma_monitors:
   - {id: immich, group: pi, type: http, name: Immich, url: "https://immich.lab.nextlevelcode.pro/api/server/ping"}
   - {id: nextcloud, group: pi, type: http, name: Nextcloud, url: "https://nextcloud.lab.nextlevelcode.pro/status.php"}
   - {id: fmd, group: pi, type: http, name: FMD, url: "https://fmd.lab.nextlevelcode.pro"}
+  # O Funnel entra pela infraestrutura do Tailscale direto no Pi, sem passar
+  # pela VPS; resolve por DNS público, então vê o que a internet vê.
+  - {id: fmd-funnel, group: pi, type: http, name: "FMD (Funnel)", url: "https://fmd.<tailnet>.ts.net"}
 
   # --- Proxmox --------------------------------------------------------------
   - {id: proxmox-ping, group: proxmox, type: ping, name: "Proxmox (ping)", hostname: <proxmox_host>}
   - {id: vaultwarden, group: proxmox, type: http, name: Vaultwarden, url: "https://vault.lab.nextlevelcode.pro/alive"}
   - {id: forgejo-ssh, group: proxmox, type: port, name: "Forgejo (SSH)", hostname: <ip-tailscale-do-forgejo>, port: 2222}
 
-  # --- Público: o que a internet vê -----------------------------------------
-  - {id: forge, group: publico, type: http, name: "Forgejo (forge.nextlevelcode.pro)", url: "https://forge.nextlevelcode.pro"}
-  - {id: fmd-funnel, group: publico, type: http, name: "FMD (Funnel)", url: "https://fmd.<tailnet>.ts.net"}
+  # --- VPS: o que a internet vê ---------------------------------------------
+  - {id: forge, group: publico, type: http, name: Forgejo, url: "https://forge.nextlevelcode.pro"}

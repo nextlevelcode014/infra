@@ -108,7 +108,7 @@ Caddy do Proxmox. O Caddy da VPS só aceita conexões da tailnet nesse site.
    ansible-playbook playbooks/uptime-kuma.yml --ask-vault-pass
    ```
 
-   Confira na interface: os grupos (Raspberry Pi, Proxmox, Público), os
+   Confira na interface: os grupos (Raspberry Pi, Proxmox, VPS), os
    monitores da lista e o aviso **E-mail** ligado em todos. Em
    *Settings → Notifications*, clique em *Test* no **E-mail**: tem que chegar
    (no formato **● AVISO**, porque o teste não traz o estado). Se você criou
