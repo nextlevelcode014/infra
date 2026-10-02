@@ -1,0 +1,35 @@
+# Gerido pelo Ansible — não editar à mão. Origem: self-hosted/nextcloud/compose.coturn-turn.yml.
+# Mudança: o intervalo de relay vem do .env (nextcloud_turn_min/max_port).
+name: coturn-turn
+services:
+  coturn:
+    image: coturn/coturn:4.6.3
+    network_mode: host
+    restart: always
+    env_file: .env
+    command: >
+      -n
+      --log-file=stdout
+      --min-port=${TURN_MIN_PORT}
+      --max-port=${TURN_MAX_PORT}
+      --listening-port=3479
+      --relay-ip=${TURN_RELAY_IP}
+      --external-ip=${TURN_RELAY_IP}
+      --static-auth-secret=${TURN_SECRET}
+      --realm=${TS_TAILNET}
+      --no-tls
+      --no-dtls
+      --no-multicast-peers
+      --fingerprint
+      --denied-peer-ip=10.0.0.0-10.255.255.255
+      --denied-peer-ip=192.168.0.0-192.168.255.255
+      --denied-peer-ip=172.16.0.0-172.31.255.255
+      --allowed-peer-ip=172.18.0.0-172.18.255.255
+      --allowed-peer-ip=100.64.0.0-100.127.255.255
+    healthcheck:
+      # A imagem do coturn não traz `nc`; usa o cliente STUN que ela já embarca.
+      # Um Binding Request não precisa de credencial, então testa o serviço de verdade.
+      test: ["CMD", "turnutils_stunclient", "-p", "3479", "127.0.0.1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3

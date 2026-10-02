@@ -11,3 +11,4 @@
 - import_playbook: playbooks/adguard.yml
 - import_playbook: playbooks/fmd.yml
 - import_playbook: playbooks/exit-node.yml
+- import_playbook: playbooks/nextcloud.yml

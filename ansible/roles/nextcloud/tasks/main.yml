@@ -1,0 +1,99 @@
+---
+# --- Mastercontainer do AIO -------------------------------------------------
+- name: Criar o diretório do AIO
+  ansible.builtin.file:
+    path: "{{ nextcloud_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0750"
+  register: nextcloud_dir_result
+
+- name: Renderizar o compose.yml do AIO
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: "{{ nextcloud_dir }}/compose.yml"
+    mode: "0644"
+
+# NUNCA remove_orphans aqui: os containers nextcloud-aio-* que o AIO cria
+# ficam neste mesmo projeto Compose e seriam apagados como "órfãos".
+- name: Subir o mastercontainer do AIO
+  community.docker.docker_compose_v2:
+    project_src: "{{ nextcloud_dir }}"
+    files: [compose.yml]
+    state: present
+    remove_orphans: false
+  # No --check de um host novo o diretório só "seria" criado, e o compose
+  # falha com "is not a directory". Pula só nesse caso.
+  when: not (ansible_check_mode and nextcloud_dir_result is changed)
+
+# --- coturn -----------------------------------------------------------------
+- name: Criar o diretório do coturn
+  ansible.builtin.file:
+    path: "{{ nextcloud_coturn_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0750"
+  register: nextcloud_coturn_dir_result
+
+- name: Copiar o compose do coturn
+  ansible.builtin.copy:
+    src: compose.coturn-turn.yml
+    dest: "{{ nextcloud_coturn_dir }}/compose.coturn-turn.yml"
+    mode: "0644"
+
+- name: Renderizar o .env do coturn
+  ansible.builtin.template:
+    src: coturn.env.j2
+    dest: "{{ nextcloud_coturn_dir }}/.env"
+    mode: "0600"
+  no_log: true
+
+- name: Subir o coturn
+  community.docker.docker_compose_v2:
+    project_src: "{{ nextcloud_coturn_dir }}"
+    files: [compose.coturn-turn.yml]
+    state: present
+  when: not (ansible_check_mode and nextcloud_coturn_dir_result is changed)
+
+# --- tailscale serve do host ------------------------------------------------
+- name: Ler o tailscale serve do host
+  ansible.builtin.command:
+    argv: [tailscale, serve, status, --json]
+  register: nextcloud_serve_status
+  changed_when: false
+  check_mode: false
+
+- name: Ler o domínio configurado no AIO
+  ansible.builtin.command:
+    argv: [docker, exec, nextcloud-aio-mastercontainer, cat, /mnt/docker-aio-config/data/configuration.json]
+  register: nextcloud_aio_config
+  changed_when: false
+  check_mode: false
+  failed_when: false
+
+- name: Calcular as portas do serve a remover
+  ansible.builtin.set_fact:
+    nextcloud_serve_ports: "{{ (nextcloud_serve_status.stdout | from_json).get('TCP', {}) | dict2items | map(attribute='key') | list }}"
+    nextcloud_aio_domain: >-
+      {{ (nextcloud_aio_config.stdout | from_json).get('domain', '')
+         if nextcloud_aio_config.rc == 0 else '' }}
+
+# A 443 só sai quando o AIO já responde pelo domínio novo (Caddy); antes
+# disso ela é o único caminho até o Nextcloud.
+- name: Remover do serve as portas que não são mais usadas
+  ansible.builtin.command:
+    argv: [tailscale, serve, "--https={{ item }}", "off"]
+  loop: "{{ nextcloud_serve_remove_ports + ([443] if nextcloud_aio_domain == nextcloud_domain else []) }}"
+  when: item | string in nextcloud_serve_ports
+
+- name: Servir a interface do AIO só na tailnet
+  ansible.builtin.command:
+    argv:
+      - tailscale
+      - serve
+      - --bg
+      - "--https={{ nextcloud_serve_aio_port }}"
+      - https+insecure://127.0.0.1:8080
+  when: nextcloud_serve_aio_port | string not in nextcloud_serve_ports

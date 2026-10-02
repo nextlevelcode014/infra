@@ -1,0 +1,8 @@
+---
+# Só o Pi: o AIO cria uma dúzia de containers e valida o domínio, e o
+# tailscale serve é do host. No pi-lab o ensaio não diria muito.
+- name: Configurar o Nextcloud AIO
+  hosts: rpi
+  gather_facts: true
+  roles:
+    - role: nextcloud
