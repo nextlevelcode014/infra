@@ -1,0 +1,149 @@
+name: exit-node
+
+services:
+  gluetun-exit:
+    # Tag FIXA, de propósito. A lista de servidores é compilada dentro da
+    # imagem, então 'latest' faz cada máquina ter um catálogo diferente conforme
+    # a data em que puxou — e um SERVER_HOSTNAMES válido aqui vira erro fatal
+    # lá. Foi o que aconteceu: notebook com build de 06/08 e Pi com build de
+    # 19/07 discordavam sobre a existência do node-br-08.
+    image: qmcgaw/gluetun:v3.41.3
+    container_name: gluetun-exit
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    environment:
+      - VPN_SERVICE_PROVIDER=protonvpn
+      - VPN_TYPE=wireguard
+      - WIREGUARD_PRIVATE_KEY=${WIREGUARD_PRIVATE_KEY}
+      - WIREGUARD_ADDRESSES=${WIREGUARD_ADDRESSES}
+      - SERVER_COUNTRIES=${SERVER_COUNTRIES:-Brazil}
+      # SERVER_COUNTRIES sozinho NÃO garante saída no Brasil. Das 9 entradas que
+      # a base do gluetun rotula como "Brazil" (todas com city "São Paulo"),
+      # apenas 2 ficam mesmo no Brasil — as outras saem em Miami, Zürich,
+      # Reykjavík e Estocolmo. Como a escolha é aleatória, é ~78% de chance de
+      # sair no país errado, e o sintoma é indireto: o Tailscale mede latência
+      # de DERP através do túnel e passa a relay em Miami.
+      # Nenhum campo do gluetun distingue as entradas (não há region nem name),
+      # e o updater que traria a lista correta exige e-mail e senha da conta
+      # Proton — segredo alto demais para o problema. Por isso, hostname fixo.
+      - SERVER_HOSTNAMES=${SERVER_HOSTNAMES:-node-br-04.protonvpn.net}
+      # NÃO adicione FIREWALL_OUTBOUND_SUBNETS=100.64.0.0/10 aqui. É a receita
+      # que circula na internet, e ela QUEBRA o exit node: além do ACCEPT no
+      # firewall, o gluetun cria 'ip rule' de prioridade 99 mandando todo o
+      # range da tailnet para a tabela 199 (via eth0). A regra do Tailscale
+      # (tabela 52, via tailscale0) fica na prioridade 5270 e perde, então o
+      # tráfego de volta sai pela bridge do Docker e some. Aquela receita é
+      # para dar acesso à LAN (192.168.x), onde não há esse conflito.
+      # Porta UDP do tailscaled: permite conexão direta (sem relay DERP).
+      # 41642, e não a 41641 padrão: o tailscaled do HOST já ocupa aquela.
+      - FIREWALL_INPUT_PORTS=41642
+      - HEALTH_TARGET_ADDRESS=1.1.1.1:443
+      - TZ=America/Sao_Paulo
+    ports:
+      - "41642:41642/udp" # furo de NAT quando o celular está no wi-fi de casa
+    # Vão aqui, e não no tailscale-exit: quem é dono da netns é o gluetun.
+    sysctls:
+      - net.ipv4.ip_forward=1
+      - net.ipv6.conf.all.forwarding=1
+      - net.ipv4.conf.all.src_valid_mark=1
+    healthcheck:
+      test: ["CMD", "/gluetun-entrypoint", "healthcheck"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
+  tailscale-exit:
+    image: tailscale/tailscale:latest
+    container_name: tailscale-exit
+    network_mode: service:gluetun-exit
+    # O tailscaled chama /usr/sbin/iptables, que na imagem é o binário LEGACY —
+    # mas o gluetun cria a tabela 'filter' pelo backend nft. O legacy então
+    # falha com "can't initialize iptables table filter" (exit 3), nenhuma regra
+    # ts-forward entra, e a política DROP do FORWARD engole todo o tráfego
+    # encaminhado: o celular conecta no exit node e fica sem internet.
+    # Apontar para iptables-nft põe os dois na MESMA tabela, e aí o ACCEPT do
+    # ts-forward vence a política. Usar TS_DEBUG_FIREWALL_MODE=nftables NÃO
+    # resolve: criaria tabelas nft separadas, e entre tabelas o drop ganha.
+    #
+    # A regra 'ip rule' abaixo conserta o caminho de VOLTA. O gluetun instala
+    # uma regra de prioridade 101 ("not fwmark 0xca6c → tabela 51820") que
+    # captura praticamente tudo e manda para o túnel. A regra do Tailscale
+    # (tabela 52) fica na 5270 e nunca é alcançada, então a resposta destinada
+    # ao celular entra na ProtonVPN em vez de sair pela tailscale0:
+    #
+    #   ip route get <ip-do-celular>  →  dev tun0 table 51820   (buraco negro)
+    #
+    # Com a regra na prioridade 99 o destino tailnet volta para a tabela 52:
+    #
+    #   ip route get <ip-do-celular>  →  dev tailscale0 table 52
+    #
+    # As regras 97/98 fecham um VAZAMENTO. O killswitch do gluetun protege o
+    # tráfego do próprio container (chain OUTPUT), mas o tráfego encaminhado do
+    # celular passa pela FORWARD — e ali o ts-forward faz "ACCEPT mark match
+    # 0x40000" SEM restringir interface, com MASQUERADE igualmente irrestrito.
+    # Quando o túnel cai, a tabela 51820 esvazia, o roteamento cai de volta na
+    # 'main' (default via eth0) e o celular passa a sair pelo IP DE CASA —
+    # silenciosamente, que é exatamente o cenário que esta stack existe para
+    # evitar. Medido, com tun0 down e sem estas regras:
+    #
+    #   ip route get 1.1.1.1 from <celular> iif tailscale0
+    #     →  via 172.20.0.1 dev eth0          (vazando)
+    #   com as regras:
+    #     →  RTNETLINK answers: Invalid argument   (sem rota, fail-closed)
+    #
+    # Feito por rota, e não por iptables, de propósito: o tailscaled reinsere o
+    # salto para ts-forward no TOPO da FORWARD periodicamente, passando por cima
+    # de qualquer DROP nosso. Se o gluetun um dia trocar o id da tabela 51820, a
+    # 97 não casa e a 98 descarta — erra para o lado seguro.
+    #
+    # A imagem do Tailscale fica em :latest de propósito (o tailscaled fala com
+    # um control plane hospedado, então versão velha vira dívida de segurança).
+    # Mas este entrypoint depende de detalhes INTERNOS da imagem — o layout dos
+    # symlinks do iptables e o caminho do containerboot — e não da interface
+    # documentada (TS_*) que os outros sidecars do repo usam. Daí a guarda:
+    # 'ln -sf' para um alvo inexistente CRIA um symlink quebrado COM SUCESSO, o
+    # tailscaled não escreveria regra nenhuma, e o exit node ficaria mudo com
+    # cara de saudável — nó aprovado, "offers exit node", zero tráfego. Falhar
+    # aqui é ruidoso; falhar depois seria silencioso.
+    # Note que nem nesse caso haveria vazamento: sem ts-forward, a política DROP
+    # do FORWARD descarta tudo, e as regras 97/98 abaixo são 'ip rule', que não
+    # dependem do iptables. O prejuízo seria indisponibilidade, não privacidade.
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        [ -x /usr/sbin/iptables-nft ]       || { echo "FATAL: /usr/sbin/iptables-nft ausente — layout da imagem do Tailscale mudou (ver README)" >&2; exit 1; }
+        [ -x /usr/sbin/ip6tables-nft ]      || { echo "FATAL: /usr/sbin/ip6tables-nft ausente — layout da imagem do Tailscale mudou (ver README)" >&2; exit 1; }
+        [ -x /usr/local/bin/containerboot ] || { echo "FATAL: /usr/local/bin/containerboot fora do lugar — layout da imagem do Tailscale mudou (ver README)" >&2; exit 1; }
+        ln -sf /usr/sbin/iptables-nft  /usr/sbin/iptables
+        ln -sf /usr/sbin/ip6tables-nft /usr/sbin/ip6tables
+        ip    rule add to 100.64.0.0/10        lookup 52 priority 99 2>/dev/null || true
+        ip -6 rule add to fd7a:115c:a1e0::/48  lookup 52 priority 99 2>/dev/null || true
+        ip    rule add iif tailscale0 lookup 51820 priority 97 2>/dev/null || true
+        ip    rule add iif tailscale0 blackhole    priority 98 2>/dev/null || true
+        exec /usr/local/bin/containerboot
+    depends_on:
+      gluetun-exit:
+        condition: service_healthy
+    environment:
+      - TS_AUTHKEY=${TS_AUTHKEY}
+      - TS_HOSTNAME=vpn-exit
+      - TS_STATE_DIR=/var/lib/tailscale
+      - TS_USERSPACE=false
+      - TS_EXTRA_ARGS=--advertise-exit-node --advertise-tags=tag:containers
+      # Precisa casar com a porta publicada acima (o host já usa a 41641).
+      - TS_TAILSCALED_EXTRA_ARGS=--port=41642
+    volumes:
+      - tailscale-exit-state:/var/lib/tailscale
+      - /dev/net/tun:/dev/net/tun
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    restart: unless-stopped
+
+volumes:
+  tailscale-exit-state:

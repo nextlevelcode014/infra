@@ -52,6 +52,7 @@ usadas depois.
 | `playbooks/pi-recuperacao.yml` | `pi_hosts` | Forgejo e Vaultwarden em standby no Pi (parados, prontos para o restore) |
 | `playbooks/adguard.yml` | `pi_hosts` | AdGuard do Pi: DNS na LAN e na tailnet, web pelo Caddy, backup Borg |
 | `playbooks/fmd.yml` | `pi_hosts` | FMD do Pi: Funnel público para emergência + fmd.lab pelo Caddy, backup Borg |
+| `playbooks/exit-node.yml` | `rpi` | exit node Tailscale saindo pela ProtonVPN (nunca no pi-lab) |
 | `playbooks/immich.yml` | `pi_hosts` | Immich do Pi (backup Borg pronto, desligado até ampliar a cota) |
 | `playbooks/*-restore.yml` | o grupo do serviço | restore Borg explícito (ver `docs/`) |
 
@@ -93,6 +94,7 @@ domínios voltados para a internet — está fora deste repo.
 | `searxng` | SearXNG do Pi; `settings.yml` renderizado, porta publicada pelo gluetun |
 | `adguard` | AdGuard do Pi; DNS em `lan_ip` e `ts_ip`, sem sidecar |
 | `fmd` | FMD do Pi; sidecar com Funnel opcional (`fmd_tailscale_sidecar`) |
+| `exit_node` | exit node `vpn-exit` (compose do `self-hosted/exit-node`, sem mudança) |
 | `immich` | Immich do Pi, acesso só pelo Caddy; `immich_backup_enabled` liga o backup |
 | `*_restore` | restore Borg do serviço, exige `-e <svc>_restore_confirmation`; `-e restore_on_pi=true` restaura no Pi de recuperação |
 | `geerlingguy.docker` | vendido, instala o engine |

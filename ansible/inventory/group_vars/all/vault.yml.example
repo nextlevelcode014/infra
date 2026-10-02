@@ -85,3 +85,8 @@ vault_immich_db_password: "CHANGE-ME"
 # Gere com: openssl rand -base64 32
 vault_fmd_ts_authkey: "tskey-auth-CHANGE-ME"
 vault_fmd_registration_token: "CHANGE-ME"
+
+# Exit node (Tailscale + ProtonVPN). A config WireGuard é OUTRA, separada da
+# do gluetun: a mesma chave em dois lugares derruba um dos túneis.
+vault_exit_node_ts_authkey: "tskey-auth-CHANGE-ME"
+vault_exit_node_wireguard_private_key: "CHANGE-ME"

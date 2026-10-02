@@ -1,0 +1,34 @@
+---
+# Tailscale exit node que sai pela ProtonVPN. O compose é o do self-hosted,
+# sem mudança: as regras de roteamento e a trava contra vazamento estão
+# explicadas nele.
+- name: Criar o diretório da stack
+  ansible.builtin.file:
+    path: "{{ exit_node_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0750"
+  register: exit_node_stack_dir_result
+
+- name: Copiar o compose.yml
+  ansible.builtin.copy:
+    src: compose.yml
+    dest: "{{ exit_node_dir }}/compose.yml"
+    mode: "0644"
+
+- name: Renderizar o .env
+  ansible.builtin.template:
+    src: exit-node.env.j2
+    dest: "{{ exit_node_dir }}/.env"
+    mode: "0600"
+  no_log: true
+
+- name: Subir o exit node
+  community.docker.docker_compose_v2:
+    project_src: "{{ exit_node_dir }}"
+    files: [compose.yml]
+    state: present
+  # No --check de um host novo o diretório só "seria" criado, e o compose
+  # falha com "is not a directory". Pula só nesse caso.
+  when: not (ansible_check_mode and exit_node_stack_dir_result is changed)

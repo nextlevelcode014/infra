@@ -1,0 +1,8 @@
+---
+# Só o Pi, nunca o pi-lab: lá ele entraria na tailnet como um segundo exit
+# node e, com a mesma chave WireGuard, derrubaria o túnel do Pi.
+- name: Configurar o exit node
+  hosts: rpi
+  gather_facts: true
+  roles:
+    - role: exit_node

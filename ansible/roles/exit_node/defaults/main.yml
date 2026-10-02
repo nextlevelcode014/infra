@@ -1,0 +1,18 @@
+---
+# O compose fixa o projeto em "exit-node" (name:), então o volume com a
+# identidade do nó (exit-node_tailscale-exit-state) é adotado: o vpn-exit
+# continua o mesmo nó da tailnet.
+exit_node_dir: /opt/exit-node
+
+exit_node_ts_authkey: "{{ vault_exit_node_ts_authkey }}"
+
+# Config WireGuard da ProtonVPN SÓ deste exit node, separada da do gluetun:
+# a mesma chave em dois lugares derruba um dos túneis.
+exit_node_wireguard_private_key: "{{ vault_exit_node_wireguard_private_key }}"
+exit_node_wireguard_addresses: 10.2.0.2/32
+
+# País e servidor fixos. SERVER_COUNTRIES sozinho não garante saída no Brasil
+# (só 2 das 9 entradas "Brazil" do gluetun ficam no Brasil); ao trocar de
+# país, troque ou esvazie o hostname junto. Ver o compose.
+exit_node_server_countries: Brazil
+exit_node_server_hostnames: node-br-04.protonvpn.net
