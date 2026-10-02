@@ -1,7 +1,17 @@
 ---
 # Operação destrutiva e explícita. O deploy normal é playbooks/vaultwarden.yml.
 - name: Restaurar Vaultwarden a partir do Borg
-  hosts: vaultwarden
+  # Padrão: o LXC de produção. -e restore_on_pi=true restaura no Pi de
+  # recuperação (sempre com --limit rpi ou --limit pi_staging).
+  hosts: "{{ 'pi_hosts' if (restore_on_pi | default(false) | bool) else 'vaultwarden' }}"
   gather_facts: false
+  pre_tasks:
+    # No Pi os dados vão para o LUKS; sem ele aberto, iriam para a raiz em claro.
+    - name: Confirmar o volume cifrado (só no Pi)
+      ansible.builtin.command:
+        argv: [mountpoint, -q, "{{ secure_mount_dir }}"]
+      changed_when: false
+      check_mode: false
+      when: "'pi_hosts' in group_names"
   roles:
     - role: vaultwarden_restore

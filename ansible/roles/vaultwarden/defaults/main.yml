@@ -38,3 +38,8 @@ vaultwarden_email_attempts_limit: "5"
 vaultwarden_ip_header: "X-Forwarded-For"
 vaultwarden_icon_redirect_code: "302"
 vaultwarden_http_request_block_non_global_ips: "true"
+
+# Modo standby (Pi de recuperação): compose e imagens prontos, containers
+# parados e sem cron de backup. Quem sobe o serviço é o vaultwarden-restore.yml,
+# com o archive mais recente da produção. Ver docs/pi-recuperacao.md.
+vaultwarden_standby: false

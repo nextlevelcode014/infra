@@ -28,3 +28,7 @@ arr_restore_required_files:
 # já existentes.
 arr_restore_excluded_dirs:
   - jellyfin/cache
+
+# Hostname da máquina cujos backups valem para o restore (o Raspberry Pi). Archives
+# arr-* de outras máquinas são ignorados.
+arr_restore_source_host: ubuntu

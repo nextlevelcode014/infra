@@ -19,7 +19,9 @@
   ansible.builtin.cron:
     name: Backup Borg do Forgejo
     user: root
-    state: "{{ 'present' if borg_backup_enabled else 'absent' }}"
+    # Standby nunca faz backup: um archive forgejo-* do Pi viraria o mais
+    # recente e o restore pegaria os dados velhos dele.
+    state: "{{ 'present' if (borg_backup_enabled and not forgejo_standby) else 'absent' }}"
     minute: "{{ forgejo_backup_schedule.split()[0] }}"
     hour: "{{ forgejo_backup_schedule.split()[1] }}"
     day: "{{ forgejo_backup_schedule.split()[2] }}"
@@ -57,3 +59,19 @@
     project_src: "{{ forgejo_dir }}"
     state: present
     pull: always
+  when: not forgejo_standby
+
+# Standby: imagens baixadas (o restore não depende de registry na hora do
+# desastre) e nenhum container rodando. remove_orphans tira também os sidecars
+# Tailscale da instância antiga do self-hosted, que usava o mesmo projeto.
+- name: Baixar as imagens (standby)
+  community.docker.docker_compose_v2_pull:
+    project_src: "{{ forgejo_dir }}"
+  when: forgejo_standby
+
+- name: Manter os serviços parados (standby)
+  community.docker.docker_compose_v2:
+    project_src: "{{ forgejo_dir }}"
+    state: absent
+    remove_orphans: true
+  when: forgejo_standby

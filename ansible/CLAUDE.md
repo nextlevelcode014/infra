@@ -49,6 +49,7 @@ usadas depois.
 | `playbooks/gluetun.yml` | `pi_hosts` | gateway VPN do Pi |
 | `playbooks/arr-stack.yml` | `pi_hosts` | stack Arr do Pi + backup Borg |
 | `playbooks/searxng.yml` | `pi_hosts` | SearXNG do Pi (sai pela VPN do gluetun) |
+| `playbooks/pi-recuperacao.yml` | `pi_hosts` | Forgejo e Vaultwarden em standby no Pi (parados, prontos para o restore) |
 | `playbooks/immich.yml` | `pi_hosts` | Immich do Pi (backup Borg pronto, desligado até ampliar a cota) |
 | `playbooks/*-restore.yml` | o grupo do serviço | restore Borg explícito (ver `docs/`) |
 
@@ -89,7 +90,7 @@ domínios voltados para a internet — está fora deste repo.
 | `arr_stack` | stack Arr do Pi (compose do `self-hosted/arr`) |
 | `searxng` | SearXNG do Pi; `settings.yml` renderizado, porta publicada pelo gluetun |
 | `immich` | Immich do Pi, acesso só pelo Caddy; `immich_backup_enabled` liga o backup |
-| `*_restore` | restore Borg do serviço, exige `-e <svc>_restore_confirmation` |
+| `*_restore` | restore Borg do serviço, exige `-e <svc>_restore_confirmation`; `-e restore_on_pi=true` restaura no Pi de recuperação |
 | `geerlingguy.docker` | vendido, instala o engine |
 | `geerlingguy.pip`, `geerlingguy.security` | vendidos, sem uso ainda |
 

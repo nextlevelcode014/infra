@@ -6,3 +6,7 @@ vaultwarden_restore_work_dir: "/var/tmp/vaultwarden-restore"
 # self-hosted/ legada: home/ubuntu/self-hosted/vaultwarden/vw-data
 # Novo LXC:           opt/vaultwarden/vw-data
 vaultwarden_restore_data_archive_path: "opt/vaultwarden/vw-data"
+
+# Hostname da máquina cujos backups valem para o restore (o LXC de produção). Archives
+# vaultwarden-* de outras máquinas são ignorados.
+vaultwarden_restore_source_host: vaultwarden

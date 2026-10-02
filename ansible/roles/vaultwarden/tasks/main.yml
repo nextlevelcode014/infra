@@ -20,7 +20,9 @@
   ansible.builtin.cron:
     name: Backup Borg do Vaultwarden
     user: root
-    state: "{{ 'present' if borg_backup_enabled else 'absent' }}"
+    # Standby nunca faz backup: um archive vaultwarden-* do Pi viraria o mais
+    # recente e o restore pegaria os dados velhos dele.
+    state: "{{ 'present' if (borg_backup_enabled and not vaultwarden_standby) else 'absent' }}"
     minute: "{{ vaultwarden_backup_schedule.split()[0] }}"
     hour: "{{ vaultwarden_backup_schedule.split()[1] }}"
     day: "{{ vaultwarden_backup_schedule.split()[2] }}"
@@ -53,3 +55,19 @@
     project_src: "{{ vaultwarden_dir }}"
     state: present
     pull: always
+  when: not vaultwarden_standby
+
+# Standby: imagens baixadas (o restore não depende de registry na hora do
+# desastre) e nenhum container rodando. remove_orphans tira também os sidecars
+# Tailscale da instância antiga do self-hosted, que usava o mesmo projeto.
+- name: Baixar as imagens (standby)
+  community.docker.docker_compose_v2_pull:
+    project_src: "{{ vaultwarden_dir }}"
+  when: vaultwarden_standby
+
+- name: Manter os serviços parados (standby)
+  community.docker.docker_compose_v2:
+    project_src: "{{ vaultwarden_dir }}"
+    state: absent
+    remove_orphans: true
+  when: vaultwarden_standby

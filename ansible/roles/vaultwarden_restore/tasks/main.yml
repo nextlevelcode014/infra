@@ -43,10 +43,8 @@
       - list
       - --prefix
       - "vaultwarden-"
-      - --last
-      - "1"
       - --format
-      - "{archive}{NL}"
+      - "{hostname} {archive}{NL}"
       - "{{ borg_repo }}"
   environment:
     BORG_PASSCOMMAND: "{{ borg_passcommand }}"
@@ -62,16 +60,28 @@
       borg list falhou (rc={{ vaultwarden_restore_archive_result.rc }}):
       {{ vaultwarden_restore_archive_result.stderr | default('sem detalhes') }}
 
+# O prefixo sozinho não basta: outra máquina com backup do mesmo serviço
+# (ex.: o Pi antigo) cria archives vaultwarden-* no mesmo repositório, e o mais
+# recente podia ser o dela. Só valem os archives feitos por vaultwarden_restore_source_host.
+- name: Filtrar os archives da máquina de origem
+  ansible.builtin.set_fact:
+    vaultwarden_restore_candidates: >-
+      {{ vaultwarden_restore_archive_result.stdout_lines
+         | select('match', '^' ~ vaultwarden_restore_source_host ~ ' vaultwarden-[^/ ]+$')
+         | map('regex_replace', '^[^ ]+ ', '')
+         | list }}
+
 - name: Validar que um archive Vaultwarden foi encontrado
   ansible.builtin.assert:
     that:
-      - vaultwarden_restore_archive_result.stdout_lines | length == 1
-      - vaultwarden_restore_archive_result.stdout_lines[0] is match('^vaultwarden-[^/]+$')
-    fail_msg: "Nenhum archive Borg Vaultwarden válido foi encontrado."
+      - vaultwarden_restore_candidates | length > 0
+    fail_msg: >-
+      Nenhum archive vaultwarden-* feito por '{{ vaultwarden_restore_source_host }}'.
+      Archives com o prefixo: {{ vaultwarden_restore_archive_result.stdout_lines | join(', ') }}
 
 - name: Guardar o nome do archive selecionado
   ansible.builtin.set_fact:
-    vaultwarden_restore_archive: "{{ vaultwarden_restore_archive_result.stdout_lines[0] }}"
+    vaultwarden_restore_archive: "{{ vaultwarden_restore_candidates | last }}"
 
 - name: Limpar diretório temporário de uma execução anterior
   ansible.builtin.file:

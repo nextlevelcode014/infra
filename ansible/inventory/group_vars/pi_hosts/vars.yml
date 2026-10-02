@@ -13,3 +13,20 @@ admin_user: ubuntu
 # A mesma do Pi e dos composes (TZ=America/Sao_Paulo). Mesmo fuso da
 # global, mas trocar só por trocar mexeria em logs e crons do host.
 timezone: America/Sao_Paulo
+
+# --- Recuperação: Forgejo e Vaultwarden em standby -------------------------
+# A produção está nos LXCs do Proxmox. No Pi os dois ficam prontos (compose,
+# imagens, dados no LUKS) e parados; o *-restore.yml com -e restore_on_pi=true
+# restaura o archive mais recente da produção e sobe. Ver docs/pi-recuperacao.md.
+forgejo_standby: true
+vaultwarden_standby: true
+
+forgejo_dir: "{{ appdata_dir }}/forgejo"
+vaultwarden_dir: "{{ appdata_dir }}/vaultwarden"
+
+# Extração temporária do restore dentro do LUKS, não em /var/tmp (raiz em claro).
+forgejo_restore_work_dir: "{{ secure_mount_dir }}/restore/forgejo"
+vaultwarden_restore_work_dir: "{{ secure_mount_dir }}/restore/vaultwarden"
+
+# 8080 está ocupada no Pi (Nextcloud AIO e tailscale serve); só no IP Tailscale.
+vaultwarden_bind_port: "{{ ts_ip }}:8083"

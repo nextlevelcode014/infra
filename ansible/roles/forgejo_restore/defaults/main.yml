@@ -8,3 +8,7 @@ forgejo_group: "1000"
 # from the absolute paths used by lib/backup_forgejo.sh.
 forgejo_restore_data_archive_path: "opt/forgejo/forgejo"
 forgejo_restore_dump_archive_path: "tmp/forgejo_db_dump.sql"
+
+# Hostname da máquina cujos backups valem para o restore (o LXC de produção). Archives
+# forgejo-* de outras máquinas são ignorados.
+forgejo_restore_source_host: forgejo

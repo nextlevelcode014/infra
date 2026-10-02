@@ -42,10 +42,8 @@
       - list
       - --prefix
       - "forgejo-"
-      - --last
-      - "1"
       - --format
-      - "{archive}{NL}"
+      - "{hostname} {archive}{NL}"
       - "{{ borg_repo }}"
   environment:
     BORG_PASSCOMMAND: "{{ borg_passcommand }}"
@@ -61,16 +59,28 @@
       borg list falhou (rc={{ forgejo_restore_archive_result.rc }}):
       {{ forgejo_restore_archive_result.stderr | default('sem detalhes') }}
 
+# O prefixo sozinho não basta: outra máquina com backup do mesmo serviço
+# (ex.: o Pi antigo) cria archives forgejo-* no mesmo repositório, e o mais
+# recente podia ser o dela. Só valem os archives feitos por forgejo_restore_source_host.
+- name: Filtrar os archives da máquina de origem
+  ansible.builtin.set_fact:
+    forgejo_restore_candidates: >-
+      {{ forgejo_restore_archive_result.stdout_lines
+         | select('match', '^' ~ forgejo_restore_source_host ~ ' forgejo-[^/ ]+$')
+         | map('regex_replace', '^[^ ]+ ', '')
+         | list }}
+
 - name: Validar que um archive Forgejo foi encontrado
   ansible.builtin.assert:
     that:
-      - forgejo_restore_archive_result.stdout_lines | length == 1
-      - forgejo_restore_archive_result.stdout_lines[0] is match('^forgejo-[^/]+$')
-    fail_msg: "Nenhum archive Borg Forgejo válido foi encontrado."
+      - forgejo_restore_candidates | length > 0
+    fail_msg: >-
+      Nenhum archive forgejo-* feito por '{{ forgejo_restore_source_host }}'.
+      Archives com o prefixo: {{ forgejo_restore_archive_result.stdout_lines | join(', ') }}
 
 - name: Guardar o nome do archive selecionado
   ansible.builtin.set_fact:
-    forgejo_restore_archive: "{{ forgejo_restore_archive_result.stdout_lines[0] }}"
+    forgejo_restore_archive: "{{ forgejo_restore_candidates | last }}"
 
 - name: Limpar diretório temporário de uma execução anterior
   ansible.builtin.file:

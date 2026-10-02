@@ -48,10 +48,8 @@
       - list
       - --prefix
       - "arr-"
-      - --last
-      - "1"
       - --format
-      - "{archive}{NL}"
+      - "{hostname} {archive}{NL}"
       - "{{ borg_repo }}"
   environment:
     BORG_PASSCOMMAND: "{{ borg_passcommand }}"
@@ -59,16 +57,28 @@
   register: arr_restore_archive_result
   changed_when: false
 
+# O prefixo sozinho não basta: outra máquina com backup do mesmo serviço
+# (ex.: o Pi antigo) cria archives arr-* no mesmo repositório, e o mais
+# recente podia ser o dela. Só valem os archives feitos por arr_restore_source_host.
+- name: Filtrar os archives da máquina de origem
+  ansible.builtin.set_fact:
+    arr_restore_candidates: >-
+      {{ arr_restore_archive_result.stdout_lines
+         | select('match', '^' ~ arr_restore_source_host ~ ' arr-[^/ ]+$')
+         | map('regex_replace', '^[^ ]+ ', '')
+         | list }}
+
 - name: Validar que um archive Arr foi encontrado
   ansible.builtin.assert:
     that:
-      - arr_restore_archive_result.stdout_lines | length == 1
-      - arr_restore_archive_result.stdout_lines[0] is match('^arr-[^/]+$')
-    fail_msg: "Nenhum archive Borg Arr válido foi encontrado."
+      - arr_restore_candidates | length > 0
+    fail_msg: >-
+      Nenhum archive arr-* feito por '{{ arr_restore_source_host }}'.
+      Archives com o prefixo: {{ arr_restore_archive_result.stdout_lines | join(', ') }}
 
 - name: Guardar o nome do archive selecionado
   ansible.builtin.set_fact:
-    arr_restore_archive: "{{ arr_restore_archive_result.stdout_lines[0] }}"
+    arr_restore_archive: "{{ arr_restore_candidates | last }}"
 
 - name: Limpar diretório temporário de uma execução anterior
   ansible.builtin.file:

@@ -30,3 +30,10 @@ arr_restore_start_stack: false
 
 # Immich no pi-lab: senha de banco de mentira (só letras e números, como a real).
 immich_db_password: stagingnaoesegredo
+
+# Recuperação no pi-lab: os composes em standby não precisam dos segredos reais.
+# A senha do Postgres do Forgejo só vale para o cluster novo (o restore carrega
+# o dump dentro dele); token admin e SMTP do Vaultwarden não fazem falta no ensaio.
+forgejo_db_password: stagingnaoesegredo
+vaultwarden_admin_token: staging-nao-e-segredo
+vaultwarden_smtp_password: staging-nao-e-segredo

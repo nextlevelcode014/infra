@@ -4,3 +4,5 @@
     project_src: "{{ vaultwarden_dir }}"
     state: present
     recreate: always
+  # Em standby o serviço fica parado; reiniciar aqui o subiria.
+  when: not vaultwarden_standby

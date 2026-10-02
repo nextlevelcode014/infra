@@ -1,0 +1,11 @@
+---
+# Deixa o Pi pronto para assumir Forgejo e Vaultwarden se o Proxmox cair:
+# compose, imagens e dados no LUKS, com os containers PARADOS. Não restaura
+# nada. Restaurar é explícito: *-restore.yml -e restore_on_pi=true.
+- name: Preparar o Pi de recuperação
+  hosts: pi_hosts
+  gather_facts: true
+  roles:
+    - role: pi_host
+    - role: forgejo
+    - role: vaultwarden
