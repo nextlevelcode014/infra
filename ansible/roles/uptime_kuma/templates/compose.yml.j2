@@ -21,8 +21,14 @@ services:
     image: {{ uptime_kuma_autokuma_image }}
     container_name: autokuma
     restart: unless-stopped
+    # O AutoKuma não refaz o login quando o Uptime Kuma reinicia: fica em
+    # "You are not logged in" para sempre. restart: true faz o Compose
+    # reiniciá-lo junto sempre que recriar o uptime-kuma. O healthcheck é o
+    # da própria imagem do Uptime Kuma.
     depends_on:
-      - uptime-kuma
+      uptime-kuma:
+        condition: service_healthy
+        restart: true
     env_file: .env
     environment:
       AUTOKUMA__KUMA__URL: http://uptime-kuma:3001
