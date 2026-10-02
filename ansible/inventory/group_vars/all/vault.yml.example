@@ -79,8 +79,3 @@ vault_searxng_secret_key: "CHANGE-ME"
 # Immich. Senha do Postgres SÓ com letras e números: o .env é env_file e o
 # Compose interpola '$' nele (o Postgres receberia outra senha, em silêncio).
 vault_immich_db_password: "CHANGE-ME"
-# Auth key do sidecar Tailscale (immich.<tailnet>.ts.net), enquanto ele existir.
-vault_immich_ts_authkey: "tskey-auth-CHANGE-ME"
-# Senha do repositório Borg PRÓPRIO do Immich (no omarchy), diferente da do
-# repo compartilhado. Hoje está em /root/.borg-immich-pass no Pi.
-vault_immich_borg_password: "CHANGE-ME"

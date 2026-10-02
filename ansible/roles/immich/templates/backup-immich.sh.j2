@@ -9,7 +9,7 @@ set -euo pipefail
 upload_location="{{ immich_upload_location }}"
 timestamp="$(date +%Y-%m-%d_%H-%M-%S)"
 
-export BORG_PASSCOMMAND="cat {{ immich_borg_password_file }}"
+export BORG_PASSCOMMAND="{{ borg_passcommand }}"
 export BORG_RSH="{{ borg_rsh }}"
 
 [[ -d "$upload_location" ]] || { echo "ERRO: $upload_location não encontrado"; exit 1; }
@@ -28,10 +28,10 @@ echo "[$(date +%H:%M:%S)] Dump: $(du -h "$upload_location/database-backup/immich
 borg create \
     --exclude "$upload_location/thumbs/" \
     --exclude "$upload_location/encoded-video/" \
-    "{{ immich_borg_repo }}::immich-$timestamp" \
+    "{{ borg_repo }}::immich-$timestamp" \
     "$upload_location"
 
-borg prune --glob-archives 'immich-*' "{{ immich_borg_repo }}" {{ borg_backup_retention }}
-borg compact "{{ immich_borg_repo }}"
+borg prune --glob-archives 'immich-*' "{{ borg_repo }}" {{ borg_backup_retention }}
+borg compact "{{ borg_repo }}"
 
 echo "[$(date +%H:%M:%S)] Backup concluído com sucesso!"
