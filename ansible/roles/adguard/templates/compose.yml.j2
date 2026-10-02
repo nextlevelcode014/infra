@@ -1,0 +1,17 @@
+# Gerido pelo Ansible — não editar à mão. Origem: self-hosted/adguard/compose.yml,
+# sem o sidecar Tailscale: o DNS é publicado nos IPs do host e a interface web
+# passa pelo Caddy do Proxmox.
+services:
+  adguardhome:
+    image: {{ adguard_image }}
+    container_name: adguardhome
+    restart: unless-stopped
+    volumes:
+      - {{ adguard_data_dir }}/work:/opt/adguardhome/work
+      - {{ adguard_data_dir }}/conf:/opt/adguardhome/conf
+    ports:
+{% for ip in adguard_dns_bind_ips | unique %}
+      - "{{ ip }}:53:53/tcp"
+      - "{{ ip }}:53:53/udp"
+{% endfor %}
+      - "{{ ts_ip }}:{{ adguard_web_port }}:80"

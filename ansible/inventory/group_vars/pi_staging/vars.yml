@@ -4,6 +4,7 @@
 
 # Sem Tailscale: as portas escutam no IP da LAN.
 ts_ip: "{{ ansible_host }}"
+lan_ip: "{{ ansible_host }}"
 
 # Sem backup: cairia no repositório de produção (ver vars.yml). O
 # borg_client continua instalando o acesso, para ensaiar restore aqui.

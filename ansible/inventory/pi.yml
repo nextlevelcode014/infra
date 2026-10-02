@@ -6,14 +6,19 @@ pi_hosts:
     rpi:
       hosts:
         # Raspberry Pi 5 (ARM64). Fora do Terraform: host físico, alcançado
-        # pelo nome MagicDNS da tailnet.
+        # pelo nome completo da tailnet. O nome curto (nextlevelcode) também é
+        # respondido pelo roteador (reserva DHCP) com o IP da LAN, e aí o SSH
+        # cai no sshd da LAN em vez do Tailscale SSH.
         pi:
-          ansible_host: nextlevelcode
+          ansible_host: nextlevelcode.<tailnet>.ts.net
           ansible_user: ubuntu
           ansible_become: true
           # IP Tailscale do próprio Pi, lido dos fatos: as portas das stacks
           # só escutam nele, e o Caddy do Proxmox chega por ali.
           ts_ip: "{{ ansible_facts['tailscale0']['ipv4']['address'] }}"
+          # IP da LAN (rota default). É onde o roteador encontra o DNS do
+          # AdGuard; precisa de reserva fixa no DHCP do roteador.
+          lan_ip: "{{ ansible_facts['default_ipv4']['address'] }}"
           # Partição LUKS (blkid da p3). Não é segredo: sem a passphrase não
           # abre. Host sem esta variável não tem LUKS (ver pi_staging).
           pi_luks_uuid: 7eef4654-3504-4dfe-9579-1e04b33d8897

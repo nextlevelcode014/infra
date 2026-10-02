@@ -1,0 +1,25 @@
+---
+# Mesmo nome de projeto Compose ("adguard") do self-hosted: ao aplicar pela
+# primeira vez, o Compose adota o container e remove o sidecar Tailscale.
+adguard_dir: /opt/adguard
+adguard_image: adguard/adguardhome:latest
+
+# Config e dados direto no LUKS, onde o link-data já os guardava.
+adguard_data_dir: "{{ appdata_dir }}/adguard"
+
+# DNS (53 TCP/UDP) no IP da LAN, para o roteador, e no IP Tailscale, para a
+# tailnet. Nunca em 0.0.0.0: o systemd-resolved do host está em 127.0.0.53.
+adguard_dns_bind_ips:
+  - "{{ lan_ip }}"
+  - "{{ ts_ip }}"
+
+# Interface web (porta 80 do container) só no IP Tailscale, para o Caddy do
+# Proxmox (adguard.lab.nextlevelcode.pro). 3000 é do Forgejo em standby.
+adguard_web_port: 8084
+
+# Backup Borg no repositório compartilhado, prefixo adguard-*. Sem parar o
+# AdGuard (parar o DNS derruba a rede da casa) e sem o querylog: é o log de
+# todas as consultas, o maior arquivo (centenas de MB) e o mais sensível.
+adguard_backup_script: /usr/local/bin/backup-adguard.sh
+adguard_backup_log_file: /var/log/adguard_backup.log
+adguard_backup_schedule: "45 2 * * *"
