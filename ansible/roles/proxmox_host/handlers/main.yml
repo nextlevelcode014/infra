@@ -1,0 +1,5 @@
+---
+- name: Recarregar udev
+  ansible.builtin.command:
+    argv: [udevadm, control, --reload-rules]
+  changed_when: true

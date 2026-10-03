@@ -1,0 +1,8 @@
+---
+# Host do Proxmox (o notebook). Os containers são do lxc.yml; aqui só o que
+# roda na máquina física.
+- name: Configurar o host do Proxmox
+  hosts: proxmox
+  gather_facts: false
+  roles:
+    - proxmox_host

@@ -1,0 +1,40 @@
+---
+# --- Bateria ----------------------------------------------------------------
+# Notebook ligado o tempo todo com a bateria em 100% (e em carga rápida, que
+# era o padrão) degrada e pode inchar. Sem bateria (ou sem driver que exponha
+# charge_types) o bloco inteiro pula.
+
+- name: Ver se a bateria aceita escolher o modo de carga
+  ansible.builtin.stat:
+    path: "/sys/class/power_supply/{{ proxmox_battery }}/charge_types"
+  register: proxmox_charge_types
+
+- name: Limitar a carga da bateria
+  when: proxmox_charge_types.stat.exists
+  block:
+    # O modo fica no firmware e costuma sobreviver ao reboot, mas não a um
+    # reset da bateria ou update de BIOS. A regra do udev reaplica no boot.
+    - name: Fixar o modo de carga no boot
+      ansible.builtin.copy:
+        dest: /etc/udev/rules.d/90-bateria.rules
+        mode: "0644"
+        content: |
+          # Gerido pelo Ansible (role proxmox_host).
+          ACTION=="add", SUBSYSTEM=="power_supply", KERNEL=="{{ proxmox_battery }}", ATTR{charge_types}="{{ proxmox_battery_charge_type }}"
+      notify: Recarregar udev
+
+    - name: Ler o modo de carga atual
+      ansible.builtin.slurp:
+        src: "/sys/class/power_supply/{{ proxmox_battery }}/charge_types"
+      register: proxmox_charge_types_now
+
+    # Sem esperar o próximo boot.
+    - name: Aplicar o modo de carga agora
+      ansible.builtin.shell:
+        cmd: >-
+          echo {{ proxmox_battery_charge_type }}
+          > /sys/class/power_supply/{{ proxmox_battery }}/charge_types
+      when: >-
+        ('[' ~ proxmox_battery_charge_type ~ ']')
+        not in (proxmox_charge_types_now.content | b64decode)
+      changed_when: true

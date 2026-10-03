@@ -1,0 +1,9 @@
+---
+# Base do host do Proxmox (o próprio notebook, não os containers).
+
+# Bateria que fica na tomada 24/7. Long_Life é o "conservation mode" do
+# ideapad_laptop: o firmware para de carregar perto de 60%, sem limite
+# configurável. O kernel lista as opções em BAT0/charge_types; a escolhida
+# aparece entre colchetes.
+proxmox_battery: BAT0
+proxmox_battery_charge_type: Long_Life

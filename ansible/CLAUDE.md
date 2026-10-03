@@ -43,6 +43,7 @@ usadas depois.
 | Playbook | Hosts | Faz |
 |---|---|---|
 | `playbooks/lxc.yml` | `proxmox`, depois `lxc` | flags do container, depois a config base de todos |
+| `playbooks/proxmox.yml` | `proxmox` | host do Proxmox (o notebook): modo de carga da bateria (`docs/proxmox.md`) |
 | `playbooks/caddy.yml` | `caddy` | binário custom com plugin DNS-01 + Caddyfile + drop-in |
 | `playbooks/forgejo.yml` | `forgejo` | stack do Forgejo + backup Borg |
 | `playbooks/vaultwarden.yml` | `vaultwarden` | stack do Vaultwarden + backup Borg |
@@ -95,6 +96,7 @@ curinga `*.lab` aponta para o Caddy do Proxmox. VPS nova: `docs/vps.md`.
 |---|---|
 | `common` | timezone + NTP de máquina física |
 | `artis3n.tailscale.machine` | instala e sobe na tailnet, com `--ssh` |
+| `proxmox_host` | base do notebook do Proxmox: bateria em `Long_Life` (conservation mode) |
 | `lxc_flags` | exceção: aplica flags do container (ver abaixo) |
 | `caddy` | binário custom (DNS-01) + Caddyfile + systemd drop-in; `caddy_caddyfile_template` escolhe o Caddyfile do host (Proxmox ou VPS) |
 | `forgejo` | compose do Forgejo + Postgres |
