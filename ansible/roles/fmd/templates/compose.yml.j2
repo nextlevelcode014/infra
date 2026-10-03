@@ -30,10 +30,9 @@ services:
 {% if fmd_anubis %}
   # Anubis só no caminho do Funnel: o ts-serve.json manda a internet para a
   # 8923 (este container), que repassa ao fmd na 8080. A porta publicada para
-  # o Caddy (fmd.lab) vai direto à 8080, sem desafio. O IP do visitante chega
-  # pelo X-Forwarded-For que o tailscale serve acrescenta. Aparelho da tailnet
-  # que abrir o endereço do Funnel leva 500: o Anubis descarta IP da faixa
-  # 100.64.0.0/10 e fica sem IP. Da tailnet, use o fmd.lab.
+  # o Caddy (fmd.lab) vai direto à 8080, sem desafio. O tailscale serve manda
+  # para cá tanto a internet quanto a tailnet; a política separa as duas pelo
+  # header Tailscale-Funnel-Request.
   fmd-anubis:
     image: {{ anubis_image }}
     container_name: fmd-anubis
@@ -47,6 +46,11 @@ services:
       DIFFICULTY: "{{ anubis_difficulty }}"
       POLICY_FNAME: /policy.yaml
       REDIRECT_DOMAINS: {{ fmd_funnel_host }}
+      # O Anubis exige o IP do cliente, e descarta IP da tailnet
+      # (100.64.0.0/10) do X-Forwarded-For: sem isto, quem vem da tailnet
+      # leva 500 antes de qualquer regra. Com isto todos aparecem como
+      # 127.0.0.1; nenhuma regra do FMD depende de IP.
+      USE_REMOTE_ADDRESS: "true"
     volumes:
       - ./anubis-policy.yaml:/policy.yaml:ro
     read_only: true

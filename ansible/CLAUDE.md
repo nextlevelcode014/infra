@@ -155,7 +155,9 @@ Vale não repetir:
 - **O Anubis responde 500 sem o IP do cliente.** Ele exige `X-Real-Ip` (ou um
   `X-Forwarded-For` com IP público): no Caddy, `header_up X-Real-Ip
   {remote_host}`. IP da tailnet (`100.64.0.0/10`) ele descarta sempre, então
-  quem chega pela tailnet a um Anubis atrás do `tailscale serve` leva 500. E a
+  quem chega pela tailnet a um Anubis atrás do `tailscale serve` leva 500: lá
+  vai `USE_REMOTE_ADDRESS=true`, e a tailnet se separa do Funnel pelo header
+  `Tailscale-Funnel-Request` (o FMD faz assim). E a
   página de desafio responde **200**: monitor apontado para a raiz fica verde
   com o serviço fora do ar; aponte para um caminho liberado na política.
 - **`redir` do Caddy com um argumento só que começa com `/`** lê o caminho como

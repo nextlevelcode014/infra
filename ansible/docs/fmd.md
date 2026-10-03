@@ -24,10 +24,10 @@ app de 2FA quase sempre sumiu junto. O que protege:
 - os dados são cifrados no aparelho: invadir o servidor dá metadado (quem tem
   conta, quando cada aparelho falou), não o mapa;
 - `FMD_REGISTRATIONTOKEN` obrigatório: vazio = qualquer um cria conta;
-- o **Anubis** no caminho do Funnel (`fmd_anubis`): todo acesso pela internet,
-  inclusive o login, passa antes por uma prova de trabalho no navegador. Bot
-  nenhum chega a tentar senha nem a travar a conta. O `fmd.lab` segue direto.
-  Da tailnet, o endereço do Funnel dá 500: use o `fmd.lab` (`docs/anubis.md`).
+- o **Anubis** no endereço do Funnel (`fmd_anubis`): todo acesso pela
+  internet, inclusive o login, passa antes por uma prova de trabalho no
+  navegador. Bot nenhum chega a tentar senha nem a travar a conta. Pela
+  tailnet (o app do celular) e pelo `fmd.lab` passa direto (`docs/anubis.md`).
 
 ## Backup
 

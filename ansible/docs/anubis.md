@@ -15,8 +15,11 @@ homelab não usa, por privacidade).
 | `forge.nextlevelcode.pro` | Caddy da VPS → `anubis-forgejo` (`127.0.0.1:8923`) → Forgejo (`<ip-tailscale-do-forgejo>:3000`) | VPS, `playbooks/anubis.yml` |
 | `fmd.<tailnet>.ts.net` (Funnel) | sidecar `fmd-tailscale` → `fmd-anubis` (`:8923`) → FMD (`:8080`) | Pi, na stack do FMD, `playbooks/fmd.yml` |
 
-O `fmd.lab` (Caddy do Proxmox → porta `8085`) vai direto ao FMD, **sem**
-desafio: é o uso normal, só da tailnet, e é a URL do app do celular.
+O endereço do Funnel atende a internet **e** a tailnet (o MagicDNS resolve o
+mesmo nome para o IP da tailnet). Os dois passam pelo `fmd-anubis`, e a
+política separa: da tailnet passa direto (o app do celular não roda
+JavaScript), da internet é desafiado. O `fmd.lab` (Caddy do Proxmox → porta
+`8085`) nem passa pelo Anubis.
 
 ## O que passa sem desafio
 
@@ -34,9 +37,10 @@ Cada serviço acrescenta o que precisa passar sem JavaScript:
 | Forgejo | `*.rss`, `*.atom` | leitores de feed |
 | Forgejo | `/api/*` **com** header `Authorization` | o `tea` e scripts com token; API anônima segue desafiada |
 | Forgejo | `/api/healthz` | monitor do Uptime Kuma |
+| FMD | tudo o que vem da **tailnet** (sem o header `Tailscale-Funnel-Request`) | o app do celular; o `tailscale serve` apaga esse header do cliente e só o põe em requisição do Funnel, então não dá para forjar |
 | FMD | `/api/v1/version` | monitor do Uptime Kuma |
 
-No FMD **todo o resto é desafiado, inclusive o login** (`/api/v1/salt`,
+No FMD, da internet, **todo o resto é desafiado, inclusive o login** (`/api/v1/salt`,
 `/requestAccess`). A trava do FMD é por usuário (5 erros = 10 min): sem o
 Anubis, qualquer bot travava a sua conta na hora da emergência. No navegador o
 login funciona normal, porque o cookie do desafio vale para as chamadas da
@@ -91,14 +95,16 @@ curl -s https://fmd.<tailnet>.ts.net/api/v1/version
 Desafio nas linhas 1 e 4, `200` na 2, clone sem erro, versão na 5. Abra os
 dois num navegador: passam depois de ~1 s, e o login do FMD funciona. O
 `tea pr ls` continua funcionando, e o app do celular continua sincronizando
-(usa o `fmd.lab`).
+pela tailnet.
 
 ## Limitações
 
 - **Exige JavaScript.** Navegador sem JS não passa.
-- **Aparelho da tailnet no endereço do Funnel leva 500.** O MagicDNS resolve
-  `fmd.<tailnet>.ts.net` para o IP da tailnet, e o Anubis descarta IPs da
-  faixa `100.64.0.0/10` e fica sem IP do cliente. Da tailnet, use o `fmd.lab`.
+- **O Anubis do FMD vê todo mundo como `127.0.0.1`** (`USE_REMOTE_ADDRESS`).
+  Ele exige o IP do cliente e descarta IPs da tailnet (`100.64.0.0/10`) do
+  `X-Forwarded-For`; sem isso, quem vem da tailnet levava 500 antes de qualquer
+  regra. Nenhuma regra do FMD depende de IP, e os logs do FMD continuam com o
+  IP real.
 - **Restart = desafio de novo.** A chave que assina o cookie é gerada na
   partida (sem chave no vault de propósito: um segredo a menos).
 

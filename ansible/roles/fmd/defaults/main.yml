@@ -21,19 +21,26 @@ fmd_legacy_dir: /home/ubuntu/self-hosted/fmd
 fmd_tailscale_sidecar: true
 fmd_ts_authkey: "{{ vault_fmd_ts_authkey }}"
 
-# Anubis só no caminho do Funnel: o tráfego da internet passa por uma prova
-# de trabalho antes de chegar ao FMD, inclusive a API de login. Sem isso,
+# Anubis no nó do Funnel: o tráfego da internet passa por uma prova de
+# trabalho antes de chegar ao FMD, inclusive a API de login. Sem isso,
 # qualquer bot trava a conta (5 senhas erradas = 10 min, por usuário) bem na
-# hora da emergência. O app do celular usa o fmd.lab, que segue direto.
+# hora da emergência. Quem chega pela tailnet (o app do celular, que não roda
+# JavaScript) passa direto; o fmd.lab nem passa pelo Anubis.
 # Só vale com o sidecar (o pi-lab desliga os dois).
 fmd_anubis: true
 # O nome do Funnel: o Anubis só redireciona para ele depois do desafio.
 fmd_funnel_host: fmd.<tailnet>.ts.net
-# Liberado sem desafio só o /api/v1/version, para o monitor do Uptime Kuma:
-# a página de desafio responde 200 e deixaria o monitor sempre verde.
 fmd_anubis_policy:
   allow_crawlers: false
   rules:
+    # Tailnet passa direto. O tailscale serve apaga o Tailscale-Funnel-Request
+    # que vier do cliente e só o recoloca (?1) em requisição que chegou pelo
+    # Funnel: ausente = tailnet, e da internet não dá para forjar.
+    - name: tailnet-direto
+      action: ALLOW
+      expression: '!("Tailscale-Funnel-Request" in headers)'
+    # Da internet, só o /api/v1/version escapa do desafio, para o monitor do
+    # Uptime Kuma: a página de desafio responde 200 e o deixaria sempre verde.
     - name: fmd-version
       action: ALLOW
       path_regex: ^/api/v1/version$
