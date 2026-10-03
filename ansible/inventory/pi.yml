@@ -22,6 +22,9 @@ pi_hosts:
           # Partição LUKS (blkid da p3). Não é segredo: sem a passphrase não
           # abre. Host sem esta variável não tem LUKS (ver pi_staging).
           pi_luks_uuid: 7eef4654-3504-4dfe-9579-1e04b33d8897
+          # Fonte oficial de 27W (5A). Sem isto o firmware não a reconhece
+          # e o boot pela USB para esperando o botão de power.
+          pi_psu_max_current: 5000
     # Máquinas que se passam pelo Pi para teste (pi-lab, LXC x86). Os hosts
     # vêm do inventário do Terraform, que os põe neste grupo.
     pi_staging: {}

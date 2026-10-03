@@ -14,7 +14,9 @@ O que ele faz:
 - deixa o Docker **desabilitado no boot**: quem o sobe é o `secure-unlock`;
 - cria o usuário admin (`ubuntu`, uid 1000) se não existir;
 - cria as redes `medianet` e `vpn_net`;
-- instala o `disk-guard` (script, service e timer).
+- instala o `disk-guard` (script, service e timer);
+- grava `PSU_MAX_CURRENT` na EEPROM (só no Pi físico; ver "Fonte e boot
+  sozinho").
 
 ## Passos manuais
 
@@ -70,6 +72,70 @@ voltam sozinhos (`restart: unless-stopped`). Confira com
 
 Enquanto o volume estiver fechado, qualquer playbook do Pi para no começo com
 `/mnt/secure não está montado` — é a guarda, não um erro do playbook.
+
+### Atualizar
+
+Sob demanda, quando você quiser (não há timer):
+
+```bash
+ansible-playbook playbooks/pi-atualizar.yml --limit rpi --ask-vault-pass
+```
+
+Faz, nesta ordem: `apt dist-upgrade`, `pull` das imagens de cada stack,
+`up -d` de cada stack (recria só o container cuja imagem mudou), recria os
+dependentes do gluetun e apaga as imagens antigas do LUKS. Só troca imagem:
+config nova continua sendo o playbook do serviço (ou o `pi-completo.yml`).
+Não reinicia: se o SO pedir reboot, o playbook avisa no fim, e o reboot fica
+com você porque derruba tudo até o `secure-unlock`.
+
+Ficam de fora:
+
+- **Nextcloud AIO**: o mastercontainer e os containers dele se atualizam pela
+  interface do próprio AIO.
+- **Forgejo e Vaultwarden em standby**: o role deles já faz `pull: always`.
+
+Quase tudo está em `:latest` (e o Immich em `release`), então um pull pode
+trazer versão nova com mudança que quebra. Confira depois:
+
+```bash
+ssh ubuntu@nextlevelcode 'docker ps --format "{{.Names}} {{.Status}}" | grep -v "Up"'
+```
+
+Sem saída, nenhum container está parado ou reiniciando. Se o SO pediu reboot,
+reinicie e destrave como em "A cada boot".
+
+### Fonte e boot sozinho
+
+A fonte oficial de 27W chega ao Pi sem negociação USB-PD, então o firmware
+assume uma fonte fraca: limita a USB e, como o sistema boota pela USB, para
+no boot pedindo o botão de power. Isso impede o reboot remoto e a volta
+depois de uma queda de luz. O role grava `PSU_MAX_CURRENT=5000` na EEPROM
+(`pi_psu_max_current` no `inventory/pi.yml`), mas a EEPROM só é gravada no
+boot seguinte e o role não reinicia sozinho: **reiniciar é o passo manual**,
+porque derruba todas as stacks até o `secure-unlock`.
+
+1. Aplicar e reiniciar:
+
+   ```bash
+   ansible-playbook playbooks/pi.yml --ask-vault-pass
+   ssh ubuntu@nextlevelcode sudo reboot
+   ```
+
+   O reboot pode demorar um pouco mais que o normal, porque o Pi grava a
+   EEPROM antes de subir.
+
+2. Destravar o LUKS (seção acima) e conferir:
+
+   ```bash
+   ssh ubuntu@nextlevelcode 'sudo rpi-eeprom-config | grep PSU_MAX_CURRENT'
+   ssh ubuntu@nextlevelcode 'od -An -tx1 /proc/device-tree/chosen/power/max_current'
+   ```
+
+   O primeiro deve mostrar `PSU_MAX_CURRENT=5000`, e o segundo
+   `00 00 13 88` (5000 em hexadecimal). Antes, mostrava `00 00 03 84` (900).
+
+3. A prova de verdade: um `sudo reboot` com você fora de casa. Se o Pi
+   volta à tailnet sem ninguém apertar nada, está resolvido.
 
 ## pi-lab — staging do Pi
 

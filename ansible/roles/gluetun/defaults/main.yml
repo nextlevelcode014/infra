@@ -8,8 +8,5 @@ gluetun_dir: /opt/gluetun
 gluetun_wireguard_private_key: "{{ vault_gluetun_wireguard_private_key }}"
 gluetun_wireguard_addresses: "{{ vault_gluetun_wireguard_addresses }}"
 
-# Containers que usam a netns do gluetun (network_mode: container:gluetun).
-# Quando o gluetun é recriado eles ficam sem rede até serem recriados.
-gluetun_dependents:
-  - qbittorrent
-  - searxng-core
+# gluetun_dependents (quem usa a netns do gluetun) fica no group_vars do
+# pi_hosts: o pi-atualizar.yml também precisa dela, sem passar pelo role.

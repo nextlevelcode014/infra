@@ -1,0 +1,99 @@
+---
+# Atualiza o Pi sob demanda: pacotes do SO, imagens das stacks e containers
+# recriados com elas. Só troca imagem: config nova continua sendo o playbook
+# do serviço (ou o pi-completo.yml). Não reinicia: se o SO pedir reboot,
+# avisa no fim, porque o reboot derruba tudo até o secure-unlock
+# (docs/pi.md, "Atualizar").
+#
+# Sempre com --limit rpi (ou pi_staging para ensaiar).
+
+- name: Atualizar o SO e baixar as imagens novas
+  hosts: pi_hosts
+  gather_facts: true
+  vars:
+    # Arquivo compose de cada stack. Fora daqui: o mastercontainer do
+    # Nextcloud AIO (se atualiza pela própria interface, junto com os
+    # containers que ele cria) e Forgejo/Vaultwarden em standby (o role
+    # deles já faz pull: always).
+    pi_atualizar_composes:
+      - /opt/gluetun/compose.yml
+      - /opt/arr/compose.yml
+      - /opt/searxng/compose.yml
+      - /opt/adguard/compose.yml
+      - /opt/fmd/compose.yml
+      - /opt/immich/compose.yml
+      - /opt/exit-node/compose.yml
+      - /opt/coturn-turn/compose.coturn-turn.yml
+  tasks:
+    # O pull grava no data-root do Docker, que está no LUKS.
+    - name: Confirmar que o volume cifrado está montado
+      ansible.builtin.command:
+        argv: [mountpoint, -q, "{{ secure_mount_dir }}"]
+      changed_when: false
+      check_mode: false
+
+    - name: Atualizar os pacotes do SO
+      ansible.builtin.apt:
+        update_cache: true
+        upgrade: dist
+        autoremove: true
+      register: pi_atualizar_apt
+
+    # Nem toda stack existe em todo host (o exit-node não vai ao pi-lab).
+    - name: Ver quais stacks existem neste host
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      loop: "{{ pi_atualizar_composes }}"
+      register: pi_atualizar_stat
+
+    - name: Baixar as imagens novas
+      community.docker.docker_compose_v2_pull:
+        project_src: "{{ item.item | dirname }}"
+        files: ["{{ item.item | basename }}"]
+      loop: "{{ pi_atualizar_stat.results }}"
+      loop_control:
+        label: "{{ item.item | dirname }}"
+      when: item.stat.exists
+
+    # up -d recria só o container cuja imagem mudou. O gluetun vem primeiro
+    # na lista, então os dependentes já o encontram recriado.
+    - name: Recriar os containers com imagem nova
+      community.docker.docker_compose_v2:
+        project_src: "{{ item.item | dirname }}"
+        files: ["{{ item.item | basename }}"]
+        state: present
+      loop: "{{ pi_atualizar_stat.results }}"
+      loop_control:
+        label: "{{ item.item | dirname }}"
+      when: item.stat.exists
+
+    # Mesmas tasks do role gluetun, sem o role: ele puxaria o pi_host
+    # inteiro pelo meta/main.yml.
+    - name: Recriar os dependentes presos a um gluetun antigo
+      ansible.builtin.include_tasks: "{{ playbook_dir }}/../roles/gluetun/tasks/dependentes.yml"
+      when: pi_atualizar_stat.results[0].stat.exists
+
+- name: Limpar e avisar
+  hosts: pi_hosts
+  gather_facts: false
+  tasks:
+    # Só as sem tag (as antigas que o pull substituiu). O /mnt/secure é o
+    # mesmo volume que o disk-guard vigia.
+    - name: Apagar as imagens substituídas
+      community.docker.docker_prune:
+        images: true
+        images_filters:
+          dangling: true
+
+    - name: Ver se o SO pede reboot
+      ansible.builtin.stat:
+        path: /var/run/reboot-required
+      register: pi_atualizar_reboot
+
+    - name: Avisar que falta reiniciar
+      ansible.builtin.debug:
+        msg: >-
+          O SO pede reboot. Reinicie quando puder ficar sem os serviços:
+          ssh ubuntu@nextlevelcode sudo reboot, depois secure-unlock
+          (docs/pi.md, "A cada boot").
+      when: pi_atualizar_reboot.stat.exists

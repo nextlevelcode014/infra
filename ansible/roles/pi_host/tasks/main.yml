@@ -11,6 +11,48 @@
     name: "{{ admin_user }}"
     uid: "{{ puid }}"
 
+# --- Fonte (EEPROM) ---------------------------------------------------------
+# A fonte oficial de 27W chega sem negociação USB-PD (PDOs zerados no
+# device tree), então o firmware assume uma fonte fraca, limita a USB e,
+# com boot pela USB, para pedindo o botão de power. PSU_MAX_CURRENT diz a
+# ele a corrente real. Só vale no Pi físico: quem não define pi_psu_max_current pula.
+# A EEPROM nova entra no próximo reboot; o role não reinicia sozinho.
+
+- name: Declarar a corrente da fonte na EEPROM (só no Pi físico)
+  when: pi_psu_max_current is defined
+  block:
+    - name: Ler a config atual da EEPROM
+      ansible.builtin.command:
+        argv: [rpi-eeprom-config]
+      changed_when: false
+      check_mode: false
+      register: pi_eeprom_config
+
+    - name: Agendar a EEPROM com a corrente da fonte
+      when: ("PSU_MAX_CURRENT=" ~ pi_psu_max_current) not in pi_eeprom_config.stdout_lines
+      block:
+        - name: Gravar a config nova num arquivo temporário
+          ansible.builtin.copy:
+            dest: /var/tmp/pi-eeprom.conf
+            mode: "0644"
+            content: |
+              {% for line in pi_eeprom_config.stdout_lines if not line.startswith('PSU_MAX_CURRENT=') %}
+              {{ line }}
+              {% endfor %}
+              PSU_MAX_CURRENT={{ pi_psu_max_current }}
+
+        - name: Agendar a gravação da EEPROM para o próximo boot
+          ansible.builtin.command:
+            argv: [rpi-eeprom-config, --apply, /var/tmp/pi-eeprom.conf]
+          changed_when: true
+
+        - name: Avisar que falta reiniciar
+          ansible.builtin.debug:
+            msg: >-
+              EEPROM agendada com PSU_MAX_CURRENT={{ pi_psu_max_current }}.
+              Vale no próximo reboot; depois dele rode o secure-unlock
+              (docs/pi.md, "Fonte e boot sozinho").
+
 # --- LUKS -------------------------------------------------------------------
 # Criar a partição cifrada (luksFormat + mkfs) é manual e acontece uma vez:
 # precisa da passphrase, que não pode viver em lugar nenhum daqui. Ver

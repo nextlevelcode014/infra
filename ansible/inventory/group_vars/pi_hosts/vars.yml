@@ -30,3 +30,10 @@ vaultwarden_restore_work_dir: "{{ secure_mount_dir }}/restore/vaultwarden"
 
 # 8080 está ocupada no Pi (Nextcloud AIO e tailscale serve); só no IP Tailscale.
 vaultwarden_bind_port: "{{ ts_ip }}:8083"
+
+# Containers que usam a netns do gluetun (network_mode: container:gluetun).
+# Quando o gluetun é recriado eles ficam sem rede até serem recriados. Lida
+# pelo role gluetun e pelo pi-atualizar.yml.
+gluetun_dependents:
+  - qbittorrent
+  - searxng-core

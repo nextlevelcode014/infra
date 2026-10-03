@@ -60,6 +60,7 @@ usadas depois.
 | `playbooks/uptime-kuma.yml` | `vps` | Uptime Kuma na VPS (fora de casa), em `uptime.lab` pelo Caddy da VPS |
 | `playbooks/immich.yml` | `pi_hosts` | Immich do Pi (backup Borg pronto, desligado até ampliar a cota) |
 | `playbooks/pi-completo.yml` | `pi_hosts` | Pi inteiro na ordem certa; com `-e pi_restaurar_tudo=RESTAURAR_PI` traz os dados do Borg antes (`docs/pi-reconstrucao.md`) |
+| `playbooks/pi-atualizar.yml` | `pi_hosts` | atualização sob demanda: `apt dist-upgrade` + pull + `up -d` das stacks + dependentes do gluetun + prune; só imagem, sem config; não reinicia, avisa se o SO pedir |
 | `playbooks/pi-lab-limpar.yml` | `pi_staging` | depois de um ensaio: derruba as stacks, apaga os dados restaurados e as credenciais do Borg do pi-lab |
 | `playbooks/*-restore.yml` | o grupo do serviço | restore Borg explícito (ver `docs/`) |
 
