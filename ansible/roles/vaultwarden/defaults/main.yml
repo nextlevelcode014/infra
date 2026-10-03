@@ -6,10 +6,6 @@ vaultwarden_bind_port: 8080
 vaultwarden_admin_token: "{{ vault_vaultwarden_admin_token }}"
 vaultwarden_signups_allowed: "false"
 
-vaultwarden_backup_script: "/usr/local/bin/backup-vaultwarden.sh"
-vaultwarden_backup_log_file: "/var/log/vaultwarden_backup.log"
-vaultwarden_backup_schedule: "15 2 * * *"
-
 # SMTP
 vaultwarden_smtp_host: "smtp.protonmail.ch"
 vaultwarden_smtp_port: "587"
@@ -40,6 +36,6 @@ vaultwarden_icon_redirect_code: "302"
 vaultwarden_http_request_block_non_global_ips: "true"
 
 # Modo standby (Pi de recuperação): compose e imagens prontos, containers
-# parados e sem cron de backup. Quem sobe o serviço é o vaultwarden-restore.yml,
+# parados e sem backup. Quem sobe o serviço é o vaultwarden-restore.yml,
 # com o archive mais recente da produção. Ver docs/pi-recuperacao.md.
 vaultwarden_standby: false

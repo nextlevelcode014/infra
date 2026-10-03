@@ -117,7 +117,7 @@ Caddy do Proxmox. O Caddy da VPS só aceita conexões da tailnet nesse site.
 7. **Primeiro backup:**
 
    ```bash
-   ssh -t hetzner@hetzner.<tailnet>.ts.net 'cd ~ && sudo /usr/local/bin/backup-uptime-kuma.sh'
+   ssh -t hetzner@hetzner.<tailnet>.ts.net 'cd ~ && sudo borgmatic -c /etc/borgmatic/uptime-kuma.yaml --verbosity 1 --stats'
    ```
 
 ## O que monitorar

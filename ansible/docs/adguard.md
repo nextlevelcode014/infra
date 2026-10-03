@@ -14,8 +14,8 @@ AdGuard segue desligado: quem distribui IP é o roteador.
 
 ## Backup
 
-Diário às 02:45, `/usr/local/bin/backup-adguard.sh`, log em
-`/var/log/adguard_backup.log`, prefixo `adguard-*` no repositório compartilhado.
+Diário, no borgmatic do Pi (`/etc/borgmatic/adguard.yaml`, `docs/backup.md`),
+prefixo `adguard-*` no repositório compartilhado.
 Leva `conf/` e `work/`, **sem** o `querylog.json` (o log de todas as consultas DNS
 da casa: centenas de MB e o dado mais sensível). Não para o AdGuard.
 
@@ -76,7 +76,7 @@ sequência.
 7. **Primeiro backup:**
 
    ```bash
-   ssh -t ubuntu@nextlevelcode sudo /usr/local/bin/backup-adguard.sh
+   ssh -t ubuntu@nextlevelcode sudo borgmatic -c /etc/borgmatic/adguard.yaml --verbosity 1 --stats
    ```
 
 ## Roteador OpenWrt

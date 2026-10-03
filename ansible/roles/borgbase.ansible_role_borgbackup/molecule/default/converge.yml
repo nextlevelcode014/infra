@@ -1,0 +1,75 @@
+---
+- name: Converge
+  hosts: all
+  pre_tasks:
+    - name: Set ssh server package name for non-Archlinux ansible_os_family
+      set_fact:
+        openssh_package: "openssh-server"
+        pip3_extra_args: ""
+      when: ansible_facts['os_family'] != "Archlinux"
+
+    - name: Set ssh server package name and pip3 argument for Archlinux ansible_os_family
+      set_fact:
+        openssh_package: "openssh"
+        pip3_extra_args: "--break-system-packages"
+      when: ansible_facts['os_family'] == "Archlinux"
+
+    - name: Install openssh
+      package:
+        name: "{{ openssh_package }}"
+        state: present
+
+    - name: Enable EPEL for yamllint
+      package:
+        name: epel-release
+        state: present
+      when: ansible_facts['os_family'] == 'RedHat' and ansible_facts['distribution'] != 'Fedora'
+
+    - name: Install yamllint
+      package:
+        name: yamllint
+        state: present
+
+    - name: Install uv for uv install method
+      ansible.builtin.shell: >-
+        set -o pipefail &&
+        curl -LsSf https://astral.sh/uv/install.sh
+        | env UV_UNMANAGED_INSTALL=/usr/local/bin sh
+      args:
+        creates: /usr/local/bin/uv
+        executable: /bin/bash
+
+    - name: Create local backup source directory
+      ansible.builtin.file:
+        path: /tmp/borgbackup-source
+        state: directory
+        mode: "0755"
+
+    - name: Create local backup source file
+      ansible.builtin.copy:
+        dest: /tmp/borgbackup-source/example.txt
+        content: |
+          molecule backup content
+        mode: "0644"
+
+  roles:
+    - role: borgbase.ansible_role_borgbackup
+      borgbackup_install:
+        method: uv
+      borgbackup_timer:
+        type: cron
+      borgbackup_config:
+        repositories:
+          - /tmp/borgbackup-molecule-repo
+        encryption_passphrase: CHANGEME
+        source_directories:
+          - /tmp/borgbackup-source
+        exclude_patterns:
+          - /tmp/borgbackup-source/excluded
+        retention:
+          keep_hourly: 3
+          keep_daily: 7
+          keep_weekly: 4
+          keep_monthly: 6
+        extra:
+          verbosity: 1

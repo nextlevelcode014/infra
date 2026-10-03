@@ -1,0 +1,8 @@
+---
+# Fixo no role da borgbase (/etc/borgmatic/<config.name>).
+borg_backup_config_dir: /etc/borgmatic
+
+# Entradas do tasks_from: backup (ver o cabeçalho de tasks/backup.yml).
+borg_backup_excludes: []
+borg_backup_commands: []
+borg_backup_active: true

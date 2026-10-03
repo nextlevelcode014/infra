@@ -1,0 +1,26 @@
+name: Publish to Galaxy
+
+# Triggers a Galaxy re-import on every v* tag. There is no test gate here:
+# the Test workflow runs on branch pushes and PRs, so only tag commits that
+# are already green on master should be tagged.
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  release:
+    name: Publish to Ansible Galaxy
+    runs-on: ubuntu-latest
+    steps:
+    - name: Set up Python
+      uses: actions/setup-python@v6
+      with:
+        python-version: "3.10"
+    - name: Install ansible-core
+      run: |
+        pip install -U pip
+        pip install ansible-core
+    - name: Import role to Ansible Galaxy
+      run: |
+        ansible-galaxy role import --token "${{ secrets.GALAXY_API_KEY }}" \
+          borgbase ansible-role-borgbackup

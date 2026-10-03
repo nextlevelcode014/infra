@@ -33,22 +33,18 @@
   # falha com "is not a directory". Pula só nesse caso.
   when: not (ansible_check_mode and adguard_stack_dir_result is changed)
 
-- name: Instalar script de backup do AdGuard
-  ansible.builtin.template:
-    src: backup-adguard.sh.j2
-    dest: "{{ adguard_backup_script }}"
-    owner: root
-    group: root
-    mode: "0750"
-
-- name: Agendar backup do AdGuard
-  ansible.builtin.cron:
-    name: Backup Borg do AdGuard
-    user: root
-    state: "{{ 'present' if borg_backup_enabled else 'absent' }}"
-    minute: "{{ adguard_backup_schedule.split()[0] }}"
-    hour: "{{ adguard_backup_schedule.split()[1] }}"
-    day: "{{ adguard_backup_schedule.split()[2] }}"
-    month: "{{ adguard_backup_schedule.split()[3] }}"
-    weekday: "{{ adguard_backup_schedule.split()[4] }}"
-    job: "{{ adguard_backup_script }} >> {{ adguard_backup_log_file }} 2>&1"
+# Sem parar o AdGuard: parar o DNS derruba a rede da casa. A config é um
+# arquivo pequeno, e o stats.db, se sair inconsistente, só perde estatística.
+# Sem o querylog: é o log de todas as consultas, o maior arquivo (centenas de
+# MB) e o mais sensível.
+- name: Configurar o backup do AdGuard
+  ansible.builtin.include_role:
+    name: borg_client
+    tasks_from: backup
+  vars:
+    borg_backup_name: adguard
+    borg_backup_sources:
+      - "{{ adguard_data_dir }}/conf"
+      - "{{ adguard_data_dir }}/work"
+    borg_backup_excludes:
+      - "{{ adguard_data_dir }}/work/data/querylog.json*"

@@ -5,7 +5,7 @@ forgejo_user: "1000"
 forgejo_group: "1000"
 
 # These paths are the paths Borg stores after stripping the leading slash
-# from the absolute paths used by lib/backup_forgejo.sh.
+# from the absolute paths in the borgmatic config (roles/forgejo).
 forgejo_restore_data_archive_path: "opt/forgejo/forgejo"
 forgejo_restore_dump_archive_path: "tmp/forgejo_db_dump.sql"
 

@@ -114,22 +114,26 @@
     - anubis_policy_result is changed
     - not ansible_check_mode
 
-- name: Instalar script de backup do FMD
-  ansible.builtin.template:
-    src: backup-fmd.sh.j2
-    dest: "{{ fmd_backup_script }}"
-    owner: root
-    group: root
-    mode: "0750"
-
-- name: Agendar backup do FMD
-  ansible.builtin.cron:
-    name: Backup Borg do FMD
-    user: root
-    state: "{{ 'present' if borg_backup_enabled else 'absent' }}"
-    minute: "{{ fmd_backup_schedule.split()[0] }}"
-    hour: "{{ fmd_backup_schedule.split()[1] }}"
-    day: "{{ fmd_backup_schedule.split()[2] }}"
-    month: "{{ fmd_backup_schedule.split()[3] }}"
-    weekday: "{{ fmd_backup_schedule.split()[4] }}"
-    job: "{{ fmd_backup_script }} >> {{ fmd_backup_log_file }} 2>&1"
+# Para só o fmd (o sidecar e o Funnel continuam) enquanto o Borg copia o
+# SQLite. O estado do sidecar vai junto: num Pi reconstruído, o Funnel volta
+# com a mesma URL.
+- name: Configurar o backup do FMD
+  ansible.builtin.include_role:
+    name: borg_client
+    tasks_from: backup
+  vars:
+    borg_backup_name: fmd
+    borg_backup_sources: >-
+      {{ [fmd_data_dir ~ '/fmddata']
+         + ([fmd_data_dir ~ '/tailscale-state'] if fmd_tailscale_sidecar else []) }}
+    borg_backup_commands:
+      - before: action
+        when: [create]
+        run:
+          - docker compose -f {{ fmd_dir }}/compose.yml stop fmd
+      - after: action
+        when: [create]
+        run: &fmd_backup_up
+          - docker compose -f {{ fmd_dir }}/compose.yml start fmd
+      - after: error
+        run: *fmd_backup_up

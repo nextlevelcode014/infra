@@ -31,8 +31,8 @@ app de 2FA quase sempre sumiu junto. O que protege:
 
 ## Backup
 
-Diário às 02:50, `/usr/local/bin/backup-fmd.sh`, log em
-`/var/log/fmd_backup.log`, prefixo `fmd-*`. Para só o `fmd` (o sidecar e o
+Diário, no borgmatic do Pi (`/etc/borgmatic/fmd.yaml`, `docs/backup.md`),
+prefixo `fmd-*`. Para só o `fmd` (o sidecar e o
 Funnel continuam) por alguns segundos, porque o SQLite está em modo WAL.
 
 ## Primeira aplicação
@@ -105,7 +105,7 @@ e nenhum no novo.
 7. **Primeiro backup:**
 
    ```bash
-   ssh -t ubuntu@nextlevelcode.<tailnet>.ts.net sudo /usr/local/bin/backup-fmd.sh
+   ssh -t ubuntu@nextlevelcode.<tailnet>.ts.net sudo borgmatic -c /etc/borgmatic/fmd.yaml --verbosity 1 --stats
    ```
 
 A partir daqui, não use mais `make up SVC=fmd` no `self-hosted`.

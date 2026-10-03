@@ -51,23 +51,24 @@
   # falha com "is not a directory". Pula só nesse caso.
   when: not (ansible_check_mode and arr_stack_dir_result is changed)
 
-- name: Instalar script de backup da stack Arr
-  ansible.builtin.template:
-    src: backup-arr.sh.j2
-    dest: "{{ arr_backup_script }}"
-    owner: root
-    group: root
-    mode: "0750"
-  no_log: true
-
-- name: Agendar backup da stack Arr
-  ansible.builtin.cron:
-    name: Backup Borg da stack Arr
-    user: root
-    state: "{{ 'present' if borg_backup_enabled else 'absent' }}"
-    minute: "{{ arr_backup_schedule.split()[0] }}"
-    hour: "{{ arr_backup_schedule.split()[1] }}"
-    day: "{{ arr_backup_schedule.split()[2] }}"
-    month: "{{ arr_backup_schedule.split()[3] }}"
-    weekday: "{{ arr_backup_schedule.split()[4] }}"
-    job: "{{ arr_backup_script }} >> {{ arr_backup_log_file }} 2>&1"
+# Parada durante o create para os bancos SQLite dos *arr saírem consistentes.
+- name: Configurar o backup da stack Arr
+  ansible.builtin.include_role:
+    name: borg_client
+    tasks_from: backup
+  vars:
+    borg_backup_name: arr
+    borg_backup_sources:
+      - "{{ arr_backup_source }}"
+    borg_backup_excludes: "{{ arr_backup_excludes + (arr_backup_excluded_app_backups | map('regex_replace', '^', 'pp:' ~ arr_backup_source ~ '/') | list) }}"
+    borg_backup_commands:
+      - before: action
+        when: [create]
+        run:
+          - docker compose -f {{ arr_stack_dir }}/compose.yml down
+      - after: action
+        when: [create]
+        run: &arr_backup_up
+          - docker compose -f {{ arr_stack_dir }}/compose.yml up -d
+      - after: error
+        run: *arr_backup_up

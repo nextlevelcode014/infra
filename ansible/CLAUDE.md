@@ -103,7 +103,7 @@ curinga `*.lab` aponta para o Caddy do Proxmox. VPS nova: `docs/vps.md`.
 | `vaultwarden` | compose do Vaultwarden |
 | `pi_host` | base do Pi: LUKS no crypttab/fstab, `secure-unlock`, Docker com data-root cifrado, redes, disk-guard |
 | `secure_links` | symlinks de caminhos antigos para o LUKS (o `bin/link-data`); recebe `secure_links_paths` |
-| `borg_client` | Borg + chave + senha + known_hosts; dependência de todo role com backup/restore |
+| `borg_client` | Borg + chave + senha + known_hosts + borgmatic com um timer por host; dependência de todo role com backup/restore. `tasks_from: backup` gera o config de um serviço (`docs/backup.md`) |
 | `gluetun` | gateway VPN do Pi (compose do `self-hosted/gluetun`) |
 | `arr_stack` | stack Arr do Pi (compose do `self-hosted/arr`) |
 | `searxng` | SearXNG do Pi; `settings.yml` renderizado, porta publicada pelo gluetun |
@@ -114,9 +114,10 @@ curinga `*.lab` aponta para o Caddy do Proxmox. VPS nova: `docs/vps.md`.
 | `anubis` | Anubis da VPS, uma instância por serviço (`anubis_instances`); `tasks_from: policy` só renderiza a política, para um Anubis em outra stack (FMD) |
 | `uptime_kuma` | Uptime Kuma + AutoKuma + Docker na VPS, sem o usuário no grupo `docker`; monitores em `group_vars/vps/monitors.yml` |
 | `immich` | Immich do Pi, acesso só pelo Caddy; `immich_backup_enabled` liga o backup |
-| `borg_restore` | miolo dos restores do Pi: escolhe o archive (prefixo + máquina de origem), extrai no LUKS e valida |
+| `borg_restore` | miolo de todos os restores: escolhe o archive (prefixo + máquina de origem), extrai (no Pi, dentro do LUKS) e valida |
 | `*_restore` | restore Borg do serviço, exige `-e <svc>_restore_confirmation`; `-e restore_on_pi=true` restaura no Pi de recuperação |
 | `geerlingguy.docker` | vendido, instala o engine |
+| `borgbase.ansible_role_borgbackup` | vendido, usado só pelo `borg_client`: instala o borgmatic, renderiza cada config e o timer |
 | `geerlingguy.pip`, `geerlingguy.security` | vendidos, sem uso ainda |
 
 `lxc_flags` é o único que foge da regra deste repo: ele **provisiona**, não
@@ -165,6 +166,12 @@ Vale não repetir:
   com o serviço fora do ar; aponte para um caminho liberado na política.
 - **`redir` do Caddy com um argumento só que começa com `/`** lê o caminho como
   matcher e falha no `adapt`. Use `redir * /destino`.
+- **O role da borgbase pensa em um config por host.** Com
+  `config.create: true`, o timer roda só o último config gravado. Por isso o
+  `borg_client` cria o timer com `config.create: false` e `-c /etc/borgmatic`
+  nas flags, e cada serviço grava o seu com `timer.type: none`. Na v2.1.0, o
+  `ssh.create: false` ainda exige `_borgbackup_ssh_key_path` definido; sem
+  ele, o configure falha com `'_borgbackup_ssh_key_path' is undefined`.
 - **O `validate` de `copy`/`template` não passa por shell.** O Ansible faz
   `shlex.split` + `execvp`, então `VAR=x comando` falha com
   `No such file or directory: 'VAR=x'` (procura um binário com esse nome).
@@ -179,10 +186,12 @@ grant lá — sem ele o serviço sobe e fica inacessível sem erro.
 
 ## Segredos
 
-Borg é um repositório só, com prefixo por serviço. O que não é segredo
-(caminho da chave, passcommand, opções de SSH, retenção, compressão) fica em
-`borg_*` no `group_vars/all/vars.yml`; o vault guarda só repo, senha, chave
-e known_host (ainda com o nome histórico `vault_forgejo_borg_*`).
+Borg é um repositório só, com prefixo por serviço; quem faz backup é o
+borgmatic, e cada backup avisa um monitor push no Uptime Kuma, com token
+derivado da senha do Borg (`docs/backup.md`). O que não é segredo
+(caminho da chave, passcommand, opções de SSH, retenção, compressão, horário
+de cada host) fica em `borg_*` no `group_vars/all/vars.yml`; o vault guarda
+só repo, senha, chave e known_host (ainda com o nome histórico `vault_forgejo_borg_*`).
 
 Em `inventory/group_vars/all/vault.yml` (cifrado, fora do git): token do
 Proxmox, auth key do Tailscale e senha do Postgres do Forgejo. O template do

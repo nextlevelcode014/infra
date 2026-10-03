@@ -9,7 +9,7 @@ que a produção: duas instâncias aceitando escrita separam os dados.
 - compose renderizado e imagens baixadas (o restore não depende de registry na
   hora do desastre);
 - dados no LUKS (`/mnt/secure/appdata/forgejo` e `.../vaultwarden`);
-- containers **parados** e **sem cron de backup** (um archive do Pi com o mesmo
+- containers **parados** e **sem backup** (um archive do Pi com o mesmo
   prefixo viraria o mais recente para o restore);
 - Vaultwarden na porta `8083` do IP Tailscale (a `8080` está ocupada no Pi).
 
@@ -35,8 +35,8 @@ e sem o filtro o mais recente podia ser um deles.
    ```
 
    Confira: `ssh ubuntu@nextlevelcode docker ps -a --filter name=forgejo --filter name=vaultwarden`
-   não lista nada, e `crontab -l` do root não tem backup de Forgejo nem de
-   Vaultwarden.
+   não lista nada, e `ls /etc/borgmatic` não tem `forgejo.yaml` nem
+   `vaultwarden.yaml`.
 
 3. **Remover os nós antigos** `forgejo` e `vaultwarden` no console do Tailscale
    (Machines → Remove). Os containers saíram; os nós ficam listados até serem

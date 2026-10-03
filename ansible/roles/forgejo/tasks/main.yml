@@ -6,28 +6,34 @@
     group: "{{ forgejo_group }}"
     mode: "0750"
 
-- name: Instalar script de backup do Forgejo
-  ansible.builtin.template:
-    src: backup_forgejo.sh.j2
-    dest: "{{ forgejo_backup_script }}"
-    owner: root
-    group: root
-    mode: "0750"
-  no_log: true
-
-- name: Agendar backup do Forgejo
-  ansible.builtin.cron:
-    name: Backup Borg do Forgejo
-    user: root
-    # Standby nunca faz backup: um archive forgejo-* do Pi viraria o mais
-    # recente e o restore pegaria os dados velhos dele.
-    state: "{{ 'present' if (borg_backup_enabled and not forgejo_standby) else 'absent' }}"
-    minute: "{{ forgejo_backup_schedule.split()[0] }}"
-    hour: "{{ forgejo_backup_schedule.split()[1] }}"
-    day: "{{ forgejo_backup_schedule.split()[2] }}"
-    month: "{{ forgejo_backup_schedule.split()[3] }}"
-    weekday: "{{ forgejo_backup_schedule.split()[4] }}"
-    job: "{{ forgejo_backup_script }} >> {{ forgejo_backup_log_file }} 2>&1"
+# Standby nunca faz backup: um archive forgejo-* do Pi viraria o mais
+# recente e o restore pegaria os dados velhos dele. O dump sai com o banco
+# no ar; os dados, com a stack parada. O dump fica no /tmp privado do
+# borgmatic.service, mas o caminho no archive é o mesmo que o restore espera.
+- name: Configurar o backup do Forgejo
+  ansible.builtin.include_role:
+    name: borg_client
+    tasks_from: backup
+  vars:
+    borg_backup_name: forgejo
+    borg_backup_active: "{{ not forgejo_standby }}"
+    borg_backup_sources:
+      - "{{ forgejo_dir }}/forgejo"
+      - "{{ forgejo_backup_db_dump }}"
+    borg_backup_excludes: ["*.tmp", "*.log", "cache/*"]
+    borg_backup_commands:
+      - before: action
+        when: [create]
+        run:
+          - docker exec forgejo-db pg_dump -U forgejo forgejo > {{ forgejo_backup_db_dump }}
+          - docker compose -f {{ forgejo_dir }}/docker-compose.yml down
+      - after: action
+        when: [create]
+        run: &forgejo_backup_up
+          - docker compose -f {{ forgejo_dir }}/docker-compose.yml up -d
+          - rm -f {{ forgejo_backup_db_dump }}
+      - after: error
+        run: *forgejo_backup_up
 
 - name: Criar subdiretórios de dados
   ansible.builtin.file:

@@ -16,8 +16,6 @@ immich_db_password: "{{ vault_immich_db_password }}"
 
 # Backup Borg no repositório compartilhado (borg_repo), prefixo immich-*.
 # DESLIGADO até o plano do BorgBase comportar as fotos (~30 GB; hoje a cota é
-# 10 GB). Para ligar: true aqui e reaplicar playbooks/immich.yml.
+# 10 GB). Para ligar: true aqui, o monitor "immich" em uptime_kuma_backups
+# (group_vars/vps/monitors.yml) e reaplicar immich.yml e uptime-kuma.yml.
 immich_backup_enabled: false
-immich_backup_script: /usr/local/bin/backup-immich.sh
-immich_backup_log_file: /var/log/immich_backup.log
-immich_backup_schedule: "30 3 * * *"

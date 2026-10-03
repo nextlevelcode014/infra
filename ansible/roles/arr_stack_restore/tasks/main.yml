@@ -8,118 +8,20 @@
       -e arr_restore_confirmation=RESTORE_ARR somente depois de confirmar
       que esta instância deve substituir a config atual da stack Arr.
 
-# Antes de parar qualquer coisa: sem o LUKS montado não há onde restaurar.
-- name: Confirmar que o volume cifrado está montado
-  ansible.builtin.command:
-    argv: [mountpoint, -q, "{{ secure_mount_dir }}"]
-  changed_when: false
-  check_mode: false
-
-- name: Validar variáveis necessárias do Borg
-  ansible.builtin.assert:
-    that:
-      - borg_repo | length > 0
-      - borg_passcommand | length > 0
-      - borg_ssh_key | length > 0
-    fail_msg: "Configure o repositório Borg, o passcommand e a chave SSH."
-
-- name: Verificar dependências do restore
-  ansible.builtin.command:
-    argv:
-      - "{{ item }}"
-      - "--version"
-  loop:
-    - borg
-    - docker
-  changed_when: false
-
-- name: Criar diretório temporário do restore
-  ansible.builtin.file:
-    path: "{{ arr_restore_work_dir }}"
-    state: directory
-    mode: "0700"
-
-- name: Selecionar o archive Arr mais recente
-  ansible.builtin.command:
-    argv:
-      - borg
-      - --lock-wait
-      - "10"
-      - list
-      - --prefix
-      - "arr-"
-      - --format
-      - "{hostname} {archive}{NL}"
-      - "{{ borg_repo }}"
-  environment:
-    BORG_PASSCOMMAND: "{{ borg_passcommand }}"
-    BORG_RSH: "{{ borg_rsh }}"
-  register: arr_restore_archive_result
-  changed_when: false
-
-# O prefixo sozinho não basta: outra máquina com backup do mesmo serviço
-# (ex.: o Pi antigo) cria archives arr-* no mesmo repositório, e o mais
-# recente podia ser o dela. Só valem os archives feitos por arr_restore_source_host.
-- name: Filtrar os archives da máquina de origem
-  ansible.builtin.set_fact:
-    arr_restore_candidates: >-
-      {{ arr_restore_archive_result.stdout_lines
-         | select('match', '^' ~ arr_restore_source_host ~ ' arr-[^/ ]+$')
-         | map('regex_replace', '^[^ ]+ ', '')
-         | list }}
-
-- name: Validar que um archive Arr foi encontrado
-  ansible.builtin.assert:
-    that:
-      - arr_restore_candidates | length > 0
-    fail_msg: >-
-      Nenhum archive arr-* feito por '{{ arr_restore_source_host }}'.
-      Archives com o prefixo: {{ arr_restore_archive_result.stdout_lines | join(', ') }}
-
-- name: Guardar o nome do archive selecionado
-  ansible.builtin.set_fact:
-    arr_restore_archive: "{{ arr_restore_candidates | last }}"
-
-- name: Limpar diretório temporário de uma execução anterior
-  ansible.builtin.file:
-    path: "{{ arr_restore_work_dir }}/extracted"
-    state: absent
-
-- name: Criar diretório de extração
-  ansible.builtin.file:
-    path: "{{ arr_restore_work_dir }}/extracted"
-    state: directory
-    mode: "0700"
-
-- name: Extrair o archive selecionado para área temporária
-  ansible.builtin.command:
-    argv:
-      - borg
-      - extract
-      - "{{ borg_repo }}::{{ arr_restore_archive }}"
-      - "{{ arr_restore_data_archive_path }}"
-  args:
-    chdir: "{{ arr_restore_work_dir }}/extracted"
-  environment:
-    BORG_PASSCOMMAND: "{{ borg_passcommand }}"
-    BORG_RSH: "{{ borg_rsh }}"
-  no_log: true
-  changed_when: true
-
-- name: Validar arquivos essenciais extraídos
-  ansible.builtin.stat:
-    path: "{{ arr_restore_work_dir }}/extracted/{{ arr_restore_data_archive_path }}/{{ item }}"
-  loop: "{{ arr_restore_required_files }}"
-  register: arr_restore_extracted
-
-- name: Bloquear restore incompleto
-  ansible.builtin.assert:
-    that:
-      - arr_restore_extracted.results | rejectattr('stat.exists') | list | length == 0
-    fail_msg: >-
-      O archive {{ arr_restore_archive }} não tem
-      {{ arr_restore_required_files | join(', ') }} em
-      {{ arr_restore_data_archive_path }}. Confira o caminho com borg list.
+# O borg_restore confere o LUKS antes de tudo: sem ele montado não há onde
+# restaurar, e nada foi parado ainda.
+- name: Extrair o backup da stack Arr
+  ansible.builtin.include_role:
+    name: borg_restore
+  vars:
+    borg_restore_prefix: arr
+    borg_restore_source_host: "{{ arr_restore_source_host }}"
+    borg_restore_work_dir: "{{ arr_restore_work_dir }}"
+    borg_restore_paths:
+      - "/{{ arr_restore_data_archive_path }}"
+    borg_restore_required_files: >-
+      {{ arr_restore_required_files
+         | map('regex_replace', '^', '/' ~ arr_restore_data_archive_path ~ '/') | list }}
 
 - name: Verificar se a stack já existe na máquina
   ansible.builtin.stat:

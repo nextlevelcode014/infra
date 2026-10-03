@@ -2,11 +2,6 @@
 # Cliente do repositório Borg compartilhado. Entra como dependência
 # (meta/main.yml) de todo role que faz backup ou restore; o Ansible roda
 # uma vez só por play, mesmo com vários serviços no mesmo host.
-- name: Instalar Borg
-  ansible.builtin.package:
-    name: borgbackup
-    state: present
-
 - name: Criar diretório SSH do Borg
   ansible.builtin.file:
     path: "{{ borg_ssh_key | dirname }}"
@@ -39,3 +34,43 @@
     key: "{{ borg_host }} {{ vault_forgejo_borg_known_host_key }}"
     path: "{{ borg_ssh_key | dirname }}/known_hosts"
     state: present
+
+# --- borgmatic ----------------------------------------------------------------
+# Um timer por host, que roda todos os configs de borg_backup_config_dir em
+# sequência (cada serviço põe o seu lá com tasks_from: backup). O role da
+# borgbase pensa em um config por host: com config.create false o timer
+# perde o "-c <arquivo>", e o -c das flags aponta para o diretório inteiro.
+- name: Criar o diretório dos configs do borgmatic
+  ansible.builtin.file:
+    path: "{{ borg_backup_config_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+
+# O role da borgbase escolhe as variáveis pela distro (ansible_facts), e os
+# playbooks de restore rodam com gather_facts: false.
+- name: Coletar os fatos mínimos para o role da borgbase
+  ansible.builtin.setup:
+    gather_subset: [min]
+  when: ansible_facts.distribution is not defined
+
+- name: Instalar Borg, borgmatic e o timer
+  ansible.builtin.include_role:
+    name: borgbase.ansible_role_borgbackup
+  vars:
+    borgbackup_install:
+      method: package
+    borgbackup_user:
+      create: false
+    borgbackup_ssh:
+      create: false
+    borgbackup_config:
+      create: false
+    borgbackup_timer:
+      type: systemd
+      hour: "{{ borg_backup_time.split(':')[0] }}"
+      minute: "{{ borg_backup_time.split(':')[1] }}"
+      # Nada no console; o log vai para o journal (journalctl -u borgmatic).
+      flags: "-c {{ borg_backup_config_dir }} --verbosity -2 --syslog-verbosity 1"
+      enabled: "{{ borg_backup_enabled }}"

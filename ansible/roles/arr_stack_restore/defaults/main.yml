@@ -17,8 +17,8 @@ arr_restore_start_stack: true
 # O restore grava aqui direto, sem passar pelo link.
 arr_restore_config_dir: "{{ appdata_dir }}/mnt/media-stack/config"
 
-# Caminho dentro do archive Borg (com a barra inicial removida). O
-# backup-arr.sh guarda a config inteira pelo caminho real.
+# Caminho dentro do archive Borg (com a barra inicial removida). O backup
+# (roles/arr_stack) guarda a config inteira pelo caminho real.
 arr_restore_data_archive_path: "{{ arr_restore_config_dir | regex_replace('^/', '') }}"
 
 # Arquivos que precisam existir no archive para o restore seguir.

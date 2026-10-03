@@ -53,9 +53,3 @@ fmd_max_saved_pic: 10
 
 # Porta para o Caddy, no IP Tailscale do Pi.
 fmd_web_port: 8085
-
-# Backup Borg no repositório compartilhado, prefixo fmd-*. Para só o fmd
-# (não o sidecar) por alguns segundos: SQLite em WAL.
-fmd_backup_script: /usr/local/bin/backup-fmd.sh
-fmd_backup_log_file: /var/log/fmd_backup.log
-fmd_backup_schedule: "50 2 * * *"

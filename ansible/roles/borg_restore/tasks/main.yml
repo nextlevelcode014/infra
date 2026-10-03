@@ -1,9 +1,11 @@
 ---
+# Só onde há LUKS (o Pi). Nos LXCs não existe secure_mount_dir.
 - name: Confirmar que o volume cifrado está montado
   ansible.builtin.command:
     argv: [mountpoint, -q, "{{ secure_mount_dir }}"]
   changed_when: false
   check_mode: false
+  when: secure_mount_dir is defined
 
 - name: Listar os archives {{ borg_restore_prefix }}-*
   ansible.builtin.command:

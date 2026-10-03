@@ -136,6 +136,13 @@
             "dst": ["tag:forgejo"],
             "ip":  ["tcp:2222"],
         },
+        // Backup -> Uptime Kuma: o borgmatic avisa o monitor push no fim de
+        // cada backup (uptime.lab, pelo Caddy da VPS).
+        {
+            "src": ["tag:pi", "tag:proxmox-lxc"],
+            "dst": ["tag:caddy-vps"],
+            "ip":  ["tcp:443"],
+        },
 
         // CONTINGÊNCIA — INATIVO. Com o Proxmox fora e Forgejo/Vaultwarden
         // restaurados no Pi (docs/pi-recuperacao.md), descomentar no console —
@@ -255,11 +262,18 @@
             "accept": ["tag:caddy:443", "tag:pi:53", "tag:forgejo:2222"],
             "deny":   ["tag:pi:22", "tag:proxmox:22", "tag:proxmox:8006"],
         },
-        // O Pi só fala com o Caddy (HPB do Nextcloud).
+        // O Pi só fala com o Caddy (HPB do Nextcloud) e com o Uptime Kuma
+        // (aviso de backup).
         {
             "src":    "tag:pi",
-            "accept": ["tag:caddy:443"],
+            "accept": ["tag:caddy:443", "tag:caddy-vps:443"],
             "deny":   ["tag:proxmox:22", "tag:proxmox-lxc:22", "tag:vps:22"],
+        },
+        // Os LXCs só avisam o Uptime Kuma; não administram a VPS.
+        {
+            "src":    "tag:proxmox-lxc",
+            "accept": ["tag:caddy-vps:443"],
+            "deny":   ["tag:vps:22", "tag:proxmox:8006"],
         },
     ],
 }

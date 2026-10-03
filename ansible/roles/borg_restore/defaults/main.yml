@@ -1,13 +1,13 @@
 ---
-# Miolo comum dos restores do Pi: escolhe o archive mais recente de
-# <prefixo>-* feito pela máquina de origem, extrai numa área temporária no
-# LUKS e valida. Quem chama (include_role) passa:
+# Miolo comum dos restores: escolhe o archive mais recente de <prefixo>-*
+# feito pela máquina de origem, extrai numa área temporária (no Pi, dentro do
+# LUKS, que ele confere) e valida. Quem chama (include_role) passa:
 #
 #   borg_restore_prefix          ex.: adguard   (archives adguard-*)
 #   borg_restore_source_host     hostname de quem fez o backup (o Pi: ubuntu)
 #   borg_restore_paths           caminhos absolutos a extrair
 #   borg_restore_required_files  caminhos absolutos que precisam vir no archive
-#   borg_restore_work_dir        área temporária (dentro do LUKS)
+#   borg_restore_work_dir        área temporária (no Pi, dentro do LUKS)
 #
 # Depois, a extração fica em {{ borg_restore_work_dir }}/extracted, com os
 # caminhos sem a barra inicial, e o archive escolhido em borg_restore_archive.

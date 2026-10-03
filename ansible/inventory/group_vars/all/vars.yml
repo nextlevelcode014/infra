@@ -46,9 +46,10 @@ vaultwarden_dir: "/opt/vaultwarden"
 vaultwarden_admin_token: "{{ vault_vaultwarden_admin_token }}"
 
 # Borg — um repositório para todos os serviços, cada um com seu prefixo
-# (forgejo-*, vaultwarden-*, arr-*). Chave e senha são instaladas pelo role
-# borg_client; backups e restores leem daqui. Os segredos continuam no vault
-# com o nome antigo (vault_forgejo_borg_*), da época em que só o Forgejo usava.
+# (forgejo-*, vaultwarden-*, arr-*). Chave, senha e borgmatic são instalados
+# pelo role borg_client; backups (borgmatic) e restores (borg direto) leem
+# daqui. Os segredos continuam no vault com o nome antigo
+# (vault_forgejo_borg_*), da época em que só o Forgejo usava. docs/backup.md.
 borg_repo: "{{ vault_forgejo_borg_repo }}"
 borg_host: "{{ borg_repo | urlsplit('hostname') }}"
 borg_password_file: /root/.borg-pass
@@ -59,13 +60,30 @@ borg_rsh_options: >-
   -o ServerAliveInterval=5 -o ServerAliveCountMax=2
 borg_rsh: "ssh -i {{ borg_ssh_key }} {{ borg_rsh_options }}"
 borg_backup_compression: "zstd,3"
-borg_backup_retention: "--keep-daily=7 --keep-weekly=4 --keep-monthly=3"
+# Por serviço: o prune de cada um só olha os archives do prefixo dele.
+borg_backup_retention:
+  keep_daily: 7
+  keep_weekly: 4
+  keep_monthly: 3
 # Segundos que cada comando espera pela trava do repositório. O Borg só deixa
 # um processo escrever por vez, e o padrão (1 s) fazia o backup que chegasse
-# depois falhar com "Failed to create/acquire the lock". Os horários também são
-# escalonados (forgejo 02:00, vaultwarden 02:15, arr 02:30, adguard 02:45,
-# fmd 02:50, immich 03:30).
+# depois falhar com "Failed to create/acquire the lock".
 borg_lock_wait: 600
+# Um timer do borgmatic por host, que roda os serviços dele em sequência (no
+# Pi: adguard, arr, fmd, immich). Entre hosts a trava ainda é disputada, então
+# os horários ficam escalonados. Chave = inventory_hostname.
+borg_backup_times:
+  forgejo: "02:00"
+  vaultwarden: "02:15"
+  pi: "02:30"
+  hetzner: "03:00"
+borg_backup_time: "{{ borg_backup_times[inventory_hostname] | default('02:30') }}"
+# Cada backup avisa um monitor push no Uptime Kuma (grupo Backups) quando
+# termina ou falha. O token sai da senha do Borg + o nome do serviço: o host
+# do backup e a VPS já têm a senha, e não sobra segredo novo para o vault.
+# borg_backup_name vem de quem usa (tasks_from: backup, role uptime_kuma).
+borg_backup_push_token: "{{ ((vault_forgejo_borg_password ~ '-' ~ borg_backup_name) | hash('sha256'))[:32] }}"
+borg_backup_push_url: "https://uptime.lab.nextlevelcode.pro/api/push/{{ borg_backup_push_token }}"
 # Desligado nas máquinas de teste: um backup delas cairia no repositório de
 # produção com o mesmo prefixo e viraria "o mais recente" para o restore.
 borg_backup_enabled: true

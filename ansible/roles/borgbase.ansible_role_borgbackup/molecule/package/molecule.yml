@@ -1,0 +1,15 @@
+---
+dependency:
+  name: galaxy
+driver:
+  name: docker
+platforms:
+  - name: archlinux-package
+    image: archlinux:latest
+    platform: linux/amd64
+  - name: debian-trixie-package
+    image: debian:trixie
+provisioner:
+  name: ansible
+verifier:
+  name: ansible

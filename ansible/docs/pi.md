@@ -148,9 +148,10 @@ Pi para testar antes. O Terraform o põe no grupo `pi_staging`, que o
   `pi_host` pula crypttab, fstab e `secure-unlock`, e o Docker sobe no boot;
 - **sem Tailscale:** `ts_ip` é o IP da LAN, e o `lxc.yml` aplica no pi-lab só
   as flags do LXC (`keyctl`, `/dev/net/tun`), não a base dos outros LXCs;
-- **sem backup:** `borg_backup_enabled: false`. Um backup do pi-lab cairia no
-  repositório de produção e viraria o archive mais recente para o restore. O
-  acesso ao Borg continua instalado, para ensaiar restore aqui;
+- **sem backup:** `borg_backup_enabled: false` (timer do borgmatic parado e
+  nenhum config). Um backup do pi-lab cairia no repositório de produção e
+  viraria o archive mais recente para o restore. O acesso ao Borg continua
+  instalado, para ensaiar restore aqui;
 - **WireGuard próprio** e API keys de mentira para o decluttarr.
 
 Cobre "o playbook roda e o compose sobe". Não cobre ARM64, LUKS de verdade nem
@@ -212,10 +213,8 @@ O `arr_stack` é o modelo. Um role novo precisa de:
    caminhos antigos do `self-hosted` (`storage.map`) sem mexer no compose.
 2. Compose em `/opt/<serviço>` e `docker_compose_v2`, portas publicadas só em
    `{{ ts_ip }}`.
-3. Backup com o prefixo `<serviço>-*`, cron com
-   `state: "{{ 'present' if borg_backup_enabled else 'absent' }}"`, usando `borg_repo`, `borg_passcommand`,
-   `borg_rsh`, `borg_backup_compression` e `borg_backup_retention` (todos em
-   `group_vars/all/vars.yml`).
+3. Backup com `include_role: borg_client, tasks_from: backup` e o monitor em
+   `uptime_kuma_backups`. A receita está em `docs/backup.md`, "Serviço novo".
 4. Um role `<serviço>_restore` com `-e <serviço>_restore_confirmation=...`.
 5. Playbook em `playbooks/` com `hosts: pi_hosts` e entrada no `site.yml`.
    Teste primeiro com `--limit pi_staging`.

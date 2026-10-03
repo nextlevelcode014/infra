@@ -17,24 +17,44 @@
           - "'rpi' not in group_names"
         fail_msg: "{{ inventory_hostname }} não é só de staging; a limpeza apaga dados."
 
-    - name: Achar as stacks em /opt
+    # Forgejo e Vaultwarden em standby moram no appdata, não em /opt.
+    - name: Achar as stacks em /opt e no appdata
       ansible.builtin.find:
-        paths: /opt
+        paths: [/opt, "{{ appdata_dir }}"]
         patterns: [compose.yml, docker-compose.yml]
         depth: 2
         recurse: true
       register: pi_lab_stacks
 
     - name: Derrubar cada stack, com os volumes dela
-      ansible.builtin.command:
-        argv: [docker, compose, -f, "{{ item.path }}", down, --volumes, --remove-orphans]
-        chdir: "{{ item.path | dirname }}"
+      community.docker.docker_compose_v2:
+        project_src: "{{ item.path | dirname }}"
+        files: ["{{ item.path | basename }}"]
+        state: absent
+        remove_volumes: true
+        remove_orphans: true
       loop: "{{ pi_lab_stacks.files }}"
       loop_control:
         label: "{{ item.path | dirname }}"
-      changed_when: true
 
-    - name: Apagar as stacks de /opt
+    # O que nenhuma stack achada derrubou: uma stack cujo compose já foi
+    # apagado (limpeza interrompida no meio) ou container criado à mão.
+    - name: Listar os containers que sobraram
+      community.docker.docker_host_info:
+        containers: true
+        containers_all: true
+      register: pi_lab_orphans
+
+    - name: Remover os containers que sobraram
+      community.docker.docker_container:
+        name: "{{ item.Id }}"
+        state: absent
+        force_kill: true
+      loop: "{{ pi_lab_orphans.containers }}"
+      loop_control:
+        label: "{{ item.Names | first }}"
+
+    - name: Apagar as stacks
       ansible.builtin.file:
         path: "{{ item.path | dirname }}"
         state: absent
@@ -59,10 +79,12 @@
       loop_control:
         label: "{{ item.path }}"
 
+    # all: também os nomeados; sem ele o prune só leva os anônimos.
     - name: Apagar volumes Docker que sobraram
-      ansible.builtin.command:
-        argv: [docker, volume, prune, --all, --force]
-      changed_when: true
+      community.docker.docker_prune:
+        volumes: true
+        volumes_filters:
+          all: true
 
     - name: Tirar as credenciais do Borg
       ansible.builtin.file:
@@ -73,8 +95,8 @@
         - "{{ borg_ssh_key }}"
 
     - name: Conferir que não sobrou container
-      ansible.builtin.command:
-        argv: [docker, ps, --all, --quiet]
+      community.docker.docker_host_info:
+        containers: true
+        containers_all: true
       register: pi_lab_left
-      changed_when: false
-      failed_when: pi_lab_left.stdout | length > 0
+      failed_when: pi_lab_left.containers | length > 0

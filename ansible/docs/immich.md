@@ -14,10 +14,12 @@ na mesma versão.
 
 Pronto, mas **desligado** (`immich_backup_enabled: false`): o repositório Borg
 compartilhado tem cota de 10 GB e as fotos têm ~30 GB. Quando o plano for
-ampliado, mude para `true` em `roles/immich/defaults/main.yml` e reaplique.
+ampliado, mude para `true` em `roles/immich/defaults/main.yml`, acrescente
+`immich: Immich` em `uptime_kuma_backups` (`group_vars/vps/monitors.yml`) e
+reaplique `playbooks/immich.yml` e `playbooks/uptime-kuma.yml`.
 
-Ligado, ele roda diário às 03:30 (`/usr/local/bin/backup-immich.sh`, log em
-`/var/log/immich_backup.log`): `pg_dump` para dentro do `UPLOAD_LOCATION` e
+Ligado, ele entra no borgmatic do Pi, depois dos outros serviços
+(`/etc/borgmatic/immich.yaml`, `docs/backup.md`): `pg_dump` para dentro do `UPLOAD_LOCATION` e
 `borg create` dele no repositório compartilhado, prefixo `immich-*`, sem thumbs
 e vídeos re-encodados (o Immich regenera). Não para os containers.
 

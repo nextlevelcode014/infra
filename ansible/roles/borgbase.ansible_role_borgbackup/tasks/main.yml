@@ -1,0 +1,24 @@
+---
+- name: Load platform variables
+  ansible.builtin.include_tasks: platform.yml
+
+- name: Validate and normalize input
+  ansible.builtin.include_tasks: assert.yml
+
+- name: Install borgbackup and borgmatic
+  ansible.builtin.include_tasks: install.yml
+
+- name: Manage backup user
+  ansible.builtin.include_tasks: user.yml
+
+- name: Manage backup SSH key
+  ansible.builtin.include_tasks: ssh_key.yml
+  when: _borgbackup_ssh.create | bool
+
+- name: Configure borgmatic
+  ansible.builtin.include_tasks: configure.yml
+  when: _borgbackup_config.create | bool
+
+- name: Install borgmatic timer
+  ansible.builtin.include_tasks: timer.yml
+...

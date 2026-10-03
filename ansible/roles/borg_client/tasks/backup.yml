@@ -1,0 +1,88 @@
+---
+# Backup de um serviço: gera o config do borgmatic dele em
+# borg_backup_config_dir, que o timer do host roda junto com os outros.
+# Chamado pelo role do serviço com include_role + tasks_from: backup.
+#
+#   borg_backup_name      prefixo dos archives (forgejo -> forgejo-2026-...);
+#                         os restores procuram por ele
+#   borg_backup_sources   caminhos absolutos a guardar
+#   borg_backup_excludes  padrões de exclusão do borg (opcional)
+#   borg_backup_commands  "commands" do borgmatic, ex. parar e subir a stack
+#                         em volta do create (opcional)
+#   borg_backup_active    false tira o config (standby, serviço desligado)
+
+- name: Configurar o backup de {{ borg_backup_name }}
+  when: borg_backup_enabled and borg_backup_active
+  block:
+    - name: Gerar o config do borgmatic de {{ borg_backup_name }}
+      ansible.builtin.include_role:
+        name: borgbase.ansible_role_borgbackup
+      vars:
+        borgbackup_install:
+          method: none
+        borgbackup_user:
+          create: false
+        borgbackup_ssh:
+          create: false
+          command: "{{ borg_rsh }}"
+        # Bug do role (v2.1.0): com ssh.create false, o configure.yml ainda
+        # avalia esta variável, que só o ssh_key.yml define. Não é usada aqui:
+        # o ssh_command vem do borg_rsh.
+        _borgbackup_ssh_key_path: "{{ borg_ssh_key }}"
+        borgbackup_timer:
+          type: none
+        borgbackup_config:
+          name: "{{ borg_backup_name }}.yaml"
+          repositories:
+            - path: "{{ borg_repo }}"
+              label: compartilhado
+          source_directories: "{{ borg_backup_sources }}"
+          exclude_patterns: "{{ borg_backup_excludes }}"
+          # Os três abaixo repetem o que os scripts antigos faziam (os
+          # defaults do role pulariam diretórios de cache e outros discos).
+          one_file_system: false
+          exclude_caches: false
+          exclude_if_present: []
+          encryption_passcommand: "{{ borg_passcommand }}"
+          compression: "{{ borg_backup_compression }}"
+          lock_wait: "{{ borg_lock_wait }}"
+          # Mesmo formato dos scripts: os restores filtram por "<nome>-".
+          archive_name_format: "{{ borg_backup_name }}-{now:%Y-%m-%d_%H-%M-%S}"
+          # O default do role traz keep_hourly: 3, e o merge é por chave.
+          retention: "{{ {'keep_hourly': 0} | combine(borg_backup_retention) }}"
+          # O repositório é um só: um check por serviço leria tudo várias
+          # vezes por mês. Os scripts também não faziam check.
+          checks:
+            - name: disabled
+          hooks:
+            commands: "{{ borg_backup_commands }}"
+            # Só fim e falha: o monitor fica verde por backup concluído, e
+            # cai na hora com uma falha (max_retries 0 no Uptime Kuma).
+            uptime_kuma:
+              push_url: "{{ borg_backup_push_url }}"
+              states: [finish, fail]
+          extra:
+            # O prune e o check olham só os archives deste serviço.
+            match_archives: "sh:{{ borg_backup_name }}-*"
+            # Com o LUKS fechado (Pi recém-ligado, timer Persistent), o
+            # caminho não existe: melhor falhar do que gravar um archive
+            # vazio que viraria "o mais recente" para o restore.
+            source_directories_must_exist: true
+
+    - name: Validar o config do borgmatic de {{ borg_backup_name }}
+      ansible.builtin.command:
+        argv:
+          - borgmatic
+          - config
+          - validate
+          - -c
+          - "{{ borg_backup_config_dir }}/{{ borg_backup_name }}.yaml"
+      changed_when: false
+      # No --check o arquivo novo não foi gravado.
+      when: not ansible_check_mode
+
+- name: Tirar o config de {{ borg_backup_name }} (backup desligado)
+  ansible.builtin.file:
+    path: "{{ borg_backup_config_dir }}/{{ borg_backup_name }}.yaml"
+    state: absent
+  when: not (borg_backup_enabled and borg_backup_active)

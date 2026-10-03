@@ -21,6 +21,8 @@ uptime_kuma_groups:
   # AutoKuma apagar o grupo e criar outro, e o histórico dele se perde.
   - id: publico
     name: VPS
+  - id: backups
+    name: Backups
 
 uptime_kuma_monitors:
   # --- Raspberry Pi ---------------------------------------------------------
@@ -59,3 +61,14 @@ uptime_kuma_monitors:
   # --- VPS: o que a internet vê ---------------------------------------------
   # Passa pelo Anubis: só o /api/healthz escapa do desafio.
   - {id: forge, group: publico, type: http, name: Forgejo, url: "https://forge.nextlevelcode.pro/api/healthz"}
+
+# Backups do borgmatic: {borg_backup_name: rótulo}, um monitor push cada. O
+# nome tem que ser o borg_backup_name do role do serviço (dele sai o token).
+# O immich entra junto com immich_backup_enabled; antes disso cairia toda noite.
+uptime_kuma_backups:
+  forgejo: Forgejo
+  vaultwarden: Vaultwarden
+  arr: Stack Arr
+  adguard: AdGuard
+  fmd: FMD
+  uptime-kuma: Uptime Kuma

@@ -23,8 +23,9 @@ services:
     restart: unless-stopped
     # O AutoKuma não refaz o login quando o Uptime Kuma reinicia: fica em
     # "You are not logged in" para sempre. restart: true faz o Compose
-    # reiniciá-lo junto sempre que recriar o uptime-kuma. O healthcheck é o
-    # da própria imagem do Uptime Kuma.
+    # reiniciá-lo junto sempre que recriar o uptime-kuma, mas não com
+    # stop/start (o backup para os dois). O healthcheck é o da própria imagem
+    # do Uptime Kuma.
     depends_on:
       uptime-kuma:
         condition: service_healthy

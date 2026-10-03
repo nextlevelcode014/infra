@@ -68,6 +68,27 @@
   loop_control:
     label: "{{ item.id }}"
 
+# Push: quem avisa é o borgmatic de cada host, no fim de cada backup. O token
+# é o mesmo que o borg_client calcula (borg_backup_push_token).
+- name: Gerar os monitores de backup
+  ansible.builtin.template:
+    src: autokuma-monitor.json.j2
+    dest: "{{ uptime_kuma_monitors_dir }}/backup-{{ backup.key }}.json"
+    mode: "0600"
+  vars:
+    borg_backup_name: "{{ backup.key }}"
+    item: >-
+      {{ uptime_kuma_backup_monitor | combine({
+           'id': 'backup-' ~ backup.key,
+           'group': uptime_kuma_backup_group,
+           'name': 'Backup ' ~ backup.value,
+           'push_token': borg_backup_push_token}) }}
+  loop: "{{ uptime_kuma_backups | dict2items }}"
+  loop_control:
+    loop_var: backup
+    label: "backup-{{ backup.key }}"
+  no_log: true
+
 # Monitor que saiu da lista: o arquivo some e o AutoKuma apaga o monitor
 # (AUTOKUMA__ON_DELETE=delete).
 - name: Achar arquivos de entidades
@@ -87,7 +108,9 @@
     (item.path | basename | splitext | first)
     not in ([uptime_kuma_notification_id]
             + (uptime_kuma_groups | map(attribute='id') | list)
-            + (uptime_kuma_monitors | map(attribute='id') | list))
+            + (uptime_kuma_monitors | map(attribute='id') | list)
+            + (uptime_kuma_backups | dict2items | map(attribute='key')
+               | map('regex_replace', '^', 'backup-') | list))
 
 - name: Subir o Uptime Kuma
   community.docker.docker_compose_v2:
@@ -102,22 +125,27 @@
 # configurado pelo playbooks/caddy-vps.yml.
 
 # --- Backup -----------------------------------------------------------------
-- name: Instalar script de backup do Uptime Kuma
-  ansible.builtin.template:
-    src: backup-uptime-kuma.sh.j2
-    dest: "{{ uptime_kuma_backup_script }}"
-    owner: root
-    group: root
-    mode: "0750"
-
-- name: Agendar backup do Uptime Kuma
-  ansible.builtin.cron:
-    name: Backup Borg do Uptime Kuma
-    user: root
-    state: "{{ 'present' if borg_backup_enabled else 'absent' }}"
-    minute: "{{ uptime_kuma_backup_schedule.split()[0] }}"
-    hour: "{{ uptime_kuma_backup_schedule.split()[1] }}"
-    day: "{{ uptime_kuma_backup_schedule.split()[2] }}"
-    month: "{{ uptime_kuma_backup_schedule.split()[3] }}"
-    weekday: "{{ uptime_kuma_backup_schedule.split()[4] }}"
-    job: "{{ uptime_kuma_backup_script }} >> {{ uptime_kuma_backup_log_file }} 2>&1"
+# Para o Uptime Kuma por alguns segundos enquanto o Borg copia o SQLite. O
+# AutoKuma para junto: o restart: true do compose não dispara com stop/start,
+# e sozinho ele ficava sem conexão (EngineIO Error) até alguém reiniciá-lo. O
+# up -d --wait sobe o Uptime Kuma, espera o healthcheck e só então o AutoKuma
+# (depends_on); o aviso de fim do próprio backup vai para o Uptime Kuma.
+- name: Configurar o backup do Uptime Kuma
+  ansible.builtin.include_role:
+    name: borg_client
+    tasks_from: backup
+  vars:
+    borg_backup_name: uptime-kuma
+    borg_backup_sources:
+      - "{{ uptime_kuma_dir }}/data"
+    borg_backup_commands:
+      - before: action
+        when: [create]
+        run:
+          - docker compose -f {{ uptime_kuma_dir }}/compose.yml stop autokuma uptime-kuma
+      - after: action
+        when: [create]
+        run: &uptime_kuma_backup_up
+          - docker compose -f {{ uptime_kuma_dir }}/compose.yml up -d --wait
+      - after: error
+        run: *uptime_kuma_backup_up

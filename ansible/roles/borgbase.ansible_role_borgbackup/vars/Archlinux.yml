@@ -1,0 +1,23 @@
+---
+_borgbackup_dep_packages:
+  - openssh
+
+_borgbackup_cron_package: cronie
+
+_borgbackup_pip_packages:
+  - acl
+  - gcc
+  - lz4
+  - openssl
+  - pkgconfig
+  - python-pip
+  - python-setuptools
+  - xxhash
+  - xz
+  - zstd
+
+_borgbackup_distro_packages:
+  - borg
+  - borgmatic
+
+_borgbackup_python_bin: python3

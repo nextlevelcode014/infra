@@ -43,17 +43,15 @@ Feita uma vez, à mão, porque envolve o vault e o crontab que hoje está no Pi.
    ansible-playbook playbooks/arr-stack.yml --ask-vault-pass
    ```
 
-5. Conferir o crontab e apagar o script antigo. O role agenda o próprio cron
-   (`#Ansible: Backup Borg da stack Arr`); não pode sobrar outra linha de
-   `backup-arr`, senão o backup roda duas vezes. O `arr-stack-backup.sh` era o
-   script antigo, que nenhum cron chamava.
+5. Apagar o script antigo do `self-hosted`, que nenhum cron chamava, e
+   conferir que o backup é só o do borgmatic (`docs/backup.md`):
 
    ```bash
-   ssh ubuntu@nextlevelcode sudo crontab -l | grep -c backup-arr
    ssh ubuntu@nextlevelcode sudo rm -f /usr/local/bin/arr-stack-backup.sh
+   ssh ubuntu@nextlevelcode sudo crontab -l | grep -c arr
    ```
 
-   O primeiro comando deve responder `1`.
+   O segundo comando deve responder `0`.
 
 6. Conferir que a stack é a de `/opt/arr`:
 
@@ -68,9 +66,9 @@ ele sobe a mesma stack a partir de outro arquivo.
 
 ## Backup
 
-Diário às 02:30, `/usr/local/bin/backup-arr.sh`, log em
-`/var/log/arr_backup.log`. Para a stack, faz `borg create` da config inteira
+Diário, no borgmatic do Pi (`/etc/borgmatic/arr.yaml`, `docs/backup.md`),
+prefixo `arr-*`. Para a stack, faz `borg create` da config inteira
 (`/mnt/secure/appdata/mnt/media-stack/config`, sem logs, caches e os zips de
-backup interno de cada app), sobe a
-stack, aplica a retenção 7d/4w/3m e compacta. A mídia (`data/`) não entra no
+backup interno de cada app), sobe a stack, aplica a retenção 7d/4w/3m e
+compacta. A mídia (`data/`) não entra no
 backup. Restore em [`arr-stack-restore.md`](arr-stack-restore.md).

@@ -1,6 +1,5 @@
-forgejo_backup_script: "/usr/local/bin/backup_forgejo.sh"
-forgejo_backup_log_file: "/var/log/forgejo_backup.log"
-forgejo_backup_schedule: "0 2 * * *"
+# O forgejo_restore lê o dump deste caminho dentro do archive.
+forgejo_backup_db_dump: /tmp/forgejo_db_dump.sql
 
 forgejo_image: "codeberg.org/forgejo/forgejo:15-rootless"
 forgejo_db_image: "postgres:16-alpine"
@@ -8,6 +7,6 @@ forgejo_user: "1000"
 forgejo_group: "1000"
 
 # Modo standby (Pi de recuperação): compose e imagens prontos, containers
-# parados e sem cron de backup. Quem sobe o serviço é o forgejo-restore.yml,
+# parados e sem backup. Quem sobe o serviço é o forgejo-restore.yml,
 # com o archive mais recente da produção. Ver docs/pi-recuperacao.md.
 forgejo_standby: false

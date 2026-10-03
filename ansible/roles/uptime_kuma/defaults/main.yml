@@ -6,12 +6,6 @@ uptime_kuma_image: louislam/uptime-kuma:2
 # uptime.lab.nextlevelcode.pro, aceitando só origem da tailnet.
 uptime_kuma_port: 3001
 
-# Backup Borg do banco (SQLite, poucos MB) no repositório compartilhado,
-# prefixo uptime-kuma-*. Para o container por alguns segundos.
-uptime_kuma_backup_script: /usr/local/bin/backup-uptime-kuma.sh
-uptime_kuma_backup_log_file: /var/log/uptime_kuma_backup.log
-uptime_kuma_backup_schedule: "0 3 * * *"
-
 # --- AutoKuma: monitores por arquivo ----------------------------------------
 # O AutoKuma (container ao lado) lê um .json por entidade em
 # uptime_kuma_monitors_dir e cria/atualiza grupos, monitores e o aviso no
@@ -34,6 +28,17 @@ uptime_kuma_monitor_defaults:
 
 uptime_kuma_groups: []
 uptime_kuma_monitors: []
+
+# Backups com monitor push, {borg_backup_name: rótulo}. O monitor cai com o
+# aviso de falha do borgmatic, ou sem aviso nenhum em 26 h (o backup é
+# diário). max_retries 0: a falha avisada já é o veredito; com retries ela
+# ficaria "pendente" até a próxima noite.
+uptime_kuma_backups: {}
+uptime_kuma_backup_group: backups
+uptime_kuma_backup_monitor:
+  type: push
+  interval: 93600
+  max_retries: 0
 
 # Aviso por e-mail (SMTP da Proton), ligado em todo monitor. O corpo é o
 # files/email-body.html (Liquid do Uptime Kuma).

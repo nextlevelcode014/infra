@@ -8,121 +8,45 @@
       -e forgejo_restore_confirmation=RESTORE_FORGEJO somente depois de
       confirmar que esta instância deve substituir os dados atuais.
 
-- name: Validar variáveis necessárias do Borg
-  ansible.builtin.assert:
-    that:
-      - borg_repo | length > 0
-      - borg_passcommand | length > 0
-      - borg_ssh_key | length > 0
-      - forgejo_dir is defined
-    fail_msg: "Configure o repositório Borg, o passcommand, a chave SSH e forgejo_dir."
-
-- name: Verificar dependências do restore
-  ansible.builtin.command:
-    argv:
-      - "{{ item }}"
-      - "--version"
-  loop:
-    - borg
-    - docker
-  changed_when: false
-
-- name: Criar diretório temporário do restore
-  ansible.builtin.file:
-    path: "{{ forgejo_restore_work_dir }}"
-    state: directory
-    mode: "0700"
-
-- name: Selecionar o archive Forgejo mais recente
-  ansible.builtin.command:
-    argv:
-      - borg
-      - --lock-wait
-      - "10"
-      - list
-      - --prefix
-      - "forgejo-"
-      - --format
-      - "{hostname} {archive}{NL}"
-      - "{{ borg_repo }}"
-  environment:
-    BORG_PASSCOMMAND: "{{ borg_passcommand }}"
-    BORG_RSH: "{{ borg_rsh }}"
-  register: forgejo_restore_archive_result
-  changed_when: false
-
-- name: Validar execução da consulta ao Borg
-  ansible.builtin.assert:
-    that:
-      - forgejo_restore_archive_result.rc == 0
-    fail_msg: >-
-      borg list falhou (rc={{ forgejo_restore_archive_result.rc }}):
-      {{ forgejo_restore_archive_result.stderr | default('sem detalhes') }}
-
-# O prefixo sozinho não basta: outra máquina com backup do mesmo serviço
-# (ex.: o Pi antigo) cria archives forgejo-* no mesmo repositório, e o mais
-# recente podia ser o dela. Só valem os archives feitos por forgejo_restore_source_host.
-- name: Filtrar os archives da máquina de origem
-  ansible.builtin.set_fact:
-    forgejo_restore_candidates: >-
-      {{ forgejo_restore_archive_result.stdout_lines
-         | select('match', '^' ~ forgejo_restore_source_host ~ ' forgejo-[^/ ]+$')
-         | map('regex_replace', '^[^ ]+ ', '')
-         | list }}
-
-- name: Validar que um archive Forgejo foi encontrado
-  ansible.builtin.assert:
-    that:
-      - forgejo_restore_candidates | length > 0
-    fail_msg: >-
-      Nenhum archive forgejo-* feito por '{{ forgejo_restore_source_host }}'.
-      Archives com o prefixo: {{ forgejo_restore_archive_result.stdout_lines | join(', ') }}
-
-- name: Guardar o nome do archive selecionado
-  ansible.builtin.set_fact:
-    forgejo_restore_archive: "{{ forgejo_restore_candidates | last }}"
-
-- name: Limpar diretório temporário de uma execução anterior
-  ansible.builtin.file:
-    path: "{{ forgejo_restore_work_dir }}/extracted"
-    state: absent
-
-- name: Criar diretório de extração
-  ansible.builtin.file:
-    path: "{{ forgejo_restore_work_dir }}/extracted"
-    state: directory
-    mode: "0700"
-
-- name: Extrair o archive selecionado para área temporária
-  ansible.builtin.command:
-    argv:
-      - borg
-      - extract
-      - "{{ borg_repo }}::{{ forgejo_restore_archive }}"
-      - "{{ forgejo_restore_data_archive_path }}"
-      - "{{ forgejo_restore_dump_archive_path }}"
-  args:
-    chdir: "{{ forgejo_restore_work_dir }}/extracted"
-  environment:
-    BORG_PASSCOMMAND: "{{ borg_passcommand }}"
-    BORG_RSH: "{{ borg_rsh }}"
-  no_log: true
-
-- name: Validar dados e dump extraídos
+# O restore substitui os dados de uma instância que já existe; quem instala
+# é o playbooks/forgejo.yml (LXC) ou o pi-recuperacao.yml (Pi, em standby).
+- name: Ver se o Forgejo está instalado aqui
   ansible.builtin.stat:
-    path: "{{ forgejo_restore_work_dir }}/extracted/{{ item }}"
-  loop:
-    - "{{ forgejo_restore_data_archive_path }}"
-    - "{{ forgejo_restore_dump_archive_path }}"
-  register: forgejo_restore_extracted
+    path: "{{ forgejo_dir }}/docker-compose.yml"
+  register: forgejo_restore_compose
 
-- name: Bloquear restore incompleto
+- name: Exigir o Forgejo instalado antes de restaurar
   ansible.builtin.assert:
-    that:
-      - item.stat.exists
-      - item.stat.size | default(1) > 0
-    fail_msg: "Arquivo esperado não foi extraído ou está vazio: {{ item.item }}"
-  loop: "{{ forgejo_restore_extracted.results }}"
+    that: forgejo_restore_compose.stat.exists
+    fail_msg: >-
+      {{ forgejo_dir }}/docker-compose.yml não existe. Instale antes: no Pi,
+      playbooks/pi-recuperacao.yml (--limit rpi ou pi_staging); no LXC,
+      playbooks/forgejo.yml.
+
+# Os *_archive_path são relativos (como o borg guarda) para dar para trocar
+# com -e por um backup antigo; o borg_restore quer caminho absoluto.
+- name: Extrair o backup do Forgejo
+  ansible.builtin.include_role:
+    name: borg_restore
+  vars:
+    borg_restore_prefix: forgejo
+    borg_restore_source_host: "{{ forgejo_restore_source_host }}"
+    borg_restore_work_dir: "{{ forgejo_restore_work_dir }}"
+    borg_restore_paths: &forgejo_restore_paths
+      - "/{{ forgejo_restore_data_archive_path }}"
+      - "/{{ forgejo_restore_dump_archive_path }}"
+    borg_restore_required_files: *forgejo_restore_paths
+
+# Um dump vazio apagaria o banco: o psql abaixo roda sobre um volume novo.
+- name: Conferir o tamanho do dump
+  ansible.builtin.stat:
+    path: "{{ forgejo_restore_work_dir }}/extracted/{{ forgejo_restore_dump_archive_path }}"
+  register: forgejo_restore_dump
+
+- name: Bloquear restore com dump vazio
+  ansible.builtin.assert:
+    that: forgejo_restore_dump.stat.size > 0
+    fail_msg: "O dump {{ forgejo_restore_dump_archive_path }} do archive {{ borg_restore_archive }} está vazio."
 
 - name: Parar os serviços do Forgejo antes de substituir os dados
   community.docker.docker_compose_v2:
@@ -179,39 +103,23 @@
     state: present
 
 - name: Corrigir ownership do volume PostgreSQL
-  ansible.builtin.command:
-    argv:
-      - docker
-      - compose
-      - exec
-      - -T
-      - -u
-      - root
-      - db
-      - chown
-      - -R
-      - postgres:postgres
-      - /var/lib/postgresql/data
-  args:
-    chdir: "{{ forgejo_dir }}"
-  changed_when: true
+  community.docker.docker_compose_v2_exec:
+    project_src: "{{ forgejo_dir }}"
+    service: db
+    user: root
+    tty: false
+    argv: [chown, -R, "postgres:postgres", /var/lib/postgresql/data]
 
 - name: Aguardar PostgreSQL ficar saudável
-  ansible.builtin.command:
-    argv:
-      - docker
-      - inspect
-      - --format
-      - "{{ '{{' }}.State.Health.Status{{ '}}' }}"
-      - forgejo-db
-  args:
-    chdir: "{{ forgejo_dir }}"
-  register: forgejo_restore_db_status
+  community.docker.docker_container_info:
+    name: forgejo-db
+  register: forgejo_restore_db_info
   retries: 30
   delay: 2
-  until: forgejo_restore_db_status.stdout == "healthy"
-  changed_when: false
+  until: (forgejo_restore_db_info.container.State.Health.Status | default('')) == "healthy"
 
+# Shell, não docker_compose_v2_exec: o stdin dele é uma string nos
+# argumentos do módulo, e o dump inteiro iria para a memória e para o log.
 - name: Carregar dump no PostgreSQL restaurado
   ansible.builtin.shell: >-
     docker compose exec -T db psql -U forgejo -d forgejo

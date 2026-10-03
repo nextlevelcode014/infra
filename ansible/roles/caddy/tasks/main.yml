@@ -53,10 +53,13 @@
     group: root
   when: caddy_needs_download | bool
 
+# O apt continua dono do caddy.default: um upgrade do pacote grava lá, e
+# não por cima do binário custom.
 - name: Desviar /usr/bin/caddy para caddy.default
-  ansible.builtin.command: dpkg-divert --divert /usr/bin/caddy.default --rename /usr/bin/caddy
-  args:
-    creates: /usr/bin/caddy.default
+  community.general.dpkg_divert:
+    path: /usr/bin/caddy
+    divert: /usr/bin/caddy.default
+    rename: true
 
 # No --check o get_url não baixa nada; sem isto o copy falha com
 # "Source /tmp/caddy not found". O dry-run ainda mostra o download como
@@ -83,14 +86,20 @@
     state: absent
   when: caddy_needs_download | bool
 
-- name: Registrar binário default em update-alternatives
-  ansible.builtin.command: update-alternatives --install /usr/bin/caddy caddy /usr/bin/caddy.default 10
-  changed_when: false
-
-- name: Registrar binário custom em update-alternatives
-  ansible.builtin.command: update-alternatives --install /usr/bin/caddy caddy /usr/bin/caddy.custom 50
-  changed_when: false
-  when: caddy_needs_download | bool
+# Modo auto: vence a maior prioridade, o custom. O default fica registrado
+# para voltar com update-alternatives --config caddy.
+- name: Registrar os binários em update-alternatives
+  community.general.alternatives:
+    name: caddy
+    link: /usr/bin/caddy
+    path: "{{ item.path }}"
+    priority: "{{ item.priority }}"
+    state: "{{ item.state }}"
+  loop:
+    - {path: /usr/bin/caddy.default, priority: 10, state: present}
+    - {path: /usr/bin/caddy.custom, priority: 50, state: auto}
+  loop_control:
+    label: "{{ item.path }}"
 
 - name: Verificar que o plugin cloudflare está disponível
   ansible.builtin.command: caddy list-modules
