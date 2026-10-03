@@ -10,8 +10,11 @@
 	}
 
 	@forge host forge.nextlevelcode.pro
+	# O upstream é o Anubis, que exige o IP do cliente em X-Real-Ip.
 	handle @forge {
-		reverse_proxy {{ caddy_vps_forgejo_upstream }}
+		reverse_proxy {{ caddy_vps_forgejo_upstream }} {
+			header_up X-Real-Ip {remote_host}
+		}
 	}
 {% if caddy_vps_status_page_slug is defined %}
 

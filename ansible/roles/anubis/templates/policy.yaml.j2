@@ -1,0 +1,18 @@
+{#- Política própria, não a padrão do Anubis: a padrão dá peso extra a tráfego
+    do Brasil (countries-with-aggressive-scrapers), e seria você pegando o
+    desafio mais pesado. As regras rodam em ordem; a primeira que casa decide.
+    Os imports "(data)/..." são arquivos embutidos na imagem.
+    Métricas (e pprof) só em 127.0.0.1: no FMD o Anubis divide a rede com o
+    sidecar Tailscale, e no default (:9090) ficariam abertas para a tailnet. -#}
+{%- set base = [
+  {'import': '(data)/bots/_deny-pathological.yaml'},
+  {'import': '(data)/meta/ai-block-aggressive.yaml'},
+] + ([{'import': '(data)/crawlers/_allow-good.yaml'}] if anubis_policy.allow_crawlers | default(false) else []) + [
+  {'import': '(data)/common/keep-internet-working.yaml'},
+] -%}
+{%- set resto = [{'name': 'desafiar-o-resto', 'path_regex': '.*', 'action': 'CHALLENGE'}] -%}
+# Gerido pelo Ansible — não editar à mão.
+{{ {
+  'bots': base + (anubis_policy.rules | default([])) + resto,
+  'metrics': {'bind': '127.0.0.1:9090', 'network': 'tcp'},
+} | to_nice_yaml(indent=2, width=1000) }}

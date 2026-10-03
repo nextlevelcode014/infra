@@ -45,11 +45,26 @@
     mode: "0700"
   when: fmd_tailscale_sidecar
 
-- name: Copiar o ts-serve.json
-  ansible.builtin.copy:
-    src: ts-serve.json
+# O ts-serve.json só é lido na partida do sidecar: mudou (ex.: o Funnel passou
+# a apontar para o Anubis), a stack é recriada mais abaixo.
+- name: Renderizar o ts-serve.json
+  ansible.builtin.template:
+    src: ts-serve.json.j2
     dest: "{{ fmd_dir }}/ts-serve.json"
     mode: "0644"
+  register: fmd_ts_serve_result
+
+# public: os defaults do role anubis (anubis_image, anubis_difficulty) ficam
+# visíveis para o compose.yml.j2 abaixo.
+- name: Renderizar a política do Anubis do Funnel
+  ansible.builtin.include_role:
+    name: anubis
+    tasks_from: policy
+    public: true
+  vars:
+    anubis_policy: "{{ fmd_anubis_policy }}"
+    anubis_policy_dest: "{{ fmd_dir }}/anubis-policy.yaml"
+  when: fmd_tailscale_sidecar and fmd_anubis
 
 - name: Renderizar o compose.yml
   ansible.builtin.template:
@@ -73,6 +88,31 @@
   # No --check de um host novo o diretório só "seria" criado, e o compose
   # falha com "is not a directory". Pula só nesse caso.
   when: not (ansible_check_mode and fmd_stack_dir_result is changed)
+
+# Recria a stack inteira, não só o sidecar: o fmd e o Anubis vivem na rede
+# dele, e reiniciar só o sidecar os deixaria presos a uma netns que sumiu.
+# O estado do nó (e o Funnel) fica no volume, então é o mesmo nó.
+- name: Recriar a stack com o ts-serve.json novo
+  community.docker.docker_compose_v2:
+    project_src: "{{ fmd_dir }}"
+    files: [compose.yml]
+    state: present
+    recreate: always
+  when:
+    - fmd_tailscale_sidecar
+    - fmd_ts_serve_result is changed
+    - not ansible_check_mode
+
+- name: Reiniciar o Anubis com a política nova
+  community.docker.docker_compose_v2:
+    project_src: "{{ fmd_dir }}"
+    files: [compose.yml]
+    state: restarted
+    services: [fmd-anubis]
+  when:
+    - fmd_tailscale_sidecar and fmd_anubis
+    - anubis_policy_result is changed
+    - not ansible_check_mode
 
 - name: Instalar script de backup do FMD
   ansible.builtin.template:

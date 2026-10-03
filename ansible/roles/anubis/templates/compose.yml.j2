@@ -1,0 +1,25 @@
+# Gerido pelo Ansible — não editar à mão.
+# Um Anubis por serviço protegido, ouvindo só em 127.0.0.1 para o Caddy.
+services:
+{% for i in anubis_instances %}
+  anubis-{{ i.name }}:
+    image: {{ anubis_image }}
+    container_name: anubis-{{ i.name }}
+    restart: unless-stopped
+    environment:
+      BIND: ":8923"
+      TARGET: "{{ i.target }}"
+      DIFFICULTY: "{{ i.difficulty | default(anubis_difficulty) }}"
+      POLICY_FNAME: /policy.yaml
+      # Sem isto o Anubis redireciona para qualquer domínio depois do
+      # desafio (open redirect).
+      REDIRECT_DOMAINS: "{{ i.redirect_domains }}"
+    volumes:
+      - ./policy-{{ i.name }}.yaml:/policy.yaml:ro
+    ports:
+      - "127.0.0.1:{{ i.port }}:8923"
+    # Store em memória e nada gravado em disco: o rootfs pode ser read-only.
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+{% endfor %}

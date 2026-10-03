@@ -5,6 +5,7 @@ A VPS fica fora de casa e serve duas coisas:
 - o **Caddy público** (`*.nextlevelcode.pro`, hoje o `forge` e o `status`) e os **sites
   privados** que moram nela (`uptime.lab`, só da tailnet), pelo
   `playbooks/caddy-vps.yml`;
+- o **Anubis** na frente do `forge` (`playbooks/anubis.yml`, ver `docs/anubis.md`);
 - o **Uptime Kuma** (`playbooks/uptime-kuma.yml`, ver `docs/uptime-kuma.md`).
 
 Segredos vêm do vault: o token da Cloudflare **próprio da VPS**
@@ -47,9 +48,13 @@ O que vem antes de o Ansible conseguir entrar, mais o DNS público:
 4. **Aplicar:**
 
    ```bash
+   ansible-playbook playbooks/anubis.yml --ask-vault-pass
    ansible-playbook playbooks/caddy-vps.yml --ask-vault-pass
    ansible-playbook playbooks/uptime-kuma.yml --ask-vault-pass
    ```
+
+   O Anubis vem antes: o Caddy aponta o `forge` para ele, e sem ele o `forge`
+   dá 502.
 
    Confira: `forge.nextlevelcode.pro` e `uptime.lab.nextlevelcode.pro`
    respondem.

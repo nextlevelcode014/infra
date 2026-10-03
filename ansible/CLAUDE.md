@@ -52,10 +52,11 @@ usadas depois.
 | `playbooks/searxng.yml` | `pi_hosts` | SearXNG do Pi (sai pela VPN do gluetun) |
 | `playbooks/pi-recuperacao.yml` | `pi_hosts` | Forgejo e Vaultwarden em standby no Pi (parados, prontos para o restore) |
 | `playbooks/adguard.yml` | `pi_hosts` | AdGuard do Pi: DNS na LAN e na tailnet, web pelo Caddy, backup Borg |
-| `playbooks/fmd.yml` | `pi_hosts` | FMD do Pi: Funnel público para emergência + fmd.lab pelo Caddy, backup Borg |
+| `playbooks/fmd.yml` | `pi_hosts` | FMD do Pi: Funnel público para emergência (atrás do Anubis) + fmd.lab pelo Caddy, backup Borg |
 | `playbooks/exit-node.yml` | `rpi` | exit node Tailscale saindo pela ProtonVPN (nunca no pi-lab) |
 | `playbooks/nextcloud.yml` | `rpi` | mastercontainer do Nextcloud AIO + coturn + `tailscale serve` do host |
 | `playbooks/caddy-vps.yml` | `vps` | Caddy da VPS: domínios públicos (forge, status page do Uptime Kuma) + sites privados em `*.lab` que moram nela |
+| `playbooks/anubis.yml` | `vps` | Anubis (prova de trabalho anti-bot) na frente dos domínios públicos da VPS; aplicar antes do `caddy-vps.yml` |
 | `playbooks/uptime-kuma.yml` | `vps` | Uptime Kuma na VPS (fora de casa), em `uptime.lab` pelo Caddy da VPS |
 | `playbooks/immich.yml` | `pi_hosts` | Immich do Pi (backup Borg pronto, desligado até ampliar a cota) |
 | `playbooks/pi-completo.yml` | `pi_hosts` | Pi inteiro na ordem certa; com `-e pi_restaurar_tudo=RESTAURAR_PI` traz os dados do Borg antes (`docs/pi-reconstrucao.md`) |
@@ -104,9 +105,10 @@ curinga `*.lab` aponta para o Caddy do Proxmox. VPS nova: `docs/vps.md`.
 | `arr_stack` | stack Arr do Pi (compose do `self-hosted/arr`) |
 | `searxng` | SearXNG do Pi; `settings.yml` renderizado, porta publicada pelo gluetun |
 | `adguard` | AdGuard do Pi; DNS em `lan_ip` e `ts_ip`, sem sidecar |
-| `fmd` | FMD do Pi; sidecar com Funnel opcional (`fmd_tailscale_sidecar`) |
+| `fmd` | FMD do Pi; sidecar com Funnel opcional (`fmd_tailscale_sidecar`), Anubis no caminho do Funnel (`fmd_anubis`) |
 | `exit_node` | exit node `vpn-exit` (compose do `self-hosted/exit-node`, sem mudança) |
 | `nextcloud` | mastercontainer do AIO (os outros containers são do próprio AIO), coturn e o serve do host |
+| `anubis` | Anubis da VPS, uma instância por serviço (`anubis_instances`); `tasks_from: policy` só renderiza a política, para um Anubis em outra stack (FMD) |
 | `uptime_kuma` | Uptime Kuma + AutoKuma + Docker na VPS, sem o usuário no grupo `docker`; monitores em `group_vars/vps/monitors.yml` |
 | `immich` | Immich do Pi, acesso só pelo Caddy; `immich_backup_enabled` liga o backup |
 | `borg_restore` | miolo dos restores do Pi: escolhe o archive (prefixo + máquina de origem), extrai no LUKS e valida |
@@ -150,6 +152,14 @@ Vale não repetir:
   ele grava sempre como `false`) faz o aviso ser regravado a cada 5 s, para
   sempre. E a mescla é rasa: o `config` do arquivo substitui o do banco
   inteiro, então tirar um campo do arquivo o **apaga** no Uptime Kuma.
+- **O Anubis responde 500 sem o IP do cliente.** Ele exige `X-Real-Ip` (ou um
+  `X-Forwarded-For` com IP público): no Caddy, `header_up X-Real-Ip
+  {remote_host}`. IP da tailnet (`100.64.0.0/10`) ele descarta sempre, então
+  quem chega pela tailnet a um Anubis atrás do `tailscale serve` leva 500. E a
+  página de desafio responde **200**: monitor apontado para a raiz fica verde
+  com o serviço fora do ar; aponte para um caminho liberado na política.
+- **`redir` do Caddy com um argumento só que começa com `/`** lê o caminho como
+  matcher e falha no `adapt`. Use `redir * /destino`.
 - **O `validate` de `copy`/`template` não passa por shell.** O Ansible faz
   `shlex.split` + `execvp`, então `VAR=x comando` falha com
   `No such file or directory: 'VAR=x'` (procura um binário com esse nome).

@@ -1,0 +1,10 @@
+---
+# Anubis da VPS: desafio de prova de trabalho na frente dos domínios
+# públicos que o Caddy da VPS serve (hoje o forge). Aplicar ANTES do
+# caddy-vps.yml quando entrar instância nova: o Caddy passa a apontar para
+# ela. O Anubis do FMD (Funnel) mora na stack do FMD, no playbooks/fmd.yml.
+- name: Configurar o Anubis na VPS
+  hosts: vps
+  gather_facts: true
+  roles:
+    - role: anubis

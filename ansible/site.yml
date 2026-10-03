@@ -12,5 +12,6 @@
 - import_playbook: playbooks/fmd.yml
 - import_playbook: playbooks/exit-node.yml
 - import_playbook: playbooks/nextcloud.yml
+- import_playbook: playbooks/anubis.yml
 - import_playbook: playbooks/caddy-vps.yml
 - import_playbook: playbooks/uptime-kuma.yml

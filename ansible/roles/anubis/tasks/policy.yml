@@ -1,0 +1,10 @@
+---
+# Só a política, para um Anubis que mora na stack de outro serviço (o FMD, na
+# rede do sidecar Tailscale). Quem chama passa anubis_policy e
+# anubis_policy_dest, e reinicia o container se anubis_policy_result mudar.
+- name: Renderizar a política do Anubis
+  ansible.builtin.template:
+    src: policy.yaml.j2
+    dest: "{{ anubis_policy_dest }}"
+    mode: "0644"
+  register: anubis_policy_result

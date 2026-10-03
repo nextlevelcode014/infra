@@ -23,7 +23,11 @@ app de 2FA quase sempre sumiu junto. O que protege:
   usuário, não por IP), uns 720 palpites por dia no máximo;
 - os dados são cifrados no aparelho: invadir o servidor dá metadado (quem tem
   conta, quando cada aparelho falou), não o mapa;
-- `FMD_REGISTRATIONTOKEN` obrigatório: vazio = qualquer um cria conta.
+- `FMD_REGISTRATIONTOKEN` obrigatório: vazio = qualquer um cria conta;
+- o **Anubis** no caminho do Funnel (`fmd_anubis`): todo acesso pela internet,
+  inclusive o login, passa antes por uma prova de trabalho no navegador. Bot
+  nenhum chega a tentar senha nem a travar a conta. O `fmd.lab` segue direto.
+  Da tailnet, o endereço do Funnel dá 500: use o `fmd.lab` (`docs/anubis.md`).
 
 ## Backup
 

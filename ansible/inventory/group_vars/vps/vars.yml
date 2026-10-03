@@ -3,7 +3,8 @@
 caddy_caddyfile_template: Caddyfile.vps.j2
 # Token próprio da VPS, separado do do Proxmox (ver roles/caddy/defaults).
 caddy_cloudflare_token: "{{ vault_caddy_vps_cloudflare_token }}"
-caddy_vps_forgejo_upstream: <ip-tailscale-do-forgejo>:3000
+# O forge passa pelo Anubis (instância "forgejo" abaixo) antes do Forgejo.
+caddy_vps_forgejo_upstream: 127.0.0.1:8923
 
 # Status page pública do Uptime Kuma em status.nextlevelcode.pro: só a página
 # com este slug passa, o resto do Uptime Kuma continua só na tailnet. A página
@@ -17,3 +18,32 @@ caddy_vps_status_page_upstream: 127.0.0.1:3001
 caddy_vps_private_sites:
   - host: uptime
     upstream: 127.0.0.1:3001
+
+# Anubis na frente dos domínios públicos (playbooks/anubis.yml). O target é o
+# Forgejo no forgejo-lxc, pela tailnet; o Caddy fala com o Anubis.
+anubis_instances:
+  - name: forgejo
+    port: 8923
+    target: http://<ip-tailscale-do-forgejo>:3000
+    redirect_domains: forge.nextlevelcode.pro
+    policy:
+      # Buscadores verificados por IP: sem isso o forge some das buscas.
+      allow_crawlers: true
+      rules:
+        # git clone/fetch por HTTPS: o cliente git não roda JavaScript.
+        - import: (data)/clients/git.yaml
+        # Feeds .rss/.atom dos repositórios, para leitores de feed.
+        - import: (data)/apps/gitea-rss-feeds.yaml
+        # API com token (o tea usa https://forge.nextlevelcode.pro/api/v1).
+        # A API anônima continua desafiada.
+        - name: forgejo-api-com-token
+          action: ALLOW
+          expression:
+            all:
+              - path.startsWith("/api/")
+              - '"Authorization" in headers'
+        # Health check para o monitor do Uptime Kuma: a página de desafio
+        # responde 200 e deixaria o monitor verde com o Forgejo fora do ar.
+        - name: forgejo-healthz
+          action: ALLOW
+          path_regex: ^/api/healthz$

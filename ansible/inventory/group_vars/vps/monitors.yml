@@ -46,8 +46,10 @@ uptime_kuma_monitors:
   - {id: nextcloud, group: pi, type: http, name: Nextcloud, url: "https://nextcloud.lab.nextlevelcode.pro/status.php"}
   - {id: fmd, group: pi, type: http, name: FMD, url: "https://fmd.lab.nextlevelcode.pro"}
   # O Funnel entra pela infraestrutura do Tailscale direto no Pi, sem passar
-  # pela VPS; resolve por DNS público, então vê o que a internet vê.
-  - {id: fmd-funnel, group: pi, type: http, name: "FMD (Funnel)", url: "https://fmd.<tailnet>.ts.net"}
+  # pela VPS; resolve por DNS público, então vê o que a internet vê. Passa
+  # pelo Anubis: só o /api/v1/version escapa do desafio (que responde 200 e
+  # deixaria o monitor sempre verde).
+  - {id: fmd-funnel, group: pi, type: http, name: "FMD (Funnel)", url: "https://fmd.<tailnet>.ts.net/api/v1/version"}
 
   # --- Proxmox --------------------------------------------------------------
   - {id: proxmox-ping, group: proxmox, type: ping, name: "Proxmox (ping)", hostname: <proxmox_host>}
@@ -55,4 +57,5 @@ uptime_kuma_monitors:
   - {id: forgejo-ssh, group: proxmox, type: port, name: "Forgejo (SSH)", hostname: <ip-tailscale-do-forgejo>, port: 2222}
 
   # --- VPS: o que a internet vê ---------------------------------------------
-  - {id: forge, group: publico, type: http, name: Forgejo, url: "https://forge.nextlevelcode.pro"}
+  # Passa pelo Anubis: só o /api/healthz escapa do desafio.
+  - {id: forge, group: publico, type: http, name: Forgejo, url: "https://forge.nextlevelcode.pro/api/healthz"}

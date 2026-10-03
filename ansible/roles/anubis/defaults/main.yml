@@ -1,0 +1,28 @@
+---
+# Anubis: proxy reverso que pede uma prova de trabalho ao navegador antes de
+# liberar o serviço, contra scrapers e bots de IA. Fica entre o proxy público
+# (Caddy, Funnel) e o serviço. Ver docs/anubis.md.
+anubis_image: ghcr.io/techarohq/anubis:v1.27.0
+anubis_dir: /opt/anubis
+
+# Zeros iniciais exigidos no hash. 4 leva ~1 s num celular; cada +1
+# multiplica o custo por 16.
+anubis_difficulty: 4
+
+# Instâncias que este host roda, uma por serviço protegido:
+#   name:   vira o container anubis-<name> e o arquivo policy-<name>.yaml
+#   port:   porta em 127.0.0.1 para o proxy da frente (Caddy)
+#   target: URL do serviço protegido
+#   redirect_domains: o(s) domínio(s) públicos do serviço, separados por
+#           vírgula; o Anubis só redireciona para eles depois do desafio
+#   policy: {allow_crawlers: bool, rules: [regras do Anubis]} (ver abaixo)
+anubis_instances: []
+
+# Política de uma instância (templates/policy.yaml.j2). A base é igual para
+# todas: nega bots patológicos e de IA, deixa passar robots.txt, favicon e
+# .well-known, e desafia todo o resto. Cada serviço acrescenta em `rules` o
+# que tem que passar sem JavaScript (git, API com token, health check);
+# `allow_crawlers` libera os buscadores verificados por IP (Google, Bing...).
+anubis_policy:
+  allow_crawlers: false
+  rules: []
