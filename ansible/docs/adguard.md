@@ -118,3 +118,35 @@ dnsmasq do OpenWrt como DNS dos clientes e o AdGuard como servidor dele
 segundo). O custo é o AdGuard passar a ver só o IP do roteador nas consultas.
 
 A partir daqui, não use mais `make up SVC=adguard` no `self-hosted`.
+
+## Roteador novo ou faixa da LAN nova
+
+O AdGuard escuta no IP da LAN do Pi (`lan_ip`, lido dos fatos), e não em
+`0.0.0.0`. Se esse IP muda (roteador trocado, faixa nova), o DNS da LAN para
+até reaplicar o playbook. A tailnet não fica sem DNS: o console usa o fallback
+da Cloudflare enquanto o IP Tailscale não responde.
+
+1. **No roteador novo**, a reserva fixa do Pi (MAC de
+   `cat /sys/class/net/eth0/address`) com um IP da faixa nova, e o nome
+   `nextlevelcode` para ela. Reinicie a rede do Pi ou o Pi para ele pegar o IP.
+
+   Confira: `ssh ubuntu@nextlevelcode.<tailnet>.ts.net ip -4 addr show eth0`
+   mostra o IP reservado.
+
+2. **Reaplicar o AdGuard**, que lê o IP novo dos fatos:
+
+   ```bash
+   ansible-playbook playbooks/adguard.yml --ask-vault-pass --limit rpi
+   ```
+
+   Confira: `dig +short @<IP novo> doubleclick.net` devolve `0.0.0.0`.
+
+3. **DNS da LAN** no roteador novo: o IP novo do Pi como servidor DNS
+   entregue pelo DHCP (opção 6; no OpenWrt, os comandos da seção acima com o
+   IP novo). Confira num dispositivo da LAN, depois de renovar o DHCP, que o
+   DNS dele é o IP novo.
+
+4. Atualize o IP antigo neste doc (seção acima e a tabela do começo).
+
+Os dois passos no roteador são à mão: cada roteador tem a sua interface, e
+este repo não gerencia nenhum.

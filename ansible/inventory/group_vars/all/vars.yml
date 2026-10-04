@@ -14,6 +14,17 @@ proxmox_user: "root@pam"
 proxmox_token_id: "ansible"
 proxmox_token_secret: "{{ vault_proxmox_token_secret }}"
 
+# Contingência: true enquanto o Proxmox estiver fora e o Pi + a VPS fizerem o
+# papel dele (docs/pi-recuperacao.md). Liga, de uma vez, o Forgejo e o
+# Vaultwarden do Pi com backup, o *.lab no Caddy da VPS e o Anubis do forge
+# apontando para o Pi. Trocar aqui e reaplicar os playbooks na ordem do doc.
+proxmox_fora: false
+
+# IPs Tailscale. A VPS não resolve nomes da tailnet, então quem fala com o Pi
+# ou com o Forgejo de lá (Caddy, Anubis, Uptime Kuma) usa o IP.
+pi_tailscale_ip: "<ts_ip>"
+forgejo_tailscale_ip: "{{ pi_tailscale_ip if proxmox_fora else '<ip-tailscale-do-forgejo>' }}"
+
 # Tailscale (artis3n.tailscale.machine)
 # --hostname usa o inventory_hostname com sufixo -lxc para distinguir
 # containers de bare-metal na tailnet. --ssh expõe o container via tailnet;
@@ -36,6 +47,31 @@ forgejo_db_password: "{{ vault_forgejo_db_password }}"
 # existe para os serviços internos do homelab (RPi, etc).
 caddy_email: "work@nextlevelcode.pro"
 caddy_domain: "lab.nextlevelcode.pro"
+
+# Sites do *.lab que moram no Pi: <host>.lab -> porta publicada no IP
+# Tailscale dele. Os dois Caddys leem daqui (o da VPS só com proxmox_fora), e
+# cada porta precisa de grant no tailscale/policy.hujson.
+caddy_lab_pi_routes:
+  - {host: jellyfin, port: 8096}
+  - {host: jellyseerr, port: 5055}
+  - {host: sonarr, port: 8989}
+  - {host: radarr, port: 7878}
+  - {host: prowlarr, port: 9696}
+  - {host: bazarr, port: 6767}
+  - {host: profilarr, port: 6868}
+  - {host: qbittorrent, port: 8090}  # publicada pelo gluetun
+  - {host: dozzle, port: 8081}
+  # Uploads grandes e WebSocket passam pelo reverse_proxy sem ajuste (o
+  # Caddy não limita corpo nem corta WebSocket por padrão).
+  - {host: immich, port: 2283}
+  - {host: adguard, port: 8084}
+  # O FMD exige HTTPS (Web Crypto); o Caddy entrega. O acesso público de
+  # emergência continua pelo Funnel, em fmd.<tailnet>.ts.net.
+  - {host: fmd, port: 8085}
+  # Apache do Nextcloud AIO no IP Tailscale do Pi (APACHE_IP_BINDING). Uploads
+  # e WebSocket (notify_push, Talk, whiteboard) passam sem ajuste.
+  - {host: nextcloud, port: 11000}
+  - {host: searxng, port: 8082}  # publicada pelo gluetun
 
 # Vaultwarden
 # Acessível apenas pelo Caddy interno em *.lab.nextlevelcode.pro. O

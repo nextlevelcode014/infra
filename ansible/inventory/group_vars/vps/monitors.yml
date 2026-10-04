@@ -26,13 +26,13 @@ uptime_kuma_groups:
 
 uptime_kuma_monitors:
   # --- Raspberry Pi ---------------------------------------------------------
-  - {id: pi-ping, group: pi, type: ping, name: "Pi (ping)", hostname: <ts_ip>}
+  - {id: pi-ping, group: pi, type: ping, name: "Pi (ping)", hostname: "{{ pi_tailscale_ip }}"}
   - id: adguard-dns
     group: pi
     type: dns
     name: AdGuard (DNS)
     hostname: nextlevelcode.pro
-    dns_resolve_server: <ts_ip>
+    dns_resolve_server: "{{ pi_tailscale_ip }}"
     dns_resolve_type: A
     port: 53
   - {id: adguard, group: pi, type: http, name: AdGuard, url: "https://adguard.lab.nextlevelcode.pro"}
@@ -56,7 +56,7 @@ uptime_kuma_monitors:
   # --- Proxmox --------------------------------------------------------------
   - {id: proxmox-ping, group: proxmox, type: ping, name: "Proxmox (ping)", hostname: <proxmox_host>}
   - {id: vaultwarden, group: proxmox, type: http, name: Vaultwarden, url: "https://vault.lab.nextlevelcode.pro/alive"}
-  - {id: forgejo-ssh, group: proxmox, type: port, name: "Forgejo (SSH)", hostname: <ip-tailscale-do-forgejo>, port: 2222}
+  - {id: forgejo-ssh, group: proxmox, type: port, name: "Forgejo (SSH)", hostname: "{{ forgejo_tailscale_ip }}", port: 2222}
 
   # --- VPS: o que a internet vê ---------------------------------------------
   # Passa pelo Anubis: só o /api/healthz escapa do desafio.

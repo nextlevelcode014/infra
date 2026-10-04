@@ -9,91 +9,21 @@
         dns cloudflare {env.{{ caddy_cloudflare_env_var }}}
     }
 
-    # Adicione handle blocks antes deste catch-all para cada serviço:
-    #
+    # Serviço novo do Pi entra em caddy_lab_pi_routes (group_vars/all), que
+    # o Caddy da VPS também lê na contingência. O resto, handle aqui.
     @vault host vault.{{ caddy_domain }}
     handle @vault {
         reverse_proxy vaultwarden-lxc:8080
     }
 
-    # --- Media stack (Raspberry Pi, portas publicadas no IP Tailscale) ---
+    # --- Raspberry Pi: portas publicadas no IP Tailscale (caddy_lab_pi_routes) ---
+{% for route in caddy_lab_pi_routes %}
 
-    @jellyfin host jellyfin.{{ caddy_domain }}
-    handle @jellyfin {
-        reverse_proxy nextlevelcode:8096
+    @{{ route.host }} host {{ route.host }}.{{ caddy_domain }}
+    handle @{{ route.host }} {
+        reverse_proxy nextlevelcode:{{ route.port }}
     }
-
-    @jellyseerr host jellyseerr.{{ caddy_domain }}
-    handle @jellyseerr {
-        reverse_proxy nextlevelcode:5055
-    }
-
-    @sonarr host sonarr.{{ caddy_domain }}
-    handle @sonarr {
-        reverse_proxy nextlevelcode:8989
-    }
-
-    @radarr host radarr.{{ caddy_domain }}
-    handle @radarr {
-        reverse_proxy nextlevelcode:7878
-    }
-
-    @prowlarr host prowlarr.{{ caddy_domain }}
-    handle @prowlarr {
-        reverse_proxy nextlevelcode:9696
-    }
-
-    @bazarr host bazarr.{{ caddy_domain }}
-    handle @bazarr {
-        reverse_proxy nextlevelcode:6767
-    }
-
-    @profilarr host profilarr.{{ caddy_domain }}
-    handle @profilarr {
-        reverse_proxy nextlevelcode:6868
-    }
-
-    @qbittorrent host qbittorrent.{{ caddy_domain }}
-    handle @qbittorrent {
-        reverse_proxy nextlevelcode:8090
-    }
-
-    @dozzle host dozzle.{{ caddy_domain }}
-    handle @dozzle {
-        reverse_proxy nextlevelcode:8081
-    }
-
-    # Immich: uploads grandes e WebSocket passam pelo reverse_proxy sem
-    # ajuste (o Caddy não limita corpo nem corta WebSocket por padrão).
-    @immich host immich.{{ caddy_domain }}
-    handle @immich {
-        reverse_proxy nextlevelcode:2283
-    }
-
-    @adguard host adguard.{{ caddy_domain }}
-    handle @adguard {
-        reverse_proxy nextlevelcode:8084
-    }
-
-    # O FMD exige HTTPS (Web Crypto); o Caddy entrega. O acesso público de
-    # emergência continua pelo Funnel, em fmd.<tailnet>.ts.net.
-    @fmd host fmd.{{ caddy_domain }}
-    handle @fmd {
-        reverse_proxy nextlevelcode:8085
-    }
-
-    # Nextcloud AIO: o Apache dele escuta na 11000 do IP Tailscale do Pi
-    # (APACHE_IP_BINDING). Uploads grandes e WebSocket (notify_push, Talk,
-    # whiteboard) passam pelo reverse_proxy sem ajuste.
-    @nextcloud host nextcloud.{{ caddy_domain }}
-    handle @nextcloud {
-        reverse_proxy nextlevelcode:11000
-    }
-
-    @searxng host searxng.{{ caddy_domain }}
-    handle @searxng {
-        reverse_proxy nextlevelcode:8082
-    }
+{% endfor %}
 
     handle {
         respond 404

@@ -14,17 +14,19 @@ caddy_vps_status_page_upstream: 127.0.0.1:3001
 
 # Sites só da tailnet, servidos pela VPS em <host>.lab.nextlevelcode.pro. Cada
 # um precisa de um registro A específico na Cloudflare apontando para o IP
-# Tailscale da VPS (o curinga *.lab aponta para o Caddy do Proxmox).
+# Tailscale da VPS (o curinga *.lab aponta para o Caddy do Proxmox; na
+# contingência, para a VPS, que serve o *.lab inteiro: ver proxmox_fora).
 caddy_vps_private_sites:
   - host: uptime
     upstream: 127.0.0.1:3001
 
 # Anubis na frente dos domínios públicos (playbooks/anubis.yml). O target é o
-# Forgejo no forgejo-lxc, pela tailnet; o Caddy fala com o Anubis.
+# Forgejo pela tailnet (o forgejo-lxc, ou o Pi com proxmox_fora); o Caddy fala
+# com o Anubis.
 anubis_instances:
   - name: forgejo
     port: 8923
-    target: http://<ip-tailscale-do-forgejo>:3000
+    target: "http://{{ forgejo_tailscale_ip }}:3000"
     redirect_domains: forge.nextlevelcode.pro
     policy:
       # Buscadores verificados por IP: sem isso o forge some das buscas.

@@ -43,7 +43,8 @@ O que vem antes de o Ansible conseguir entrar, mais o DNS público:
    | `*` | A | IP público novo da VPS |
    | `uptime.lab` | A | IP Tailscale novo (o do passo 2) |
 
-   O curinga `*.lab` fica como está (Caddy do Proxmox).
+   O curinga `*.lab` fica como está (Caddy do Proxmox; só aponta para a VPS
+   na contingência, `docs/pi-recuperacao.md`).
 
 4. **Aplicar:**
 

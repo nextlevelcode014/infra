@@ -51,7 +51,7 @@ usadas depois.
 | `playbooks/gluetun.yml` | `pi_hosts` | gateway VPN do Pi |
 | `playbooks/arr-stack.yml` | `pi_hosts` | stack Arr do Pi + backup Borg |
 | `playbooks/searxng.yml` | `pi_hosts` | SearXNG do Pi (sai pela VPN do gluetun) |
-| `playbooks/pi-recuperacao.yml` | `pi_hosts` | Forgejo e Vaultwarden em standby no Pi (parados, prontos para o restore) |
+| `playbooks/pi-recuperacao.yml` | `pi_hosts` | Forgejo e Vaultwarden em standby no Pi (parados, prontos para o restore); com `proxmox_fora: true`, no ar e com backup |
 | `playbooks/adguard.yml` | `pi_hosts` | AdGuard do Pi: DNS na LAN e na tailnet, web pelo Caddy, backup Borg |
 | `playbooks/fmd.yml` | `pi_hosts` | FMD do Pi: Funnel público para emergência (atrás do Anubis) + fmd.lab pelo Caddy, backup Borg |
 | `playbooks/exit-node.yml` | `rpi` | exit node Tailscale saindo pela ProtonVPN (nunca no pi-lab) |
@@ -89,6 +89,12 @@ domínios voltados para a internet, e também é gerido aqui
 sites privados que moram na VPS. Um site privado na VPS precisa de um registro
 A específico na Cloudflare apontando para o IP Tailscale dela, porque o
 curinga `*.lab` aponta para o Caddy do Proxmox. VPS nova: `docs/vps.md`.
+
+**Contingência (Proxmox fora):** `proxmox_fora: true` em `group_vars/all`
+põe o Forgejo e o Vaultwarden do Pi no ar com backup, o `*.lab` inteiro no
+Caddy da VPS e o Anubis do `forge` no Pi. As rotas do `*.lab` que vão para o
+Pi ficam em `caddy_lab_pi_routes`, lidas pelos dois Caddys: serviço novo do Pi
+entra ali, não no Caddyfile. Ida e volta em `docs/pi-recuperacao.md`.
 
 ## Roles
 

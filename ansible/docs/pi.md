@@ -218,4 +218,7 @@ O `arr_stack` é o modelo. Um role novo precisa de:
 4. Um role `<serviço>_restore` com `-e <serviço>_restore_confirmation=...`.
 5. Playbook em `playbooks/` com `hosts: pi_hosts` e entrada no `site.yml`.
    Teste primeiro com `--limit pi_staging`.
-6. Rota no `roles/caddy/templates/Caddyfile.j2`.
+6. Rota em `caddy_lab_pi_routes` (`group_vars/all/vars.yml`), que vale para o
+   Caddy do Proxmox e para o da VPS na contingência, e a porta nos dois
+   grants do Pi no `tailscale/policy.hujson` (o de `tag:caddy` e o comentado
+   de `tag:caddy-vps`).

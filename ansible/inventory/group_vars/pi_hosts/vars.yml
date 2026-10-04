@@ -18,8 +18,10 @@ timezone: America/Sao_Paulo
 # A produção está nos LXCs do Proxmox. No Pi os dois ficam prontos (compose,
 # imagens, dados no LUKS) e parados; o *-restore.yml com -e restore_on_pi=true
 # restaura o archive mais recente da produção e sobe. Ver docs/pi-recuperacao.md.
-forgejo_standby: true
-vaultwarden_standby: true
+# Com proxmox_fora o Pi é a produção: o pi-recuperacao.yml sobe os dois e liga
+# o backup deles, em vez de derrubar.
+forgejo_standby: "{{ not proxmox_fora }}"
+vaultwarden_standby: "{{ not proxmox_fora }}"
 
 forgejo_dir: "{{ appdata_dir }}/forgejo"
 vaultwarden_dir: "{{ appdata_dir }}/vaultwarden"
