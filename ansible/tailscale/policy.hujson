@@ -144,27 +144,27 @@
             "ip":  ["tcp:443"],
         },
 
-        // CONTINGÊNCIA — INATIVO. Com o Proxmox fora e Forgejo/Vaultwarden
-        // restaurados no Pi (docs/pi-recuperacao.md), descomentar no console —
-        // e tirar tag:pi:3000/8083 do deny de tag:caddy-vps nos tests. O
+        // CONTINGÊNCIA — ATIVO enquanto proxmox_fora for true
+        // (docs/pi-recuperacao.md). Na volta, comentar de novo e devolver
+        // tag:pi:3000/8083 ao deny de tag:caddy-vps nos tests. O
         // Caddy da VPS faz o papel do Caddy do Proxmox: forge (3000),
         // Vaultwarden (8083) e as mesmas portas do Pi do grant de tag:caddy.
-        // {
-        //   "src": ["tag:caddy-vps"],
-        //   "dst": ["tag:pi"],
-        //   "ip": [
-        //     "tcp:3000", "tcp:8083",
-        //     "tcp:8096", "tcp:5055", "tcp:8989", "tcp:7878", "tcp:9696",
-        //     "tcp:6767", "tcp:6868", "tcp:8090", "tcp:8081", "tcp:8082",
-        //     "tcp:8084", "tcp:8085", "tcp:2283", "tcp:11000",
-        //   ],
-        // },
+        {
+          "src": ["tag:caddy-vps"],
+          "dst": ["tag:pi"],
+          "ip": [
+            "tcp:3000", "tcp:8083",
+            "tcp:8096", "tcp:5055", "tcp:8989", "tcp:7878", "tcp:9696",
+            "tcp:6767", "tcp:6868", "tcp:8090", "tcp:8081", "tcp:8082",
+            "tcp:8084", "tcp:8085", "tcp:2283", "tcp:11000",
+          ],
+        },
         // SSH do Git no Pi, para você e para o monitor do Uptime Kuma.
-        // {
-        //   "src": ["autogroup:member", "tag:vps"],
-        //   "dst": ["tag:pi"],
-        //   "ip":  ["tcp:2222"],
-        // },
+        {
+          "src": ["autogroup:member", "tag:vps"],
+          "dst": ["tag:pi"],
+          "ip":  ["tcp:2222"],
+        },
     ],
 
     "ssh": [
@@ -262,7 +262,7 @@
         {
             "src":    "tag:caddy-vps",
             "accept": ["tag:forgejo:3000"],
-            "deny":   ["tag:proxmox-lxc:8080", "tag:pi:3000", "tag:pi:8083"],
+            "deny":   ["tag:proxmox-lxc:8080"],
         },
         // O monitor alcança o que monitora, e não administra nada.
         {

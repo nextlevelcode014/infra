@@ -135,9 +135,11 @@ Proxmox pode ser desligado no fim.
 
 6. **ACL do Tailscale:** no `tailscale/policy.hujson`, descomente os dois
    blocos `CONTINGÊNCIA` e tire `tag:pi:3000` e `tag:pi:8083` do `deny` do
-   teste de `tag:caddy-vps`. Cole no console (`tailscale/README.md`) e
-   commite na mesma branch do passo 4. Sem isso o Caddy da VPS não alcança o
-   Pi, e os sites dão 502.
+   teste de `tag:caddy-vps`. Cole **o arquivo inteiro do repo** por cima do
+   console (`tailscale/README.md`), em vez de descomentar lá: o console pode
+   ter uma versão mais velha dos blocos, com menos portas. E commite na mesma
+   branch do passo 4. Sem isso o Caddy da VPS não alcança o Pi, e os sites dão
+   502. Um `want: Drop, got: Accept` no save é o `deny` do teste que ficou.
 
 7. **VPS**, nesta ordem (o Caddy aponta o `forge` para o Anubis):
 
@@ -149,7 +151,10 @@ Proxmox pode ser desligado no fim.
    ```
 
    Confira: `curl -s https://forge.nextlevelcode.pro/api/healthz` devolve
-   `"status": "pass"`. O `*.lab` ainda não, porque o DNS só muda no próximo passo.
+   `"status": "pass"`. O `*.lab` ainda não, porque o DNS só muda no próximo
+   passo. O `--diff` do Caddy tem que mostrar o bloco `*.lab.nextlevelcode.pro`
+   entrando; sem ele, o `proxmox_fora` não estava `true` neste checkout, e o
+   `*.lab` falha depois com `tlsv1 alert internal error` (sem certificado).
 
 8. **Cloudflare** (zona `nextlevelcode.pro`, DNS only): **anote o valor
    atual** do registro `*.lab` (o IP Tailscale do Caddy do Proxmox, que volta
@@ -166,9 +171,21 @@ Proxmox pode ser desligado no fim.
    não gerencia registros da Cloudflare (a VPS nova também é assim,
    `docs/vps.md`).
 
-9. **Remote do Git:** no `~/.ssh/config`, no bloco `Host forgejo forgejo-lxc`,
-   troque `HostName forgejo-lxc` por `HostName nextlevelcode.<tailnet>.ts.net`.
-   Os remotes (`forgejo-lxc:2222`) continuam iguais.
+9. **Remote do Git:** no `~/.ssh/config`, o bloco do Forgejo fica assim (só a
+   linha `HostName` muda, e entra a `HostKeyAlias`; a linha `Host` fica igual):
+
+   ```
+   Host forgejo forgejo-lxc
+       HostName nextlevelcode.<tailnet>.ts.net
+       HostKeyAlias [forgejo-lxc]:2222
+       Port 2222
+       ...
+   ```
+
+   O `HostKeyAlias` confere a chave contra a entrada que o `known_hosts` já
+   tem do LXC: a chave é a mesma, porque veio no restore. Trocar a linha
+   `Host` em vez da `HostName` manda **todo** ssh para o Pi (inclusive o do
+   Ansible) para o `git@forgejo-lxc:2222`. Os remotes continuam iguais.
 
    Confira: `git ls-remote origin` neste repo lista as branches.
 
@@ -241,7 +258,8 @@ eles recebem a do Pi (`ubuntu`) e o caminho que os dados têm no archive dele.
 6. **Cloudflare:** `*.lab` de volta para o IP anotado no passo 8 da ida.
    Confira: `dig +short vault.lab.nextlevelcode.pro` devolve esse IP.
 
-7. **Remote do Git:** `HostName forgejo-lxc` de volta no `~/.ssh/config`.
+7. **Remote do Git:** `HostName forgejo-lxc` de volta no `~/.ssh/config`, e
+   a linha `HostKeyAlias` sai.
    Confira: `git ls-remote origin`.
 
 8. Confira o conjunto: `vault.lab` mostra o que foi salvo durante a

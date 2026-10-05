@@ -18,7 +18,7 @@ proxmox_token_secret: "{{ vault_proxmox_token_secret }}"
 # papel dele (docs/pi-recuperacao.md). Liga, de uma vez, o Forgejo e o
 # Vaultwarden do Pi com backup, o *.lab no Caddy da VPS e o Anubis do forge
 # apontando para o Pi. Trocar aqui e reaplicar os playbooks na ordem do doc.
-proxmox_fora: false
+proxmox_fora: true
 
 # IPs Tailscale. A VPS não resolve nomes da tailnet, então quem fala com o Pi
 # ou com o Forgejo de lá (Caddy, Anubis, Uptime Kuma) usa o IP.
