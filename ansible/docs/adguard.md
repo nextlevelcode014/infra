@@ -1,7 +1,7 @@
 # AdGuard no Raspberry Pi
 
-`playbooks/adguard.yml` aplica o AdGuard que antes subia por `make up
-SVC=adguard` no `self-hosted`, **sem o sidecar Tailscale**:
+`playbooks/adguard.yml` sobe o AdGuard no Pi com o DNS publicado nos IPs do
+próprio host e a interface web atrás do Caddy:
 
 | O quê | Onde |
 |---|---|
@@ -19,16 +19,15 @@ prefixo `adguard-*` no repositório compartilhado.
 Leva `conf/` e `work/`, **sem** o `querylog.json` (o log de todas as consultas DNS
 da casa: centenas de MB e o dado mais sensível). Não para o AdGuard.
 
-## Aplicação
+## Instalação
 
-Ao aplicar no Pi, o sidecar sai e o IP do DNS da tailnet muda de
-`<ip-tailscale-do-adguard-antigo>` (nó `adguard`) para `<ts_ip>` (o Pi). Entre a aplicação e a
-troca no console, a tailnet usa o fallback (Cloudflare). Faça os passos em
-sequência.
+Faça os passos em sequência. Até o passo 4, a tailnet segue com o DNS que já
+tinha.
 
 1. **ACL do Tailscale** (console, antes de aplicar): os dispositivos da tailnet
    precisam alcançar o Pi em `udp:53` e `tcp:53`, e o `tag:caddy` em `tcp:8084`.
-   Sem isso, o DNS da tailnet não volta depois da troca.
+   Sem isso, o DNS da tailnet não responde e a interface web não abre pelo
+   Caddy.
 
 2. **Testar no pi-lab** (sem config, o AdGuard sobe no assistente de
    instalação e não responde DNS; o teste é o container e as portas):
@@ -57,10 +56,9 @@ sequência.
 
    O primeiro devolve o IP; o segundo, `0.0.0.0` (bloqueado).
 
-4. **Trocar o nameserver no console do Tailscale** (DNS → Nameservers):
-   `<ip-tailscale-do-adguard-antigo>` sai, `<ts_ip>` entra. Mantenha o fallback da Cloudflare.
-   Confira num dispositivo da tailnet que a navegação segue e que o AdGuard
-   registra as consultas (interface web → Query Log).
+4. **Nameserver da tailnet no console do Tailscale** (DNS → Nameservers):
+   `<ts_ip>` entra. Mantenha o fallback da Cloudflare. Confira num
+   dispositivo da tailnet que a navegação segue.
 
 5. **Caddy:**
 
@@ -68,12 +66,12 @@ sequência.
    ansible-playbook playbooks/caddy.yml --ask-vault-pass
    ```
 
-   Confira: `https://adguard.lab.nextlevelcode.pro` abre o login do AdGuard.
+   Confira: `https://adguard.lab.nextlevelcode.pro` abre o login do AdGuard, e
+   o Query Log mostra as consultas de um dispositivo da tailnet. Antes deste
+   passo a interface só existe em `<ts_ip>:8084`, que a ACL libera para o
+   Caddy, não para os dispositivos.
 
-6. **Remover o nó `adguard`** no console do Tailscale (Machines → `adguard` →
-   Remove).
-
-7. **Primeiro backup:**
+6. **Primeiro backup:**
 
    ```bash
    ssh -t ubuntu@nextlevelcode sudo borgmatic -c /etc/borgmatic/adguard.yaml --verbosity 1 --stats
@@ -117,14 +115,13 @@ dnsmasq do OpenWrt como DNS dos clientes e o AdGuard como servidor dele
 (`uci add_list dhcp.@dnsmasq[0].server='192.168.50.187'` mais um público como
 segundo). O custo é o AdGuard passar a ver só o IP do roteador nas consultas.
 
-A partir daqui, não use mais `make up SVC=adguard` no `self-hosted`.
-
 ## Roteador novo ou faixa da LAN nova
 
 O AdGuard escuta no IP da LAN do Pi (`lan_ip`, lido dos fatos), e não em
 `0.0.0.0`. Se esse IP muda (roteador trocado, faixa nova), o DNS da LAN para
-até reaplicar o playbook. A tailnet não fica sem DNS: o console usa o fallback
-da Cloudflare enquanto o IP Tailscale não responde.
+até reaplicar o playbook. A tailnet também perde o AdGuard: o container publica
+a 53 nos dois IPs, e num restart ou reboot não sobe se um deles sumir. Até
+reaplicar, a tailnet segue pelo fallback da Cloudflare.
 
 1. **No roteador novo**, a reserva fixa do Pi (MAC de
    `cat /sys/class/net/eth0/address`) com um IP da faixa nova, e o nome

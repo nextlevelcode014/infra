@@ -8,8 +8,8 @@
     mode: "0750"
   register: adguard_stack_dir_result
 
-# Sem dono nem modo: no Pi os diretórios já existem (do link-data) e o
-# AdGuard grava como root dentro deles.
+# Sem dono nem modo: no Pi os diretórios já existem no LUKS e o AdGuard
+# grava como root dentro deles.
 - name: Garantir os diretórios de dados no volume cifrado
   ansible.builtin.file:
     path: "{{ adguard_data_dir }}/{{ item }}"
@@ -22,7 +22,7 @@
     dest: "{{ adguard_dir }}/compose.yml"
     mode: "0644"
 
-# remove_orphans tira o sidecar tailscale-adguard do compose antigo.
+# remove_orphans tira container de serviço que saiu do compose.
 - name: Subir o AdGuard
   community.docker.docker_compose_v2:
     project_src: "{{ adguard_dir }}"

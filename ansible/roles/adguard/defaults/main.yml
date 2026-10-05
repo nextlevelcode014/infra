@@ -1,10 +1,8 @@
 ---
-# Mesmo nome de projeto Compose ("adguard") do self-hosted: ao aplicar pela
-# primeira vez, o Compose adota o container e remove o sidecar Tailscale.
 adguard_dir: /opt/adguard
 adguard_image: adguard/adguardhome:latest
 
-# Config e dados direto no LUKS, onde o link-data já os guardava.
+# Config e dados direto no LUKS.
 adguard_data_dir: "{{ appdata_dir }}/adguard"
 
 # DNS (53 TCP/UDP) no IP da LAN, para o roteador, e no IP Tailscale, para a
