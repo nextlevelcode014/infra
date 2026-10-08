@@ -1,0 +1,11 @@
+# Gerido pelo Ansible (roles/vps_host) — não editar à mão.
+# Nome com 00 de propósito: no sshd vale o primeiro valor lido, e o
+# 50-cloud-init.conf da imagem pode ligar PasswordAuthentication.
+#
+# A porta 22 pública já está fechada no UFW e a administração é pelo
+# Tailscale SSH; isto é a segunda camada, para o dia em que o UFW cair.
+PasswordAuthentication no
+KbdInteractiveAuthentication no
+PermitEmptyPasswords no
+PermitRootLogin no
+X11Forwarding no

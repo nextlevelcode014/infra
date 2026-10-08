@@ -1,6 +1,6 @@
 ---
-# VPS da Hetzner, fora de casa. O Caddy público dela continua fora deste repo;
-# aqui entra só o que é configurado por playbook (hoje, o Uptime Kuma).
+# VPS da Hetzner, fora de casa. Base em playbooks/vps.yml (role vps_host),
+# serviços em caddy-vps.yml, anubis.yml e uptime-kuma.yml (docs/vps.md).
 # Acesso pelo Tailscale SSH com o usuário hetzner (sudo sem senha).
 vps:
   hosts:

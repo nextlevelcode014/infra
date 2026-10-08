@@ -56,6 +56,7 @@ usadas depois.
 | `playbooks/fmd.yml` | `pi_hosts` | FMD do Pi: Funnel público para emergência (atrás do Anubis) + fmd.lab pelo Caddy, backup Borg |
 | `playbooks/exit-node.yml` | `rpi` | exit node Tailscale saindo pela ProtonVPN (nunca no pi-lab) |
 | `playbooks/nextcloud.yml` | `rpi` | mastercontainer do Nextcloud AIO + coturn + `tailscale serve` do host |
+| `playbooks/vps.yml` | `vps` | base da VPS: UFW, sshd endurecido, atualização automática, fail2ban; os playbooks da VPS já a aplicam |
 | `playbooks/caddy-vps.yml` | `vps` | Caddy da VPS: domínios públicos (forge, status page do Uptime Kuma) + sites privados em `*.lab` que moram nela |
 | `playbooks/anubis.yml` | `vps` | Anubis (prova de trabalho anti-bot) na frente dos domínios públicos da VPS; aplicar antes do `caddy-vps.yml` |
 | `playbooks/uptime-kuma.yml` | `vps` | Uptime Kuma na VPS (fora de casa), em `uptime.lab` pelo Caddy da VPS |
@@ -86,9 +87,10 @@ O Caddy do homelab atende `*.lab.nextlevelcode.pro`, acessível via Tailscale
 split DNS dentro da tailnet. O Caddy público (VPS) é o que serve os
 domínios voltados para a internet, e também é gerido aqui
 (`playbooks/caddy-vps.yml`, `Caddyfile.vps.j2`): os domínios públicos e os
-sites privados que moram na VPS. Um site privado na VPS precisa de um registro
-A específico na Cloudflare apontando para o IP Tailscale dela, porque o
-curinga `*.lab` aponta para o Caddy do Proxmox. VPS nova: `docs/vps.md`.
+sites privados que moram na VPS. Todo playbook da VPS põe o role `vps_host`
+antes do serviço, como o Pi faz com o `pi_host`. Um site privado na VPS
+precisa de um registro A específico na Cloudflare apontando para o IP
+Tailscale dela, porque o curinga `*.lab` aponta para o Caddy do Proxmox. VPS nova: `docs/vps.md`.
 
 **Contingência (Proxmox fora):** `proxmox_fora: true` em `group_vars/all`
 põe o Forgejo e o Vaultwarden do Pi no ar com backup, o `*.lab` inteiro no
@@ -118,6 +120,7 @@ entra ali, não no Caddyfile. Ida e volta em `docs/pi-recuperacao.md`.
 | `exit_node` | exit node `vpn-exit` (compose do `self-hosted/exit-node`, sem mudança) |
 | `nextcloud` | mastercontainer do AIO (os outros containers são do próprio AIO), coturn e o serve do host |
 | `anubis` | Anubis da VPS, uma instância por serviço (`anubis_instances`); `tasks_from: policy` só renderiza a política, para um Anubis em outra stack (FMD) |
+| `vps_host` | base de toda VPS: UFW (só 80/443 + `tailscale0`), sshd sem senha nem root, unattended-upgrades, fail2ban de fallback |
 | `uptime_kuma` | Uptime Kuma + AutoKuma + Docker na VPS, sem o usuário no grupo `docker`; monitores em `group_vars/vps/monitors.yml` |
 | `immich` | Immich do Pi, acesso só pelo Caddy; `immich_backup_enabled` liga o backup |
 | `borg_restore` | miolo de todos os restores: escolhe o archive (prefixo + máquina de origem), extrai (no Pi, dentro do LUKS) e valida |
@@ -182,6 +185,11 @@ Vale não repetir:
   `shlex.split` + `execvp`, então `VAR=x comando` falha com
   `No such file or directory: 'VAR=x'` (procura um binário com esse nome).
   Para env var inline use `/usr/bin/env VAR=x comando`.
+- **`sshd -t` falha com `Missing privilege separation directory: /run/sshd`**
+  no Ubuntu com `ssh.socket`: o `ssh.service` só sobe na primeira conexão e é
+  ele que cria o diretório. Com acesso só pelo Tailscale SSH, ele nunca subiu.
+  O `vps_host` cria o `/run/sshd` antes do `validate` e reinicia com
+  `systemctl try-restart` (não liga o serviço parado).
 
 ## ACL do Tailscale
 

@@ -1,0 +1,9 @@
+---
+# Base da VPS: firewall, sshd endurecido e atualização automática. Os
+# playbooks de serviço da VPS já puxam este role; este playbook existe para
+# preparar uma VPS nova antes de qualquer serviço.
+- name: Configurar a base da VPS
+  hosts: vps
+  gather_facts: true
+  roles:
+    - role: vps_host

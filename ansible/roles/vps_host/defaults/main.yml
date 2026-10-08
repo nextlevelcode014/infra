@@ -1,0 +1,24 @@
+---
+# Base de toda VPS: firewall, sshd endurecido e atualização de segurança
+# automática. Os playbooks da VPS aplicam este role antes do serviço, então
+# uma VPS nova nunca sobe um serviço sem firewall.
+
+# Únicas portas abertas para a internet: o Caddy público (HTTP-01/redirect e
+# HTTPS). Sem endereço de origem, o UFW cria a regra em IPv4 e IPv6; sem
+# registro AAAA na Cloudflare, ninguém chega por IPv6 hoje.
+vps_host_public_tcp_ports:
+  - 80
+  - 443
+
+# Tudo que chega pela tailnet passa: quem filtra ali é a ACL do Tailscale
+# (tailscale/policy.hujson), não o UFW. É assim que o Ansible entra.
+vps_host_tailnet_interface: tailscale0
+
+# fail2ban: fallback para o dia em que o UFW cair e a 22 pública ficar exposta.
+# A tailnet nunca é banida: o Tailscale SSH nem passa pelo sshd, mas um
+# deploy por OpenSSH na tailnet (ansible#66) passaria.
+vps_host_fail2ban_ignoreip:
+  - 127.0.0.1/8
+  - ::1
+  - 100.64.0.0/10
+  - fd7a:115c:a1e0::/48

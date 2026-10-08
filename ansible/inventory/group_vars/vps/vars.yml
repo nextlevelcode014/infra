@@ -1,4 +1,13 @@
 ---
+# Log dos containers com rotação (o padrão do json-file cresce sem limite e
+# lota o disco pequeno da VPS). Vale para container criado depois da mudança:
+# os que já existem mantêm o log antigo até serem recriados.
+docker_daemon_options:
+  log-driver: json-file
+  log-opts:
+    max-size: 10m
+    max-file: "3"
+
 # Caddy da VPS: domínios públicos + sites privados que moram nela.
 caddy_caddyfile_template: Caddyfile.vps.j2
 # Token próprio da VPS, separado do do Proxmox (ver roles/caddy/defaults).

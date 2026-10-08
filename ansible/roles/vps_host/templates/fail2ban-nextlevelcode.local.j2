@@ -1,0 +1,9 @@
+# Gerido pelo Ansible (roles/vps_host) — não editar à mão.
+[DEFAULT]
+ignoreip = {{ vps_host_fail2ban_ignoreip | join(' ') }}
+
+# Lê o journal em vez do /var/log/auth.log: sem rsyslog, o arquivo não
+# existe e o jail não sobe.
+[sshd]
+enabled = true
+backend = systemd

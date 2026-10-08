@@ -8,6 +8,34 @@ A VPS fica fora de casa e serve duas coisas:
 - o **Anubis** na frente do `forge` (`playbooks/anubis.yml`, ver `docs/anubis.md`);
 - o **Uptime Kuma** (`playbooks/uptime-kuma.yml`, ver `docs/uptime-kuma.md`).
 
+## Base
+
+Todo playbook da VPS aplica antes o role `vps_host` (e o `playbooks/vps.yml`
+aplica só ele):
+
+- **UFW:** entrada negada por padrão; abertos só `80` e `443` para a internet
+  (IPv4 e IPv6) e tudo que chega pela `tailscale0`. Na tailnet, quem filtra é
+  a ACL (`tailscale/policy.hujson`). A porta 22 pública fica fechada.
+- **sshd endurecido** (`/etc/ssh/sshd_config.d/00-nextlevelcode.conf`): sem
+  senha e sem root. É segunda camada: a administração é pelo Tailscale SSH.
+- **unattended-upgrades** ligado, só atualização de segurança e sem reboot
+  automático.
+- **fail2ban** no jail do sshd, ignorando a tailnet. Com a 22 fechada ele não
+  vê nada: é fallback para o dia em que o UFW cair.
+- **Log do Docker com rotação** (10 MB × 3 por container,
+  `docker_daemon_options` em `group_vars/vps`), aplicado pelo role que instala
+  o Docker. Só vale para container recriado depois da mudança.
+- timezone, pelo role `common`.
+
+Porta publicada pelo Docker passa por cima do UFW: compose na VPS publica
+sempre em `127.0.0.1:`, e o Caddy chega por localhost.
+
+IPv6: o firewall já aceita 80/443, mas nenhum domínio tem registro AAAA, então
+ninguém chega por IPv6. Para ligar, basta o AAAA na Cloudflare.
+
+Regra criada à mão fica no UFW (o Ansible só acrescenta): confira com
+`sudo ufw status verbose` e apague o que não estiver no role.
+
 Segredos vêm do vault: o token da Cloudflare **próprio da VPS**
 (`vault_caddy_vps_cloudflare_token`, separado do do Proxmox) e o acesso ao Borg. O Docker roda com `sudo`: o
 usuário `hetzner` não fica no grupo `docker`.
@@ -46,7 +74,18 @@ O que vem antes de o Ansible conseguir entrar, mais o DNS público:
    O curinga `*.lab` fica como está (Caddy do Proxmox; só aponta para a VPS
    na contingência, `docs/pi-recuperacao.md`).
 
-4. **Aplicar:**
+4. **Base, antes de tudo:** até aqui a VPS está com a 22 pública aberta (só
+   chave, a da criação na Hetzner). O primeiro playbook a fecha:
+
+   ```bash
+   ansible-playbook playbooks/vps.yml --ask-vault-pass
+   ```
+
+   Confira na VPS: `sudo ufw status verbose` mostra `deny (incoming)`, 80,
+   443 e a `tailscale0`. De fora da tailnet,
+   `nc -zv -w 5 <IP público> 22` tem que falhar (timeout).
+
+5. **Aplicar os serviços:**
 
    ```bash
    ansible-playbook playbooks/anubis.yml --ask-vault-pass
@@ -60,6 +99,6 @@ O que vem antes de o Ansible conseguir entrar, mais o DNS público:
    Confira: `forge.nextlevelcode.pro` e `uptime.lab.nextlevelcode.pro`
    respondem.
 
-5. **Dados do Uptime Kuma** (monitores, avisos, histórico), se quiser recuperar
+6. **Dados do Uptime Kuma** (monitores, avisos, histórico), se quiser recuperar
    em vez de configurar de novo: com o container parado, `borg extract` do
    archive `uptime-kuma-*` mais recente para `/opt/uptime-kuma/data`, e subir.

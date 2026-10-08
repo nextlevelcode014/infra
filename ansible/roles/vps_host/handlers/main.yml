@@ -1,0 +1,14 @@
+---
+# O sshd passa a config do listener para cada conexão, então um ssh.service
+# já no ar só vê o drop-in depois de reiniciar. Parado (o ssh.socket espera a
+# primeira conexão), ele lê a config nova quando subir: o try-restart não o
+# liga à toa. O Tailscale SSH, por onde o Ansible entra, é o tailscaled e não
+# cai junto.
+- name: Reiniciar ssh
+  ansible.builtin.command: systemctl try-restart ssh.service
+  changed_when: true
+
+- name: Reiniciar fail2ban
+  ansible.builtin.systemd_service:
+    name: fail2ban
+    state: restarted
