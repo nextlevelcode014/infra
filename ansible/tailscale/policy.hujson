@@ -79,6 +79,13 @@
             "dst": ["tag:lab"],
             "ip":  ["*"],
         },
+        // CI do lab (GitHub Actions, nó efêmero): só pede deploy ao Coolify de
+        // uma máquina do lab. Mais nada, nem SSH.
+        {
+            "src": ["tag:lab-ci"],
+            "dst": ["tag:lab"],
+            "ip":  ["tcp:8000"],
+        },
 
         // --- Caddy do Proxmox -> backends -------------------------------------
         // Forgejo (3000) e Vaultwarden (8080) nos LXCs.
@@ -235,6 +242,9 @@
         "tag:caddy-vps":   ["autogroup:admin"],
         // Máquinas do repo lab (auth key efêmera). Não alcançam nada da infra.
         "tag:lab":         ["autogroup:admin"],
+        // Runner do GitHub Actions dos testes do lab (OAuth client com esta
+        // tag, auth key efêmera por job). Só chega no Coolify do lab.
+        "tag:lab-ci":      ["autogroup:admin"],
     },
 
     "nodeAttrs": [
@@ -295,6 +305,19 @@
                 "tag:proxmox:22", "tag:proxmox:8006",
                 "tag:proxmox-lxc:22", "tag:proxmox-lxc:8080",
                 "tag:forgejo:2222", "tag:forgejo:3000",
+                "tag:caddy:443", "tag:caddy-vps:443",
+                "tag:vps:22",
+            ],
+        },
+        // O CI do lab chega no Coolify do lab, e em mais nada.
+        {
+            "src":    "tag:lab-ci",
+            "accept": ["tag:lab:8000"],
+            "deny": [
+                "tag:lab:22",
+                "tag:pi:22", "tag:pi:443",
+                "tag:proxmox:22", "tag:proxmox:8006",
+                "tag:proxmox-lxc:22", "tag:forgejo:3000",
                 "tag:caddy:443", "tag:caddy-vps:443",
                 "tag:vps:22",
             ],

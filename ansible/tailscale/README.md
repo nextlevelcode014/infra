@@ -40,6 +40,7 @@ nome do nó antes: o nome MagicDNS pode diferir do hostname.
 | VPS | `tag:vps`, `tag:caddy-vps` |
 | Nós Tailscale em container (sidecar do FMD, exit node) | `tag:containers`; o FMD também `tag:public` (Funnel) |
 | Máquinas do repo `lab` | `tag:lab`, pela auth key efêmera (não se aplica à mão) |
+| Runner do GitHub Actions dos testes do `lab` | `tag:lab-ci`, pelo OAuth client (não se aplica à mão) |
 | Desktop de administração | sem tag — fica em `hosts.infra-admin-1` |
 
 Desktop não leva tag: com tag o nó deixa de ser dispositivo pessoal e sai de
