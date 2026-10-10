@@ -72,6 +72,13 @@
             "dst": ["tag:pi"],
             "ip":  ["tcp:8080"],
         },
+        // Laboratório (repo lab): descartável, qualquer porta. O caminho
+        // inverso não existe: nenhum grant tem tag:lab como origem.
+        {
+            "src": ["infra-admin-1"],
+            "dst": ["tag:lab"],
+            "ip":  ["*"],
+        },
 
         // --- Caddy do Proxmox -> backends -------------------------------------
         // Forgejo (3000) e Vaultwarden (8080) nos LXCs.
@@ -200,6 +207,14 @@
             "users":  ["autogroup:nonroot", "root"],
             "action": "check",
         },
+        // Lab: accept, sem reautenticação. É descartável, e o grant acima já
+        // limita quem chega à porta 22 ao desktop de administração.
+        {
+            "src":    ["autogroup:admin", "autogroup:owner"],
+            "dst":    ["tag:lab"],
+            "users":  ["autogroup:nonroot", "root"],
+            "action": "accept",
+        },
     ],
 
     "autoApprovers": {
@@ -223,6 +238,8 @@
         "tag:pi":          ["autogroup:admin"],
         "tag:vps":         ["autogroup:admin"],
         "tag:caddy-vps":   ["autogroup:admin"],
+        // Máquinas do repo lab (auth key efêmera). Não alcançam nada da infra.
+        "tag:lab":         ["autogroup:admin"],
     },
 
     "nodeAttrs": [
@@ -276,6 +293,19 @@
             "src":    "tag:pi",
             "accept": ["tag:caddy:443", "tag:caddy-vps:443"],
             "deny":   ["tag:proxmox:22", "tag:proxmox-lxc:22", "tag:vps:22"],
+        },
+        // O lab não alcança nada da infra.
+        {
+            "src":  "tag:lab",
+            "deny": [
+                "tag:pi:22", "tag:pi:53", "tag:pi:2222",
+                "tag:proxmox:22", "tag:proxmox:8006",
+                "tag:proxmox-lxc:22", "tag:proxmox-lxc:8080",
+                "tag:forgejo:2222", "tag:forgejo:3000",
+                "tag:caddy:443", "tag:caddy-vps:443",
+                "tag:vps:22",
+                "10.10.10.1:22", "10.10.10.1:8006",
+            ],
         },
         // Os LXCs só avisam o Uptime Kuma; não administram a VPS.
         {
