@@ -23,6 +23,8 @@ uptime_kuma_groups:
     name: VPS
   - id: backups
     name: Backups
+  - id: atualizacoes
+    name: Atualizações
 
 uptime_kuma_monitors:
   # --- Raspberry Pi ---------------------------------------------------------
@@ -72,3 +74,10 @@ uptime_kuma_backups:
   adguard: AdGuard
   fmd: FMD
   uptime-kuma: Uptime Kuma
+
+# Reboot pendente há mais de 3 dias ou apt-daily-upgrade falhando (role
+# reboot_watch): {inventory_hostname: rótulo}. Só host de verdade: em LXC o
+# kernel é o do Proxmox e o reboot_watch não roda.
+uptime_kuma_reboot_watch:
+  pi: Raspberry Pi
+  hetzner: VPS

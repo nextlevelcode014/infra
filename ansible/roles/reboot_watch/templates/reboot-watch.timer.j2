@@ -1,0 +1,12 @@
+# Gerido pelo Ansible (roles/reboot_watch) — não editar à mão.
+# De hora em hora; o monitor tolera um push perdido (intervalo de 2 h).
+[Unit]
+Description=Aviso de reboot pendente, de hora em hora
+
+[Timer]
+OnCalendar=hourly
+RandomizedDelaySec=5m
+Persistent=true
+
+[Install]
+WantedBy=timers.target

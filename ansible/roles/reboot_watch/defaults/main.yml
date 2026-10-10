@@ -1,0 +1,11 @@
+---
+# Avisa no Uptime Kuma quando o host pede reboot há tempo demais ou quando o
+# apt-daily-upgrade (quem roda o unattended-upgrades) falhou. Dependência do
+# vps_host e do pi_host. O token e a URL do push vêm do group_vars/all.
+
+# Tolerância antes de o reboot pendente virar aviso. Sem ela, toda
+# atualização de kernel vira e-mail na hora e o aviso passa a ser ignorado.
+# Conta da data do /var/run/reboot-required (a primeira atualização que pediu).
+reboot_watch_grace_days: 3
+
+reboot_watch_script: /usr/local/bin/reboot-watch

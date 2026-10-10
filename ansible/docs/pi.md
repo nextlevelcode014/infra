@@ -15,6 +15,7 @@ O que ele faz:
 - cria o usuário admin (`ubuntu`, uid 1000) se não existir;
 - cria as redes `medianet` e `vpn_net`;
 - instala o `disk-guard` (script, service e timer);
+- instala o `reboot-watch` (ver "Atualizar");
 - grava `PSU_MAX_CURRENT` na EEPROM (só no Pi físico; ver "Fonte e boot
   sozinho").
 
@@ -75,7 +76,10 @@ Enquanto o volume estiver fechado, qualquer playbook do Pi para no começo com
 
 ### Atualizar
 
-Sob demanda, quando você quiser (não há timer):
+Atualização de **segurança** do Ubuntu já entra sozinha: o
+unattended-upgrades vem ligado na imagem e roda todo dia pelo
+`apt-daily-upgrade.timer`, sem reiniciar. O resto (pacotes que não são de
+segurança e as imagens das stacks) é sob demanda, quando você quiser:
 
 ```bash
 ansible-playbook playbooks/pi-atualizar.yml --limit rpi --ask-vault-pass
@@ -103,6 +107,10 @@ ssh ubuntu@nextlevelcode 'docker ps --format "{{.Names}} {{.Status}}" | grep -v 
 
 Sem saída, nenhum container está parado ou reiniciando. Se o SO pediu reboot,
 reinicie e destrave como em "A cada boot".
+
+Se o reboot ficar para depois, o `reboot-watch` lembra: passados **3 dias**
+do pedido, o monitor *Atualizações Raspberry Pi* cai no Uptime Kuma e manda
+e-mail com os pacotes que pediram o reboot (`docs/uptime-kuma.md`).
 
 ### Fonte e boot sozinho
 

@@ -121,6 +121,7 @@ entra ali, não no Caddyfile. Ida e volta em `docs/pi-recuperacao.md`.
 | `nextcloud` | mastercontainer do AIO (os outros containers são do próprio AIO), coturn e o serve do host |
 | `anubis` | Anubis da VPS, uma instância por serviço (`anubis_instances`); `tasks_from: policy` só renderiza a política, para um Anubis em outra stack (FMD) |
 | `vps_host` | base de toda VPS: UFW (só 80/443 + `tailscale0`), sshd sem senha nem root, unattended-upgrades, fail2ban de fallback |
+| `reboot_watch` | timer de hora em hora que avisa um monitor push quando o reboot está pendente há 3+ dias ou o `apt-daily-upgrade` falhou; dependência do `vps_host` e do `pi_host`, pula LXC |
 | `uptime_kuma` | Uptime Kuma + AutoKuma + Docker na VPS, sem o usuário no grupo `docker`; monitores em `group_vars/vps/monitors.yml` |
 | `immich` | Immich do Pi, acesso só pelo Caddy; `immich_backup_enabled` liga o backup |
 | `borg_restore` | miolo de todos os restores: escolhe o archive (prefixo + máquina de origem), extrai (no Pi, dentro do LUKS) e valida |

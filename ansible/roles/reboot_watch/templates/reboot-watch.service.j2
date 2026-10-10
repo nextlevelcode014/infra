@@ -1,0 +1,9 @@
+# Gerido pelo Ansible (roles/reboot_watch) — não editar à mão.
+[Unit]
+Description=Avisa o Uptime Kuma de reboot pendente ou atualização falhando
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart={{ reboot_watch_script }}

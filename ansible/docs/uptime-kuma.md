@@ -146,6 +146,42 @@ e reaplicar `playbooks/uptime-kuma.yml`. Item que sai da lista tem o monitor
   sincronização desfaz a mudança. Monitor criado à mão fica, e o AutoKuma não
   mexe nele.
 
+## Atualizações: reboot pendente
+
+O role `reboot_watch` (dependência do `vps_host` e do `pi_host`) põe em cada
+host um timer de hora em hora que empurra um monitor push do grupo
+*Atualizações*:
+
+| Situação no host | Monitor |
+|---|---|
+| tudo certo | up |
+| `/var/run/reboot-required` com mais de 3 dias (`reboot_watch_grace_days`) | down, com os pacotes que pediram o reboot |
+| `apt-daily-upgrade.service` (quem roda o unattended-upgrades) em `failed` | down, com o motivo |
+| host fora ou timer parado | down quando passa 2 h sem push |
+
+Os 3 dias evitam e-mail a cada kernel novo: o aviso só sai quando o reboot já
+ficou esquecido. O reboot apaga o `/var/run/reboot-required` (tmpfs), e o
+próximo push já volta a up. Para não esperar a hora cheia:
+
+```bash
+sudo systemctl start reboot-watch.service
+```
+
+O token sai da senha do Borg + `reboot-<host>`, como o do backup
+(`reboot_watch_push_token` em `group_vars/all`). Host novo: uma linha em
+`uptime_kuma_reboot_watch` (`group_vars/vps/monitors.yml`), com o
+`inventory_hostname` dele. LXC não entra: o kernel é o do Proxmox.
+
+Confira depois de aplicar, no host:
+
+```bash
+systemctl list-timers reboot-watch.timer   # próxima execução marcada
+sudo systemctl start reboot-watch.service && systemctl status reboot-watch.service --no-pager
+```
+
+O status tem que terminar em `Deactivated successfully` (o `curl` falha a
+unit se o Uptime Kuma recusar o push), e o monitor fica verde.
+
 ## Status page pública
 
 `https://status.nextlevelcode.pro` mostra a status page de slug `infra` para a
