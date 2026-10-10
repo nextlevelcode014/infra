@@ -77,6 +77,14 @@ As saídas seriam autenticar o provider com usuário/senha de `root@pam` (funcio
 ao custo de por a senha de admin no estado) ou manter o token e aplicar fora —
 **escolhemos a segunda**.
 
+## Hetzner (`hetzner/`)
+
+A VPS e o firewall da Hetzner Cloud vivem numa **stack separada**, com state
+próprio, em `hetzner/` (`hetzner/README.md`). Os comandos rodam de dentro da
+pasta. A VPS foi importada (criada à mão antes), tem `prevent_destroy` e as
+proteções da Hetzner ligadas: plano com `destroy` ou `must be replaced` nela
+é erro, não se aplica.
+
 ## Estado
 
 `terraform.tfstate` é local e ignorado pelo git. Ele não é só o estado do
