@@ -219,8 +219,6 @@
 
     "autoApprovers": {
         "exitNode": ["autogroup:admin", "autogroup:owner"],
-        // Reinstalar o Proxmox não exige reaprovar a rota no console.
-        "routes": {"10.10.10.0/24": ["tag:proxmox"]},
     },
 
     "tagOwners": {
@@ -229,8 +227,8 @@
         // Opt-in do Funnel (fmd): só funciona junto com AllowFunnel no
         // ts-serve.json do serviço.
         "tag:public": ["autogroup:admin"],
-        // Subnet router do Proxmox. Tag em vez de conta de usuário: nó com tag
-        // não expira a chave (com conta, a sub-rede some a cada 180 dias).
+        // Host do Proxmox. Tag em vez de conta de usuário: nó com tag não
+        // expira a chave (com conta, o nó cai da tailnet a cada 180 dias).
         "tag:proxmox":     ["autogroup:admin"],
         "tag:proxmox-lxc": ["autogroup:admin"],
         "tag:forgejo":     ["autogroup:admin"],
@@ -260,8 +258,6 @@
                 "tag:proxmox:22",
                 "tag:proxmox:8006",
                 "tag:proxmox-lxc:8080",
-                "10.10.10.1:22",
-                "10.10.10.1:8006",
             ],
         },
         {
@@ -304,7 +300,6 @@
                 "tag:forgejo:2222", "tag:forgejo:3000",
                 "tag:caddy:443", "tag:caddy-vps:443",
                 "tag:vps:22",
-                "10.10.10.1:22", "10.10.10.1:8006",
             ],
         },
         // Os LXCs só avisam o Uptime Kuma; não administram a VPS.
