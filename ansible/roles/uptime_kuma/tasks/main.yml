@@ -89,6 +89,27 @@
     label: "backup-{{ backup.key }}"
   no_log: true
 
+# Push do reboot_watch de cada host. O token é o mesmo que o host calcula
+# (reboot_watch_push_token, com o nome do host em reboot_watch_name).
+- name: Gerar os monitores de reboot pendente
+  ansible.builtin.template:
+    src: autokuma-monitor.json.j2
+    dest: "{{ uptime_kuma_monitors_dir }}/reboot-{{ host.key }}.json"
+    mode: "0600"
+  vars:
+    reboot_watch_name: "{{ host.key }}"
+    item: >-
+      {{ uptime_kuma_reboot_watch_monitor | combine({
+           'id': 'reboot-' ~ host.key,
+           'group': uptime_kuma_reboot_watch_group,
+           'name': 'Atualizações ' ~ host.value,
+           'push_token': reboot_watch_push_token}) }}
+  loop: "{{ uptime_kuma_reboot_watch | dict2items }}"
+  loop_control:
+    loop_var: host
+    label: "reboot-{{ host.key }}"
+  no_log: true
+
 # Monitor que saiu da lista: o arquivo some e o AutoKuma apaga o monitor
 # (AUTOKUMA__ON_DELETE=delete).
 - name: Achar arquivos de entidades
@@ -110,7 +131,9 @@
             + (uptime_kuma_groups | map(attribute='id') | list)
             + (uptime_kuma_monitors | map(attribute='id') | list)
             + (uptime_kuma_backups | dict2items | map(attribute='key')
-               | map('regex_replace', '^', 'backup-') | list))
+               | map('regex_replace', '^', 'backup-') | list)
+            + (uptime_kuma_reboot_watch | dict2items | map(attribute='key')
+               | map('regex_replace', '^', 'reboot-') | list))
 
 - name: Subir o Uptime Kuma
   community.docker.docker_compose_v2:

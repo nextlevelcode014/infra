@@ -1,0 +1,32 @@
+#!/bin/bash
+# Gerido pelo Ansible (roles/reboot_watch) — não editar à mão.
+# Empurra o estado do host para o monitor push no Uptime Kuma: up com tudo
+# certo, down com o motivo. Sem push (host ou timer parado), o monitor cai
+# sozinho quando passa o intervalo dele.
+set -u
+
+grace=$(( {{ reboot_watch_grace_days }} * 86400 ))
+problemas=""
+
+# O /var/run é tmpfs: o reboot apaga o arquivo, e o próximo push já é up.
+if [ -e /var/run/reboot-required ]; then
+  idade=$(( $(date +%s) - $(stat -c %Y /var/run/reboot-required) ))
+  if [ "$idade" -ge "$grace" ]; then
+    pacotes=$(sort -u /var/run/reboot-required.pkgs 2>/dev/null | paste -sd, -)
+    problemas="reboot pendente há $(( idade / 86400 )) dias${pacotes:+ ($pacotes)}"
+  fi
+fi
+
+# A unit fica failed até a próxima execução que der certo.
+if systemctl is-failed --quiet apt-daily-upgrade.service; then
+  problemas="${problemas:+$problemas; }apt-daily-upgrade falhou (journalctl -u apt-daily-upgrade)"
+fi
+
+if [ -z "$problemas" ]; then
+  status=up; msg=OK
+else
+  status=down; msg=$problemas
+fi
+
+exec curl -fsS -m 30 --retry 3 -o /dev/null -G {{ reboot_watch_push_url | quote }} \
+  --data-urlencode "status=$status" --data-urlencode "msg=$msg"

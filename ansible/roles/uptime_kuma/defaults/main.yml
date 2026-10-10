@@ -40,6 +40,17 @@ uptime_kuma_backup_monitor:
   interval: 93600
   max_retries: 0
 
+# Aviso de reboot pendente (role reboot_watch), {inventory_hostname: rótulo},
+# um monitor push por host. O host empurra de hora em hora; o intervalo de
+# 2 h tolera um push perdido. max_retries 0: o down empurrado já vem depois
+# da tolerância de dias do reboot_watch, não precisa esperar mais.
+uptime_kuma_reboot_watch: {}
+uptime_kuma_reboot_watch_group: atualizacoes
+uptime_kuma_reboot_watch_monitor:
+  type: push
+  interval: 7200
+  max_retries: 0
+
 # Aviso por e-mail (SMTP da Proton), ligado em todo monitor. O corpo é o
 # files/email-body.html (Liquid do Uptime Kuma).
 uptime_kuma_notification_id: email

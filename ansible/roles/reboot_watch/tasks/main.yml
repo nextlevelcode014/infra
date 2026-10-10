@@ -1,0 +1,34 @@
+---
+# Em LXC o kernel é o do Proxmox: o reboot-required de dentro do container
+# não diz nada útil. Pula o pi-lab e qualquer outro container.
+- name: Aviso de reboot pendente
+  when: ansible_facts.virtualization_type != 'lxc'
+  block:
+    - name: Instalar o script
+      ansible.builtin.template:
+        src: reboot-watch.sh.j2
+        dest: "{{ reboot_watch_script }}"
+        owner: root
+        group: root
+        mode: "0700"
+      no_log: true
+
+    - name: Instalar o service e o timer
+      ansible.builtin.template:
+        src: "reboot-watch.{{ item }}.j2"
+        dest: "/etc/systemd/system/reboot-watch.{{ item }}"
+        owner: root
+        group: root
+        mode: "0644"
+      loop: [service, timer]
+      register: reboot_watch_units
+
+    - name: Ligar o timer
+      ansible.builtin.systemd_service:
+        name: reboot-watch.timer
+        state: started
+        enabled: true
+        daemon_reload: "{{ reboot_watch_units is changed }}"
+      # No --check de um host novo a unit só "seria" criada, e o systemd não
+      # a acha. Pula só nesse caso.
+      when: not (ansible_check_mode and reboot_watch_units is changed)
