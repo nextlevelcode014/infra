@@ -10,6 +10,11 @@ puid: 1000
 pgid: 1000
 admin_user: ubuntu
 
+# Caddy reserva do *.lab (playbooks/caddy-pi.yml), com token da Cloudflare
+# próprio: dá para revogar sem derrubar o do Proxmox nem o da VPS.
+caddy_caddyfile_template: Caddyfile.pi.j2
+caddy_cloudflare_token: "{{ vault_caddy_pi_cloudflare_token }}"
+
 # A mesma do Pi e dos composes (TZ=America/Sao_Paulo). Mesmo fuso da
 # global, mas trocar só por trocar mexeria em logs e crons do host.
 timezone: America/Sao_Paulo

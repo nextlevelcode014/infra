@@ -10,7 +10,7 @@
     }
 
     # Serviço novo do Pi entra em caddy_lab_pi_routes (group_vars/all), que
-    # o Caddy da VPS também lê na contingência. O resto, handle aqui.
+    # o Caddy reserva do Pi também lê. O resto, handle aqui.
     @vault host vault.{{ caddy_domain }}
     handle @vault {
         reverse_proxy vaultwarden-lxc:8080

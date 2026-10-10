@@ -1,0 +1,10 @@
+---
+# Caddy reserva do *.lab no Pi: sempre no ar, assume quando o curinga *.lab
+# da Cloudflare aponta para o Pi (Proxmox fora, docs/pi-recuperacao.md).
+# Mesmo role do Caddy do Proxmox e da VPS; o template e o token vêm do
+# group_vars/pi_hosts.
+- name: Configurar o Caddy reserva do Pi
+  hosts: pi_hosts
+  gather_facts: true
+  roles:
+    - role: caddy

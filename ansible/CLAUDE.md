@@ -57,6 +57,7 @@ usadas depois.
 | `playbooks/exit-node.yml` | `rpi` | exit node Tailscale saindo pela ProtonVPN (nunca no pi-lab) |
 | `playbooks/nextcloud.yml` | `rpi` | mastercontainer do Nextcloud AIO + coturn + `tailscale serve` do host |
 | `playbooks/vps.yml` | `vps` | base da VPS: UFW, sshd endurecido, atualização automática, fail2ban; os playbooks da VPS já a aplicam |
+| `playbooks/caddy-pi.yml` | `pi_hosts` | Caddy reserva do `*.lab` no Pi: sempre no ar, só no IP Tailscale; atende quando o `*.lab` da Cloudflare aponta para o Pi |
 | `playbooks/caddy-vps.yml` | `vps` | Caddy da VPS: domínios públicos (forge, status page do Uptime Kuma) + sites privados em `*.lab` que moram nela |
 | `playbooks/anubis.yml` | `vps` | Anubis (prova de trabalho anti-bot) na frente dos domínios públicos da VPS; aplicar antes do `caddy-vps.yml` |
 | `playbooks/uptime-kuma.yml` | `vps` | Uptime Kuma na VPS (fora de casa), em `uptime.lab` pelo Caddy da VPS |
@@ -93,10 +94,13 @@ precisa de um registro A específico na Cloudflare apontando para o IP
 Tailscale dela, porque o curinga `*.lab` aponta para o Caddy do Proxmox. VPS nova: `docs/vps.md`.
 
 **Contingência (Proxmox fora):** `proxmox_fora: true` em `group_vars/all`
-põe o Forgejo e o Vaultwarden do Pi no ar com backup, o `*.lab` inteiro no
-Caddy da VPS e o Anubis do `forge` no Pi. As rotas do `*.lab` que vão para o
-Pi ficam em `caddy_lab_pi_routes`, lidas pelos dois Caddys: serviço novo do Pi
-entra ali, não no Caddyfile. Ida e volta em `docs/pi-recuperacao.md`.
+põe o Forgejo e o Vaultwarden do Pi no ar com backup e o Anubis do `forge` no
+Pi. O `*.lab` não é variável: o Pi tem um **Caddy reserva** sempre no ar
+(`playbooks/caddy-pi.yml`, só no IP Tailscale), e quem decide se ele atende é
+o registro `*.lab` da Cloudflare. A VPS não atende o `*.lab`. As rotas que vão
+para o Pi ficam em `caddy_lab_pi_routes`, lidas pelo Caddy do Proxmox e pelo
+reserva: serviço novo do Pi entra ali, não no Caddyfile. Ida e volta em
+`docs/pi-recuperacao.md`.
 
 ## Roles
 
@@ -106,7 +110,7 @@ entra ali, não no Caddyfile. Ida e volta em `docs/pi-recuperacao.md`.
 | `artis3n.tailscale.machine` | instala e sobe na tailnet, com `--ssh` |
 | `proxmox_host` | base do notebook do Proxmox: bateria em `Long_Life` (conservation mode) |
 | `lxc_flags` | exceção: aplica flags do container (ver abaixo) |
-| `caddy` | binário custom (DNS-01) + Caddyfile + systemd drop-in; `caddy_caddyfile_template` escolhe o Caddyfile do host (Proxmox ou VPS) |
+| `caddy` | binário custom (DNS-01) + Caddyfile + systemd drop-in; `caddy_caddyfile_template` escolhe o Caddyfile do host (Proxmox, VPS ou Pi); binário amd64 ou arm64 pela arquitetura |
 | `forgejo` | compose do Forgejo + Postgres |
 | `vaultwarden` | compose do Vaultwarden |
 | `pi_host` | base do Pi: LUKS no crypttab/fstab, `secure-unlock`, Docker com data-root cifrado, redes, disk-guard |
@@ -186,6 +190,11 @@ Vale não repetir:
   `shlex.split` + `execvp`, então `VAR=x comando` falha com
   `No such file or directory: 'VAR=x'` (procura um binário com esse nome).
   Para env var inline use `/usr/bin/env VAR=x comando`.
+- **Handler de reload antes do de restart quebra host novo.** O `apt install
+  caddy` já sobe o Caddy do pacote, sem o plugin da Cloudflare; o reload
+  manda o Caddyfile novo para esse processo e ele recusa com `unknown module:
+  dns.providers.cloudflare`, e o restart nunca roda. No role `caddy` o
+  restart vem primeiro: com os dois notificados, o reload depois é inócuo.
 - **`sshd -t` falha com `Missing privilege separation directory: /run/sshd`**
   no Ubuntu com `ssh.socket`: o `ssh.service` só sobe na primeira conexão e é
   ele que cria o diretório. Com acesso só pelo Tailscale SSH, ele nunca subiu.

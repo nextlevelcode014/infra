@@ -2,8 +2,9 @@
 
 A produção do Forgejo e do Vaultwarden roda nos LXCs do Proxmox. O Pi fica
 pronto para assumir se o Proxmox cair (ou for desligado de propósito, por
-dias), com a VPS no lugar do Caddy do Proxmox, sem nunca rodar os dois ao mesmo tempo
-que a produção: duas instâncias aceitando escrita separam os dados.
+dias), com o Caddy reserva do Pi no lugar do Caddy do Proxmox, sem nunca rodar
+os dois ao mesmo tempo que a produção: duas instâncias aceitando escrita
+separam os dados.
 
 `playbooks/pi-recuperacao.yml` deixa o Pi em **standby**:
 
@@ -43,23 +44,44 @@ e sem o filtro o mais recente podia ser um deles.
    (Machines → Remove). Os containers saíram; os nós ficam listados até serem
    apagados à mão.
 
-## Assumir: o Pi e a VPS no lugar do Proxmox
+4. **Caddy reserva do Pi.** Fica sempre no ar, só no IP Tailscale do Pi, com
+   o certificado do `*.lab` em dia; só recebe tráfego quando o DNS mandar.
+   Precisa do `vault_caddy_pi_cloudflare_token` no vault (token próprio,
+   Zone:DNS:Edit em `nextlevelcode.pro`):
+
+   ```bash
+   ansible-playbook playbooks/caddy-pi.yml --ask-vault-pass --limit rpi --check --diff
+   ansible-playbook playbooks/caddy-pi.yml --ask-vault-pass --limit rpi
+   ```
+
+   Confira, sem mexer no DNS (força o nome para o IP do Pi):
+
+   ```bash
+   curl -sI --resolve jellyfin.lab.nextlevelcode.pro:443:$(tailscale ip -4 nextlevelcode) \
+     https://jellyfin.lab.nextlevelcode.pro | head -1
+   ```
+
+   Tem que responder com certificado válido (sem `-k`).
+
+## Assumir: o Pi no lugar do Proxmox
 
 Com o Proxmox fora, não caem só o Forgejo e o Vaultwarden: o curinga `*.lab`
 aponta para o Caddy do Proxmox, então todos os sites do Pi (jellyfin.lab,
 immich.lab, nextcloud.lab...) ficam inacessíveis junto. Na contingência o
-**Caddy da VPS** assume o `*.lab` inteiro, e o tráfego passa pela Hetzner
-(Jellyfin e Immich ficam mais lentos; `nextlevelcode:<porta>` direto, pela
-tailnet, continua de pé).
+**Caddy reserva do Pi** assume o `*.lab` inteiro: basta o registro `*.lab` da
+Cloudflare apontar para ele. O tráfego fica em casa, e a VPS segue só com o
+que é público.
 
-Quem liga tudo isso é uma variável, `proxmox_fora` em
-`inventory/group_vars/all/vars.yml`:
+A variável `proxmox_fora` (`inventory/group_vars/all/vars.yml`) cuida do
+resto:
 
 | | `false` (normal) | `true` (contingência) |
 |---|---|---|
 | Forgejo e Vaultwarden no Pi | standby, sem backup | no ar, com backup às 02:30 |
-| `*.lab` no Caddy da VPS | só `uptime.lab` | todos os sites, `vault.lab` no Pi |
 | Anubis do `forge` e monitor do SSH do Git | `forgejo-lxc` (`<ip-tailscale-do-forgejo>`) | Pi |
+
+Quem atende o `*.lab` não é variável, é o DNS: Caddy do Proxmox no normal,
+Caddy reserva do Pi na contingência (passo 8).
 
 Os backups do Pi avisam os mesmos monitores push (o token sai do nome do
 serviço). O monitor **Proxmox (ping)** fica vermelho até o Proxmox voltar, e
@@ -134,38 +156,34 @@ Proxmox pode ser desligado no fim.
    mostra `forgejo`, `forgejo-db` e `vaultwarden` rodando.
 
 6. **ACL do Tailscale:** no `tailscale/policy.hujson`, descomente os dois
-   blocos `CONTINGÊNCIA` e tire `tag:pi:3000` e `tag:pi:8083` do `deny` do
-   teste de `tag:caddy-vps`. Cole **o arquivo inteiro do repo** por cima do
-   console (`tailscale/README.md`), em vez de descomentar lá: o console pode
-   ter uma versão mais velha dos blocos, com menos portas. E commite na mesma
-   branch do passo 4. Sem isso o Caddy da VPS não alcança o Pi, e os sites dão
-   502. Um `want: Drop, got: Accept` no save é o `deny` do teste que ficou.
+   blocos `CONTINGÊNCIA` e tire `tag:pi:3000` do `deny` do teste de
+   `tag:caddy-vps`. Cole **o arquivo inteiro do repo** por cima do console
+   (`tailscale/README.md`), em vez de descomentar lá. E commite na mesma
+   branch do passo 4. Sem isso o Anubis da VPS não alcança o Forgejo do Pi, e
+   o `forge` dá 502. Um `want: Drop, got: Accept` no save é o `deny` do teste
+   que ficou. O `*.lab` não depende disto: o grant de `tcp:443` no Pi é fixo.
 
-7. **VPS**, nesta ordem (o Caddy aponta o `forge` para o Anubis):
+7. **VPS**: o Anubis do `forge` passa a apontar para o Forgejo do Pi, e o
+   monitor do SSH do Git também:
 
    ```bash
    ansible-playbook playbooks/anubis.yml --ask-vault-pass
-   ansible-playbook playbooks/caddy-vps.yml --ask-vault-pass --check --diff
-   ansible-playbook playbooks/caddy-vps.yml --ask-vault-pass
    ansible-playbook playbooks/uptime-kuma.yml --ask-vault-pass
    ```
 
    Confira: `curl -s https://forge.nextlevelcode.pro/api/healthz` devolve
-   `"status": "pass"`. O `*.lab` ainda não, porque o DNS só muda no próximo
-   passo. O `--diff` do Caddy tem que mostrar o bloco `*.lab.nextlevelcode.pro`
-   entrando; sem ele, o `proxmox_fora` não estava `true` neste checkout, e o
-   `*.lab` falha depois com `tlsv1 alert internal error` (sem certificado).
+   `"status": "pass"`.
 
 8. **Cloudflare** (zona `nextlevelcode.pro`, DNS only): **anote o valor
    atual** do registro `*.lab` (o IP Tailscale do Caddy do Proxmox, que volta
-   no fim) e troque pelo IP Tailscale da VPS:
+   no fim) e troque pelo IP Tailscale do Pi:
 
    ```bash
-   tailscale ip -4 hetzner
+   tailscale ip -4 nextlevelcode
    ```
 
    Confira, depois de uns minutos (TTL):
-   `dig +short vault.lab.nextlevelcode.pro` devolve o IP da VPS,
+   `dig +short vault.lab.nextlevelcode.pro` devolve o IP do Pi,
    `curl -s https://vault.lab.nextlevelcode.pro/alive` responde, e
    `https://jellyfin.lab.nextlevelcode.pro` abre. É à mão porque este repo
    não gerencia registros da Cloudflare (a VPS nova também é assim,
@@ -245,7 +263,6 @@ eles recebem a do Pi (`ubuntu`) e o caminho que os dados têm no archive dele.
    ansible-playbook playbooks/vaultwarden.yml --ask-vault-pass
    ansible-playbook playbooks/pi-recuperacao.yml --ask-vault-pass --limit rpi
    ansible-playbook playbooks/anubis.yml --ask-vault-pass
-   ansible-playbook playbooks/caddy-vps.yml --ask-vault-pass
    ansible-playbook playbooks/uptime-kuma.yml --ask-vault-pass
    ```
 

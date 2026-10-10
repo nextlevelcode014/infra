@@ -3,15 +3,19 @@
   ansible.builtin.systemd:
     daemon_reload: true
 
-# Reload fica antes do restart de propósito: se os dois forem notificados no
-# mesmo run (ex.: Caddyfile + env file mudaram), o restart roda por último e
-# garante o estado final correto — reload não relê o EnvironmentFile.
-- name: Reload caddy
-  ansible.builtin.service:
-    name: caddy
-    state: reloaded
-
+# Restart fica antes do reload de propósito. Quando os dois são notificados
+# no mesmo run (binário ou env file mudaram junto com o Caddyfile), o restart
+# já sobe o estado final e o reload depois não muda nada. Na ordem inversa o
+# reload ia primeiro para o processo antigo: em host novo, o Caddy do apt
+# (sem o plugin da Cloudflare) recusa o Caddyfile com `unknown module:
+# dns.providers.cloudflare`, o reload falha e o restart nem roda. Reload
+# sozinho (só o Caddyfile mudou) continua graceful.
 - name: Restart caddy
   ansible.builtin.service:
     name: caddy
     state: restarted
+
+- name: Reload caddy
+  ansible.builtin.service:
+    name: caddy
+    state: reloaded

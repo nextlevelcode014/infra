@@ -227,6 +227,7 @@ O `arr_stack` é o modelo. Um role novo precisa de:
 5. Playbook em `playbooks/` com `hosts: pi_hosts` e entrada no `site.yml`.
    Teste primeiro com `--limit pi_staging`.
 6. Rota em `caddy_lab_pi_routes` (`group_vars/all/vars.yml`), que vale para o
-   Caddy do Proxmox e para o da VPS na contingência, e a porta nos dois
-   grants do Pi no `tailscale/policy.hujson` (o de `tag:caddy` e o comentado
-   de `tag:caddy-vps`).
+   Caddy do Proxmox e para o reserva do Pi, e a porta no grant de `tag:caddy`
+   → `tag:pi` no `tailscale/policy.hujson`. O Caddy reserva fala com o
+   próprio IP Tailscale, sem passar pela ACL. Reaplique os dois:
+   `playbooks/caddy.yml` e `playbooks/caddy-pi.yml`.

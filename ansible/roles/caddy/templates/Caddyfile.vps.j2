@@ -59,33 +59,3 @@
 	reverse_proxy {{ site.upstream }}
 }
 {% endfor %}
-{% if proxmox_fora %}
-
-# --- Contingência: o *.lab do Caddy do Proxmox ------------------------------
-# Só com proxmox_fora (docs/pi-recuperacao.md), depois de o curinga *.lab da
-# Cloudflare apontar para o IP Tailscale da VPS. Os sites acima, com nome
-# próprio, continuam valendo: o Caddy prefere o nome mais específico.
-*.{{ caddy_domain }} {
-	tls {
-		dns cloudflare {env.{{ caddy_cloudflare_env_var }}}
-	}
-	import so_tailnet
-
-	# Vaultwarden restaurado no Pi (vaultwarden_bind_port do pi_hosts).
-	@vault host vault.{{ caddy_domain }}
-	handle @vault {
-		reverse_proxy {{ pi_tailscale_ip }}:8083
-	}
-{% for route in caddy_lab_pi_routes %}
-
-	@{{ route.host }} host {{ route.host }}.{{ caddy_domain }}
-	handle @{{ route.host }} {
-		reverse_proxy {{ pi_tailscale_ip }}:{{ route.port }}
-	}
-{% endfor %}
-
-	handle {
-		respond 404
-	}
-}
-{% endif %}

@@ -49,8 +49,8 @@ caddy_email: "work@nextlevelcode.pro"
 caddy_domain: "lab.nextlevelcode.pro"
 
 # Sites do *.lab que moram no Pi: <host>.lab -> porta publicada no IP
-# Tailscale dele. Os dois Caddys leem daqui (o da VPS só com proxmox_fora), e
-# cada porta precisa de grant no tailscale/policy.hujson.
+# Tailscale dele. O Caddy do Proxmox e o reserva do Pi leem daqui, e cada
+# porta precisa de grant no tailscale/policy.hujson.
 caddy_lab_pi_routes:
   - {host: jellyfin, port: 8096}
   - {host: jellyseerr, port: 5055}

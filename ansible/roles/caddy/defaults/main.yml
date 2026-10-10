@@ -1,6 +1,8 @@
 ---
 caddy_apt_package: caddy
-caddy_download_url: "https://caddyserver.com/api/download?os=linux&arch=amd64&p=github.com%2Fcaddy-dns%2Fcloudflare"
+# A arquitetura vem do host: o Pi é arm64, o Proxmox e a VPS são amd64.
+caddy_download_arch: "{{ 'arm64' if ansible_facts.architecture == 'aarch64' else 'amd64' }}"
+caddy_download_url: "https://caddyserver.com/api/download?os=linux&arch={{ caddy_download_arch }}&p=github.com%2Fcaddy-dns%2Fcloudflare"
 caddy_config_dir: /etc/caddy
 caddy_env_file: /etc/caddy/cf-token.env
 caddy_systemd_drop_in: /etc/systemd/system/caddy.service.d/override.conf
@@ -12,10 +14,11 @@ caddy_upgrade: false
 
 # Qual Caddyfile este host usa. O do Proxmox (padrão) serve o *.lab; o da VPS
 # (Caddyfile.vps.j2) serve os domínios públicos e os sites privados que moram
-# nela.
+# nela; o do Pi (Caddyfile.pi.j2) é a reserva do *.lab quando o Proxmox cai.
 caddy_caddyfile_template: Caddyfile.j2
 
 # Token da Cloudflare do DNS-01. Cada Caddy tem o seu: dá para revogar um sem
 # derrubar o outro, e a auditoria da Cloudflare mostra qual deles agiu. A VPS
-# sobrescreve com vault_caddy_vps_cloudflare_token (group_vars/vps).
+# sobrescreve com vault_caddy_vps_cloudflare_token (group_vars/vps), e o Pi
+# com vault_caddy_pi_cloudflare_token (group_vars/pi_hosts).
 caddy_cloudflare_token: "{{ vault_caddy_cloudflare_token }}"

@@ -27,11 +27,11 @@
             "dst": ["autogroup:internet"],
             "ip":  ["*"],
         },
-        // Serviços web: só HTTPS, pelos dois Caddys (Proxmox: *.lab; VPS:
-        // uptime.lab e o *.lab em contingência).
+        // Serviços web: só HTTPS, pelos três Caddys (Proxmox: *.lab; VPS:
+        // uptime.lab; Pi: reserva do *.lab quando o Proxmox cai).
         {
             "src": ["autogroup:member"],
-            "dst": ["tag:caddy", "tag:caddy-vps"],
+            "dst": ["tag:caddy", "tag:caddy-vps", "tag:pi"],
             "ip":  ["tcp:443"],
         },
         // Pi direto: DNS do AdGuard e o coturn do Talk (TURN/STUN + relay; o
@@ -122,10 +122,12 @@
             "dst": ["tag:forgejo"],
             "ip":  ["tcp:3000"],
         },
-        // Uptime Kuma: *.lab pelo Caddy, DNS do AdGuard, ping e SSH do Forgejo.
+        // Uptime Kuma: *.lab pelo Caddy (o do Proxmox, ou o reserva do Pi
+        // quando o *.lab aponta para ele), DNS do AdGuard, ping e SSH do
+        // Forgejo.
         {
             "src": ["tag:vps"],
-            "dst": ["tag:caddy"],
+            "dst": ["tag:caddy", "tag:pi"],
             "ip":  ["tcp:443"],
         },
         {
@@ -153,18 +155,13 @@
 
         // CONTINGÊNCIA — ATIVO enquanto proxmox_fora for true
         // (docs/pi-recuperacao.md). Na volta, comentar de novo e devolver
-        // tag:pi:3000/8083 ao deny de tag:caddy-vps nos tests. O
-        // Caddy da VPS faz o papel do Caddy do Proxmox: forge (3000),
-        // Vaultwarden (8083) e as mesmas portas do Pi do grant de tag:caddy.
+        // tag:pi:3000 ao deny de tag:caddy-vps nos tests. O forge público
+        // (Anubis na VPS) passa a apontar para o Forgejo do Pi. O *.lab não
+        // passa mais pela VPS: quem assume é o Caddy reserva do Pi.
         {
           "src": ["tag:caddy-vps"],
           "dst": ["tag:pi"],
-          "ip": [
-            "tcp:3000", "tcp:8083",
-            "tcp:8096", "tcp:5055", "tcp:8989", "tcp:7878", "tcp:9696",
-            "tcp:6767", "tcp:6868", "tcp:8090", "tcp:8081", "tcp:8082",
-            "tcp:8084", "tcp:8085", "tcp:2283", "tcp:11000",
-          ],
+          "ip":  ["tcp:3000"],
         },
         // SSH do Git no Pi, para você e para o monitor do Uptime Kuma.
         {
@@ -270,17 +267,17 @@
             "accept": ["tag:pi:6868", "tag:pi:11000", "tag:proxmox-lxc:3000", "tag:proxmox-lxc:8080"],
             "deny":   ["tag:pi:22", "tag:pi:53", "tag:proxmox:8006"],
         },
-        // O Caddy público só chega no Forgejo; o Vaultwarden não é público.
-        // Os denies do Pi saem durante a contingência (ver grants).
+        // O Caddy público só chega no Forgejo; o Vaultwarden não é público,
+        // nem na contingência (o do Pi fica atrás do Caddy reserva do Pi).
         {
             "src":    "tag:caddy-vps",
             "accept": ["tag:forgejo:3000"],
-            "deny":   ["tag:proxmox-lxc:8080"],
+            "deny":   ["tag:proxmox-lxc:8080", "tag:pi:8083", "tag:pi:8096"],
         },
         // O monitor alcança o que monitora, e não administra nada.
         {
             "src":    "tag:vps",
-            "accept": ["tag:caddy:443", "tag:pi:53", "tag:forgejo:2222"],
+            "accept": ["tag:caddy:443", "tag:pi:443", "tag:pi:53", "tag:forgejo:2222"],
             "deny":   ["tag:pi:22", "tag:proxmox:22", "tag:proxmox:8006"],
         },
         // O Pi só fala com o Caddy (HPB do Nextcloud) e com o Uptime Kuma

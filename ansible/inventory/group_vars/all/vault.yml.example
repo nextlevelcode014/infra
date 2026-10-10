@@ -45,6 +45,10 @@ vault_caddy_cloudflare_token: "CHANGE-ME"
 # Hoje está em /etc/caddy/cf-token.env na VPS.
 vault_caddy_vps_cloudflare_token: "CHANGE-ME"
 
+# Token da Cloudflare do Caddy reserva do Pi (playbooks/caddy-pi.yml). Mesmo
+# escopo, separado dos outros dois pelo mesmo motivo.
+vault_caddy_pi_cloudflare_token: "CHANGE-ME"
+
 # Hash argon2 do token admin do Vaultwarden (painel /admin). Gere com:
 #   docker run --rm vaultwarden/server /vaultwarden hash
 # Vai parar em texto no {{ vaultwarden_dir }}/docker-compose.yml do

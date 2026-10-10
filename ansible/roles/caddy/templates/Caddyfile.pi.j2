@@ -1,0 +1,39 @@
+# Gerido pelo Ansible — não editar à mão. Caddy reserva do Pi.
+#
+# Fica sempre no ar, com o certificado do *.lab em dia, mas só atende quando
+# o curinga *.lab da Cloudflare aponta para o IP Tailscale do Pi: é a
+# contingência do Caddy do Proxmox (docs/pi-recuperacao.md). Escuta só no IP
+# Tailscale, e sem a porta 80 (o certificado vem por DNS-01).
+{
+	email {{ caddy_email }}
+	default_bind {{ ts_ip }}
+	auto_https disable_redirects
+}
+
+*.{{ caddy_domain }} {
+	tls {
+		dns cloudflare {env.{{ caddy_cloudflare_env_var }}}
+	}
+
+	# O IP Tailscale já não é alcançável de fora; isto corta quem chegar
+	# por outro caminho com o nome certo no SNI.
+	@fora_da_tailnet not remote_ip 100.64.0.0/10 fd7a:115c:a1e0::/48
+	abort @fora_da_tailnet
+
+	# Vaultwarden do Pi: em standby fica parado (502); no ar com proxmox_fora.
+	@vault host vault.{{ caddy_domain }}
+	handle @vault {
+		reverse_proxy {{ vaultwarden_bind_port }}
+	}
+{% for route in caddy_lab_pi_routes %}
+
+	@{{ route.host }} host {{ route.host }}.{{ caddy_domain }}
+	handle @{{ route.host }} {
+		reverse_proxy {{ ts_ip }}:{{ route.port }}
+	}
+{% endfor %}
+
+	handle {
+		respond 404
+	}
+}
