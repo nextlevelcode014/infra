@@ -34,7 +34,7 @@ nome do nó antes: o nome MagicDNS pode diferir do hostname.
 | Nó | Tags |
 |---|---|
 | Raspberry Pi (o host) | `tag:pi` |
-| Proxmox (hypervisor e subnet router de `10.10.10.0/24`) | `tag:proxmox` |
+| Proxmox (hypervisor) | `tag:proxmox` |
 | LXC do Caddy | `tag:caddy` |
 | LXCs do Forgejo e do Vaultwarden | `tag:proxmox-lxc`; o do Forgejo também `tag:forgejo` |
 | VPS | `tag:vps`, `tag:caddy-vps` |
