@@ -1,6 +1,4 @@
 ---
-# Mesmo nome de projeto Compose ("arr") do self-hosted/arr: ao aplicar pela
-# primeira vez, o Compose adota os containers que já estão rodando.
 arr_stack_dir: /opt/arr
 app_domain: "{{ caddy_domain }}"
 
@@ -12,7 +10,7 @@ arr_qbit_username: "{{ vault_arr_qbit_username }}"
 arr_qbit_password: "{{ vault_arr_qbit_password }}"
 
 # Caminhos que o compose.yml usa. Viram symlinks para o LUKS pelo role
-# secure_links (ver meta/main.yml), como o storage.map do self-hosted.
+# secure_links (ver meta/main.yml).
 arr_media_stack_dir: /mnt/media-stack
 
 arr_config_dirs:

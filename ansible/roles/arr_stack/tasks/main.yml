@@ -19,7 +19,7 @@
     mode: "0750"
   register: arr_stack_dir_result
 
-# Substitui o bin/render-config: o decluttarr só aceita segredo inline.
+# Renderizada aqui porque o decluttarr só aceita segredo inline, não por env.
 - name: Renderizar a config do decluttarr
   ansible.builtin.template:
     src: decluttarr.config.yaml.j2

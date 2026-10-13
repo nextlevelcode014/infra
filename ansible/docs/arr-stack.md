@@ -1,74 +1,111 @@
 # Stack Arr no Raspberry Pi
 
-`playbooks/arr-stack.yml` aplica no Pi a stack que antes subia por
-`make up SVC=arr` no repo `self-hosted`. O compose é o mesmo
-(`self-hosted/arr/compose.media-stack.yml`); muda só quem o aplica e onde ele
-mora: `/opt/arr`. O nome do projeto Compose continua `arr`, então os
-containers que já estão rodando são adotados, não duplicados.
+`playbooks/arr-stack.yml` sobe a stack de mídia do Pi em `/opt/arr`. Cada app
+publica a sua porta só no IP Tailscale, e o acesso é pelo Caddy, em
+`https://<app>.lab.nextlevelcode.pro` (rotas em `caddy_lab_pi_routes`).
 
-## Dependências
+| App | Porta | Papel |
+|---|---|---|
+| Jellyfin | `8096` | player e bibliotecas |
+| Jellyseerr | `5055` | pedidos de filmes e séries |
+| Sonarr / Radarr | `8989` / `7878` | séries / filmes: busca, download, organização |
+| Prowlarr | `9696` | indexadores, repassados aos *arr (com o FlareSolverr, sem porta) |
+| Bazarr | `6767` | legendas |
+| Profilarr | `6868` | perfis de qualidade dos *arr |
+| qBittorrent | `8090` | download, **pela VPN**: vive na rede do gluetun, que publica a porta (`docs/gluetun.md`) |
+| decluttarr | — | limpa downloads travados; fala com o qBittorrent em `gluetun:8090` |
+| Dozzle | `8081` | logs dos containers |
 
-Entram sozinhas, pelo `meta/main.yml` do role:
+| O quê | Onde |
+|---|---|
+| Config dos apps | `/mnt/media-stack/config`, symlink para `/mnt/secure/appdata/mnt/media-stack/config` (LUKS) |
+| Mídia | `/mnt/media-stack/data`, symlink para o LUKS (`secure_links`) |
+| Stack | `/opt/arr`: `compose.yml`, `.env` e a config do decluttarr |
 
-- **Base do Pi** (`pi_host`, ver [`pi.md`](pi.md)): LUKS aberto, Docker,
-  redes `medianet`/`vpn_net`.
-- **gluetun** (ver [`gluetun.md`](gluetun.md)): o qBittorrent usa a netns
-  dele (`network_mode: container:gluetun`) e o decluttarr fala com
-  `gluetun:8090`.
+Os symlinks vêm do role `secure_links` (`meta/main.yml`): o compose usa
+`/mnt/media-stack/...`, e os dados moram no LUKS.
 
-## Primeira aplicação
+## Antes de aplicar
 
-Feita uma vez, à mão, porque envolve o vault e o crontab que hoje está no Pi.
+- **Vault** (modelo em `vault.yml.example`), usado só pelo decluttarr:
+  `vault_arr_radarr_api_key` e `vault_arr_sonarr_api_key` (Settings →
+  General → API Key de cada app), e `vault_arr_qbit_username` /
+  `vault_arr_qbit_password` (os da WebUI do qBittorrent).
+- **gluetun** com a config WireGuard (`docs/gluetun.md`). O role do gluetun
+  entra como dependência.
+- **ACL** (`tailscale/policy.hujson`), já na política: `tag:caddy` →
+  `tag:pi` nas portas da tabela acima (um grant por rota).
 
-1. Adicionar as chaves `vault_arr_*` (modelo em `vault.yml.example`). As
-   duas API keys se copiam de *Settings → General → API Key* do Radarr e do
-   Sonarr; usuário e senha são os da WebUI do qBittorrent. Os mesmos valores
-   estão hoje em `/mnt/secure/env/arr.env` no Pi.
+## Instalação
 
-   ```bash
-   ansible-vault edit inventory/group_vars/all/vault.yml
-   ```
-
-2. Seguir antes a primeira aplicação do gluetun ([`gluetun.md`](gluetun.md)).
-
-3. Ver o que vai mudar, sem aplicar:
-
-   ```bash
-   ansible-playbook playbooks/arr-stack.yml --ask-vault-pass --check --diff
-   ```
-
-4. Aplicar:
-
-   ```bash
-   ansible-playbook playbooks/arr-stack.yml --ask-vault-pass
-   ```
-
-5. Apagar o script antigo do `self-hosted`, que nenhum cron chamava, e
-   conferir que o backup é só o do borgmatic (`docs/backup.md`):
+1. **Testar no pi-lab** (as API keys do pi-lab são de mentira, em
+   `group_vars/pi_staging/vars.yml`):
 
    ```bash
-   ssh ubuntu@nextlevelcode sudo rm -f /usr/local/bin/arr-stack-backup.sh
-   ssh ubuntu@nextlevelcode sudo crontab -l | grep -c arr
+   ansible-playbook playbooks/arr-stack.yml --ask-vault-pass --limit pi_staging
    ```
 
-   O segundo comando deve responder `0`.
+   Confira: `ssh root@192.168.50.203 docker compose -f /opt/arr/compose.yml ps`
+   lista todos `Up`, e
+   `ssh root@192.168.50.203 docker exec qbittorrent curl -s https://ipinfo.io/ip`
+   mostra um IP da ProtonVPN.
 
-6. Conferir que a stack é a de `/opt/arr`:
+2. **Dados.** Com backup a trazer, restaure antes de aplicar
+   (`docs/arr-stack-restore.md`): a config de todos os apps volta, com as
+   ligações entre eles, e o passo 4 não se aplica.
+
+3. **Aplicar no Pi e no Caddy** (o do Proxmox e o reserva do Pi leem as
+   mesmas rotas):
 
    ```bash
-   ssh ubuntu@nextlevelcode docker compose ls --filter name=arr
+   ansible-playbook playbooks/arr-stack.yml --ask-vault-pass --limit rpi --check --diff
+   ansible-playbook playbooks/arr-stack.yml --ask-vault-pass --limit rpi
+   ansible-playbook playbooks/caddy.yml --ask-vault-pass
+   ansible-playbook playbooks/caddy-pi.yml --ask-vault-pass
    ```
 
-   A coluna `CONFIG FILES` deve mostrar `/opt/arr/compose.yml`.
+   Confira: `https://sonarr.lab.nextlevelcode.pro` e os outros abrem, e os
+   monitores do grupo *Raspberry Pi* ficam verdes no Uptime Kuma.
 
-A partir daqui, `make up SVC=arr` no `self-hosted` não deve mais ser usado:
-ele sobe a mesma stack a partir de outro arquivo.
+4. **Apps, só em instância nova.** A config de cada app é feita na interface
+   dele, e as ligações entre eles também: Prowlarr → Sonarr/Radarr (API
+   keys), Sonarr/Radarr → qBittorrent (`gluetun:8090`), Jellyseerr →
+   Jellyfin e *arr. É manual porque cada app guarda a sua config no próprio
+   banco. Depois, as API keys do Radarr e do Sonarr e a senha do qBittorrent
+   vão para o vault, e reaplique o passo 3 para o decluttarr.
+
+   Confira: `docker logs decluttarr --tail 20` sem erro de autenticação.
+
+5. **Primeiro backup:**
+
+   ```bash
+   ssh -t ubuntu@nextlevelcode.<tailnet>.ts.net sudo borgmatic -c /etc/borgmatic/arr.yaml --verbosity 1 --stats
+   ```
+
+   Confira: o monitor *Backup Stack Arr* fica verde.
 
 ## Backup
 
-Diário, no borgmatic do Pi (`/etc/borgmatic/arr.yaml`, `docs/backup.md`),
-prefixo `arr-*`. Para a stack, faz `borg create` da config inteira
-(`/mnt/secure/appdata/mnt/media-stack/config`, sem logs, caches e os zips de
-backup interno de cada app), sobe a stack, aplica a retenção 7d/4w/3m e
-compacta. A mídia (`data/`) não entra no
-backup. Restore em [`arr-stack-restore.md`](arr-stack-restore.md).
+Prefixo `arr-*`, no borgmatic do Pi (`/etc/borgmatic/arr.yaml`,
+`docs/backup.md`). **Para a stack inteira** durante o `borg create`, para os
+bancos SQLite saírem consistentes, e sobe no fim (também quando falha). Leva
+a config inteira, pelo caminho real no LUKS (o Borg não segue o symlink),
+sem logs, caches, o Sentry e os zips de backup interno de cada app
+(`arr_backup_excluded_app_backups`): com a stack parada, eles só repetem o
+que o Borg já guarda. **A mídia não entra.** Monitor *Backup Stack Arr*.
+Restore: `docs/arr-stack-restore.md`.
+
+## Operação
+
+- **Credencial trocada num app** (API key, senha do qBittorrent): os apps
+  guardam cópia da credencial uns dos outros, e nada ressincroniza. Troque
+  em todo app que a usa, no vault e reaplique (#23 quer tirar isso da mão).
+- **qBittorrent sem rede depois de recriar o gluetun:** o role do gluetun o
+  recria sozinho (`docs/gluetun.md`, "Operação").
+- **Atualizar:** `pi-atualizar.yml` (`docs/pi.md`, "Atualizar").
+
+## Limitações
+
+- Mídia sem backup: perder o LUKS é baixar tudo de novo.
+- A porta `8090` do qBittorrent sai em todas as interfaces, LAN incluída,
+  porque é publicada pelo gluetun (#43).
