@@ -69,8 +69,7 @@ vault_arr_sonarr_api_key: "CHANGE-ME"
 vault_arr_qbit_username: "admin"
 vault_arr_qbit_password: "CHANGE-ME"
 
-# WireGuard da ProtonVPN para o gluetun (o mesmo do
-# /mnt/secure/env/gluetun.env do Pi). Gere em account.protonvpn.com →
+# WireGuard da ProtonVPN para o gluetun do Pi. Gere em account.protonvpn.com →
 # Downloads → WireGuard configuration: PrivateKey e Address do [Interface].
 vault_gluetun_wireguard_private_key: "CHANGE-ME"
 vault_gluetun_wireguard_addresses: "10.2.0.2/32"

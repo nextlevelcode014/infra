@@ -1,6 +1,4 @@
 ---
-# Mesmo nome de projeto Compose ("gluetun") do self-hosted/gluetun: ao
-# aplicar pela primeira vez, o Compose adota o container que já roda.
 gluetun_dir: /opt/gluetun
 
 # WireGuard da ProtonVPN. Cada máquina precisa da PRÓPRIA config: a mesma

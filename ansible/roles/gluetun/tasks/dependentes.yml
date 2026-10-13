@@ -15,8 +15,8 @@
   loop: "{{ gluetun_dependents }}"
   register: gluetun_dependents_info
 
-# Pelos labels do Compose, recria no projeto de onde o container veio — vale
-# para stack do Ansible (/opt/...) e para a que ainda sobe pelo self-hosted.
+# Pelos labels do Compose, recria no projeto de onde o container veio: cada
+# dependente mora na stack dele (/opt/arr, /opt/searxng).
 - name: Recriar os dependentes presos a um gluetun antigo
   community.docker.docker_compose_v2:
     project_src: "{{ labels['com.docker.compose.project.working_dir'] }}"
