@@ -222,4 +222,6 @@ Proxmox, auth key do Tailscale e senha do Postgres do Forgejo. O template do
 que vai lá é `vault.yml.example`.
 
 Todo runbook manual vai em arquivo `.md` no repo, em ordem de execução, com o
-comando literal e como conferir que funcionou.
+comando literal e como conferir que funcionou. O padrão dos docs (um por
+serviço, um de restore por playbook de restore, as seções e as regras) e o
+índice estão em `docs/README.md`: doc novo ou reescrito segue o modelo de lá.
