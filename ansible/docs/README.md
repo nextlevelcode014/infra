@@ -29,7 +29,7 @@ modelo.
 | Forgejo | LXC | `forgejo.md` | `forgejo-restore.md` |
 | gluetun | Pi | `gluetun.md` | — |
 | Immich | Pi | `immich.md` | — |
-| Nextcloud AIO | Pi | `nextcloud.md` | — |
+| Nextcloud AIO | Pi | `nextcloud.md` | seção no próprio doc (pelo AIO) |
 | SearXNG | Pi | `searxng.md` | — |
 | Uptime Kuma | VPS | `uptime-kuma.md` | seção no próprio doc (sem role) |
 | Vaultwarden | LXC | `vaultwarden.md` | `vaultwarden-restore.md` |

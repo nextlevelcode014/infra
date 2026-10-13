@@ -72,7 +72,7 @@ sobem vazios.
   (`https://nextlevelcode.<tailnet>.ts.net:8080`), escolha restaurar de um
   backup, informe o repositório (hoje o celular) e a senha de criptografia do
   backup. O domínio (`nextcloud.lab.nextlevelcode.pro`) volta com o backup.
-  Depois, ajuste o Talk como em `docs/nextcloud.md` (passo 8).
+  Depois, ajuste o Talk como em `docs/nextcloud.md` ("Instalação", passo 3).
 - **Immich:** sem restore automatizado ainda (#29); o backup no repositório
   compartilhado depende do #31. Até lá, a cópia é a do omarchy.
 - **exit node:** a identidade do nó não está no backup. Ele entra como um nó

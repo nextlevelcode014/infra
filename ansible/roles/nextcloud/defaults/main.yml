@@ -1,8 +1,8 @@
 ---
 # O compose fixa o projeto em "nextcloud-aio" (name:) e o volume do
-# mastercontainer em "nextcloud_aio_mastercontainer": ao aplicar pela
-# primeira vez, o Compose adota o mastercontainer. Os outros containers
-# (nextcloud-aio-*) são criados e geridos pelo próprio AIO, não pelo Ansible.
+# mastercontainer em "nextcloud_aio_mastercontainer", nomes que o AIO exige.
+# Os outros containers (nextcloud-aio-*) são criados e geridos pelo próprio
+# AIO, não pelo Ansible.
 nextcloud_dir: /opt/nextcloud-aio
 
 # Onde o Apache do AIO escuta a porta 11000. O IP Tailscale do Pi, para o
@@ -22,9 +22,9 @@ nextcloud_ts_tailnet: <tailnet>.ts.net
 nextcloud_turn_min_port: 49160
 nextcloud_turn_max_port: 49200
 
-# Domínio do Nextcloud depois da migração, servido pelo Caddy do Proxmox.
-# A troca no AIO é manual (docs/nextcloud.md); o role lê o domínio atual na
-# configuration.json do AIO e só tira a 443 do serve quando ele já é este.
+# Domínio do Nextcloud, servido pelo Caddy. Ele é configurado na interface
+# do AIO (docs/nextcloud.md); o role lê o domínio na configuration.json do AIO
+# e só tira a 443 do serve quando ele já é este.
 nextcloud_domain: "nextcloud.{{ caddy_domain }}"
 
 # tailscale serve do host. Fica só a interface de administração do AIO

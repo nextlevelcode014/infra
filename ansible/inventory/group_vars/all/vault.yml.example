@@ -98,8 +98,8 @@ vault_fmd_registration_token: "CHANGE-ME"
 vault_exit_node_ts_authkey: "tskey-auth-CHANGE-ME"
 vault_exit_node_wireguard_private_key: "CHANGE-ME"
 
-# Segredo do coturn (TURN do Nextcloud Talk). Hoje está em
-# /mnt/secure/env/nextcloud.env no Pi (TURN_SECRET).
+# Segredo do coturn (TURN do Nextcloud Talk), o mesmo que vai na config do
+# Talk. Gere com `openssl rand -hex 32`.
 vault_nextcloud_turn_secret: "CHANGE-ME"
 
 # Uptime Kuma: o admin criado no primeiro acesso (o AutoKuma entra com ele) e

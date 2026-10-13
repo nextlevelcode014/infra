@@ -1,5 +1,5 @@
-# Gerido pelo Ansible — não editar à mão. Origem: self-hosted/nextcloud/compose.yml.
-# Mudanças: APACHE_IP_BINDING no IP Tailscale do Pi e a porta 8443 removida
+# Gerido pelo Ansible — não editar à mão. Parte do compose oficial do AIO;
+# mudanças: APACHE_IP_BINDING no IP Tailscale do Pi e a porta 8443 removida
 # (ver as linhas).
 name: nextcloud-aio # Add the container to the same compose project like all the sibling containers are added to automatically.
 services:
@@ -31,7 +31,7 @@ services:
       # COLLABORA_SECCOMP_DISABLED: false # Setting this to true allows to disable Collabora's Seccomp feature. See https://github.com/nextcloud/all-in-one#how-to-disable-collaboras-seccomp-feature
       # DOCKER_API_VERSION: 1.44 # You can adjust the internally used docker api version with this variable. ⚠️⚠️⚠️ Warning: please note that only the default api version (unset this variable) is supported and tested by the maintainers of Nextcloud AIO. So use this on your own risk and things might break without warning. See https://github.com/nextcloud/all-in-one#how-to-adjust-the-internally-used-docker-api-version
       # FULLTEXTSEARCH_JAVA_OPTIONS: "-Xms1024M -Xmx1024M" # Allows to adjust the fulltextsearch java options. See https://github.com/nextcloud/all-in-one#how-to-adjust-the-fulltextsearch-java-options
-      NEXTCLOUD_DATADIR: /mnt/secure/appdata/nextcloud/ncdata # Datadir no volume LUKS (cifrado). Antes era /mnt/ncdata (root NÃO-cifrado, 19GB) — encheu o root e vazava em texto puro. Env-driven como o Immich. ⚠️ NÃO altere após a instalação inicial. Ver https://github.com/nextcloud/all-in-one#how-to-change-the-default-location-of-nextclouds-datadir
+      NEXTCLOUD_DATADIR: /mnt/secure/appdata/nextcloud/ncdata # Datadir no volume LUKS (cifrado): a raiz não é cifrada e é pequena. ⚠️ NÃO altere após a instalação inicial. Ver https://github.com/nextcloud/all-in-one#how-to-change-the-default-location-of-nextclouds-datadir
       # NEXTCLOUD_MOUNT: /mnt/external # Allows the Nextcloud container to access the chosen directory on the host. See https://github.com/nextcloud/all-in-one#how-to-allow-the-nextcloud-container-to-access-directories-on-the-host
       # NEXTCLOUD_UPLOAD_LIMIT: 16G # Can be adjusted if you need more. See https://github.com/nextcloud/all-in-one#how-to-adjust-the-upload-limit-for-nextcloud
       # NEXTCLOUD_MAX_TIME: 3600 # Can be adjusted if you need more. See https://github.com/nextcloud/all-in-one#how-to-adjust-the-max-execution-time-for-nextcloud

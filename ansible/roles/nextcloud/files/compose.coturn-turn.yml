@@ -1,5 +1,5 @@
-# Gerido pelo Ansible — não editar à mão. Origem: self-hosted/nextcloud/compose.coturn-turn.yml.
-# Mudança: o intervalo de relay vem do .env (nextcloud_turn_min/max_port).
+# Gerido pelo Ansible — não editar à mão. O intervalo de relay vem do .env
+# (nextcloud_turn_min/max_port).
 name: coturn-turn
 services:
   coturn:
