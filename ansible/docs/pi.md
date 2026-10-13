@@ -34,9 +34,15 @@ ext4 montada não encolhe, então quem esquece este passo regrava o SSD.
 
 1. **Gravar no Imager:** Raspberry Pi 5 → Other general-purpose OS → Ubuntu →
    Ubuntu Server 26.04 (64-bit) → o SSD. Em "Edit settings": hostname
-   `nextlevelcode`, usuário **`ubuntu`** (vira o uid 1000, que o `pi_host`
+   **`ubuntu`**, usuário **`ubuntu`** (vira o uid 1000, que o `pi_host`
    espera), SSH ligado só com chave pública (a sua `.pub`). Wi-Fi não: o Pi
    fica no cabo.
+
+   O hostname não é o nome da tailnet (esse é o `nextlevelcode`, dado pelo
+   `tailscale up`). O Borg grava o hostname em cada archive, e os restores do
+   Pi só aceitam archives de `ubuntu` (`*_restore_source_host`). Com outro
+   nome, o restore seguinte ignora os backups novos e traz, sem erro, o último
+   feito antes da reinstalação.
 
 2. **Reservar a `p3`**, com o SSD ainda no seu computador. Ache o disco pelo
    tamanho (o SSD do Pi tem ~931G) e confira que as partições estão
