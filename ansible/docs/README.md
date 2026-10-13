@@ -26,7 +26,7 @@ modelo.
 | Stack Arr | Pi | `arr-stack.md` | `arr-stack-restore.md` |
 | Exit node | Pi | `exit-node.md` | — |
 | FMD | Pi | `fmd.md` | *falta* |
-| Forgejo | LXC | *falta* | `forgejo-restore.md` |
+| Forgejo | LXC | `forgejo.md` | `forgejo-restore.md` |
 | gluetun | Pi | `gluetun.md` | — |
 | Immich | Pi | `immich.md` | — |
 | Nextcloud AIO | Pi | `nextcloud.md` | — |

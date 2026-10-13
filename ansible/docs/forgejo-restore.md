@@ -1,46 +1,93 @@
 # Restore do Forgejo
 
-Este procedimento substitui os dados do Forgejo pelo archive Borg mais recente
-com o prefixo exato `forgejo-*`. O playbook normal (`playbooks/forgejo.yml`)
-nunca executa restore.
+Substitui os repositórios (`forgejo/`) e o banco do Forgejo pelo archive
+`forgejo-*` mais recente feito pela máquina de origem
+(`forgejo_restore_source_host`, por padrão o LXC `forgejo`). Archives de
+outras máquinas com o mesmo prefixo são ignorados. O `forgejo.yml` nunca
+restaura.
+
+O restore para a stack, **apaga** `forgejo/` e `postgres/`, copia os dados do
+archive, carrega o dump num Postgres vazio e sobe tudo. Duas instâncias no ar
+ao mesmo tempo separam os dados: restaure só onde vai ficar a única.
 
 ## Antes de executar
 
-1. Confirmar que o Proxmox está indisponível ou que esta é a migração inicial,
-   e que este host será temporariamente a única instância autoritativa.
-2. Confirmar que o volume onde `forgejo_dir` está montado e desbloqueado.
-3. Confirmar que a execução normal de `playbooks/forgejo.yml` já instalou o
-   pacote `borgbackup` e distribuiu a chave SSH e a senha do Borg a partir do
-   vault Ansible.
-4. Preencher as variáveis `vault_forgejo_borg_*` no vault Ansible, incluindo
-   `vault_forgejo_borg_password` e `vault_forgejo_borg_ssh_private_key`.
-5. Aplicar primeiro `playbooks/forgejo.yml` para preparar o Compose, as imagens
-   e os diretórios, se esta for uma máquina nova.
+1. **A outra instância está parada.** Restaurando no LXC, o Forgejo do Pi
+   está em standby; restaurando no Pi, o do LXC está fora ou parado
+   (`docs/pi-recuperacao.md`).
 
-Para restaurar o archive legado criado no Pi, informe também os caminhos
-antigos do archive:
+   Confira: `docker ps --filter name=forgejo` no outro host não lista nada.
 
-```bash
--e forgejo_restore_data_archive_path=mnt/secure/appdata/forgejo/forgejo
-```
+2. **O Forgejo está instalado no destino** (o restore recusa sem o
+   `docker-compose.yml`): no LXC, `playbooks/forgejo.yml`
+   (`docs/forgejo.md`, passos 1 a 4); no Pi, `playbooks/pi-recuperacao.yml`.
+   O Borg (chave, senha, `known_hosts`) vem junto, pelo `borg_client`.
+
+3. **No Pi, o LUKS aberto** (`docs/pi.md`, "A cada boot"). O playbook confere
+   e para se `/mnt/secure` não estiver montado.
 
 ## Executar
+
+**No LXC, com o backup do LXC** (perdeu os dados, LXC recriado):
 
 ```bash
 ansible-playbook playbooks/forgejo-restore.yml --ask-vault-pass \
   -e forgejo_restore_confirmation=RESTORE_FORGEJO
 ```
 
-A confirmação é obrigatória porque o role remove os diretórios atuais do
-Forgejo e do PostgreSQL antes de carregar o dump.
+**No Pi, com o backup do LXC** (Proxmox fora; faz parte de
+`docs/pi-recuperacao.md`, "Assumir", que diz o antes e o depois):
+
+```bash
+ansible-playbook playbooks/forgejo-restore.yml --ask-vault-pass \
+  --limit rpi -e restore_on_pi=true -e forgejo_restore_confirmation=RESTORE_FORGEJO
+```
+
+**No LXC, com o backup do Pi** (volta da contingência,
+`docs/pi-recuperacao.md`, "Voltar ao Proxmox"). O archive é da máquina
+`ubuntu`, e os dados estão nele com o caminho do Pi:
+
+```bash
+ansible-playbook playbooks/forgejo-restore.yml --ask-vault-pass \
+  -e forgejo_restore_confirmation=RESTORE_FORGEJO \
+  -e forgejo_restore_source_host=ubuntu \
+  -e forgejo_restore_data_archive_path=mnt/secure/appdata/forgejo/forgejo
+```
+
+A confirmação é obrigatória porque o role apaga os dados atuais antes de
+carregar os do archive. Em todos os casos, confira na task "Extrair o
+archive" que a data é a do backup esperado.
 
 ## Conferir
 
+No host restaurado:
+
 ```bash
-docker compose -f /opt/forgejo/docker-compose.yml ps
-docker compose -f /opt/forgejo/docker-compose.yml logs --tail=100 server db
+docker compose -f <forgejo_dir>/docker-compose.yml ps
+docker compose -f <forgejo_dir>/docker-compose.yml logs --tail=100 server db
 ```
 
-Validar login, leitura de repositórios, clone, push SSH e webhooks antes de
-anunciar o serviço como recuperado. O domínio e a rota de contingência do Caddy
-continuam sendo ativados manualmente conforme o runbook da infraestrutura.
+(`forgejo_dir`: `/opt/forgejo` no LXC, `/mnt/secure/appdata/forgejo` no Pi.)
+
+Depois, de um computador da tailnet: login em
+`https://forge.nextlevelcode.pro`, um repositório com o último commit que
+você esperava, e `git ls-remote origin` num clone (o SSH do Git).
+
+## Ensaio no pi-lab
+
+Restaura o archive real da produção no pi-lab, sem tocar no LXC:
+
+```bash
+ansible-playbook playbooks/lxc.yml --ask-vault-pass --limit proxmox,pi_staging
+ansible-playbook playbooks/pi-recuperacao.yml --ask-vault-pass --limit pi_staging
+ansible-playbook playbooks/forgejo-restore.yml --ask-vault-pass --limit pi_staging \
+  -e restore_on_pi=true -e forgejo_restore_confirmation=RESTORE_FORGEJO
+```
+
+Confira: `http://192.168.50.203:3000` lista os repositórios, com o `main` do
+`ansible` igual ao da produção. O pi-lab não tem LUKS: os repositórios ficam
+num volume sem criptografia, então limpe no fim:
+
+```bash
+ansible-playbook playbooks/pi-lab-limpar.yml --ask-vault-pass
+```
