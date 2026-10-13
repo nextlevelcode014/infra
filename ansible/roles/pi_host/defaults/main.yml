@@ -1,6 +1,6 @@
 ---
-# Base do Raspberry Pi: tudo que o BOOTSTRAP.md do self-hosted fazia à mão
-# antes de subir um serviço. Serviços do Pi dependem deste role
+# Base do Raspberry Pi: o que precisa existir no host antes de subir um
+# serviço. Serviços do Pi dependem deste role
 # (meta/main.yml), então ele roda antes de qualquer um deles.
 
 pi_packages:

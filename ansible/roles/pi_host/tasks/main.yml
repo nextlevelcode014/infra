@@ -130,7 +130,6 @@
 # imagens em /var/lib/containerd (na raiz!) ignorando o data-root; com o
 # snapshotter desligado (overlay2) elas também vão para o volume cifrado.
 # A chave é uma válvula de escape temporária do Docker — rever em upgrades.
-# Conteúdo idêntico ao do BOOTSTRAP.md, para não reiniciar o Docker à toa.
 # Não é o docker_daemon_options do geerlingguy.docker de propósito: ele grava
 # o daemon.json depois de instalar o pacote, e o docker-ce sobe na instalação
 # — num host novo, o Docker criaria /var/lib/docker na raiz, fora do LUKS.

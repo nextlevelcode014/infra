@@ -1,7 +1,6 @@
 # Raspberry Pi — base do host
 
-`playbooks/pi.yml` aplica o role `pi_host`, que substitui as etapas 0 a 0.2
-do `BOOTSTRAP.md` do `self-hosted` (`make host`, `bin/unlock`, `disk-guard`).
+`playbooks/pi.yml` aplica o role `pi_host`, a base do Pi.
 Todo playbook de serviço do Pi já puxa esse role como dependência, então
 rodar só `playbooks/arr-stack.yml` também prepara o host.
 
@@ -9,7 +8,7 @@ O que ele faz:
 
 - instala `git`, `rsync`, `cryptsetup` e o Docker (`geerlingguy.docker`);
 - registra o LUKS em `/etc/crypttab` e `/etc/fstab` com `noauto`;
-- instala `/usr/local/bin/secure-unlock` (o antigo `make unlock`);
+- instala `/usr/local/bin/secure-unlock`, que abre o LUKS e sobe o Docker;
 - põe o data-root do Docker no LUKS e impede o Docker de subir sem ele;
 - deixa o Docker **desabilitado no boot**: quem o sobe é o `secure-unlock`;
 - cria o usuário admin (`ubuntu`, uid 1000) se não existir;
@@ -266,8 +265,9 @@ O `arr_stack` é o modelo. Um role novo precisa de:
    ```
 
    Serviço novo não precisa de link: pode gravar direto em
-   `{{ appdata_dir }}/<serviço>`. O `secure_links` existe para manter os
-   caminhos antigos do `self-hosted` (`storage.map`) sem mexer no compose.
+   `{{ appdata_dir }}/<serviço>`. O `secure_links` serve para compose que usa
+   caminho fixo fora do LUKS (a stack Arr usa `/mnt/media-stack`): o caminho
+   vira symlink para o LUKS sem mexer no compose.
 2. Compose em `/opt/<serviço>` e `docker_compose_v2`, portas publicadas só em
    `{{ ts_ip }}`.
 3. Backup com `include_role: borg_client, tasks_from: backup` e o monitor em

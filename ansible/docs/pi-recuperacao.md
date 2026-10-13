@@ -17,19 +17,13 @@ separam os dados.
 
 Subir é sempre pelo restore, com o archive mais recente da produção. O restore
 escolhe só archives feitos pela máquina de produção (`*_restore_source_host`):
-o Pi antigo deixou archives `vaultwarden-*` e `forgejo-*` no mesmo repositório,
-e sem o filtro o mais recente podia ser um deles.
+o próprio Pi grava archives `vaultwarden-*` e `forgejo-*` no mesmo repositório
+durante uma contingência, e sem o filtro o mais recente podia ser um deles.
 
 ## Preparar (uma vez)
 
-1. **Nenhum cliente pode usar as instâncias antigas do Pi.** Em cada cliente
-   Bitwarden (extensão, celular, desktop), o servidor tem que ser
-   `https://vault.lab.nextlevelcode.pro`, e não `vaultwarden.<tailnet>.ts.net`.
-   Se algo foi salvo só no Pi, exporte desse cliente e importe na produção antes
-   de trocar. Os remotes git têm que apontar para `forgejo-lxc:2222`.
-
-2. **Aplicar o standby.** Isto **derruba** o Forgejo e o Vaultwarden antigos do
-   Pi, os sidecars Tailscale e o Funnel público do Forgejo:
+1. **Aplicar o standby:** compose renderizado, imagens baixadas e os
+   containers parados, sem backup:
 
    ```bash
    ansible-playbook playbooks/pi-recuperacao.yml --ask-vault-pass --limit rpi --check --diff
@@ -40,11 +34,7 @@ e sem o filtro o mais recente podia ser um deles.
    não lista nada, e `ls /etc/borgmatic` não tem `forgejo.yaml` nem
    `vaultwarden.yaml`.
 
-3. **Remover os nós antigos** `forgejo` e `vaultwarden` no console do Tailscale
-   (Machines → Remove). Os containers saíram; os nós ficam listados até serem
-   apagados à mão.
-
-4. **Caddy reserva do Pi.** Fica sempre no ar, só no IP Tailscale do Pi, com
+2. **Caddy reserva do Pi.** Fica sempre no ar, só no IP Tailscale do Pi, com
    o certificado do `*.lab` em dia; só recebe tráfego quando o DNS mandar.
    Precisa do `vault_caddy_pi_cloudflare_token` no vault (token próprio,
    Zone:DNS:Edit em `nextlevelcode.pro`):
@@ -247,10 +237,7 @@ eles recebem a do Pi (`ubuntu`) e o caminho que os dados têm no archive dele.
      -e forgejo_restore_data_archive_path=mnt/secure/appdata/forgejo/forgejo
    ```
 
-   Confira na task "Extrair o archive ..." que a data é a do passo 2. O Pi
-   antigo também deixou archives com a máquina `ubuntu`, mas com outro
-   caminho: se um deles fosse o escolhido, o restore pararia na conferência
-   dos arquivos obrigatórios.
+   Confira na task "Extrair o archive ..." que a data é a do passo 2.
 
 4. **Desligar a contingência no repo:** `proxmox_fora: false` e os blocos
    `CONTINGÊNCIA` do `policy.hujson` comentados de novo, com o `deny` do
