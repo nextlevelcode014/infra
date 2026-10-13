@@ -1,22 +1,4 @@
 ---
-- name: Procurar dados do FMD no caminho antigo
-  ansible.builtin.stat:
-    path: "{{ fmd_legacy_dir }}/fmddata/db/fmd.sqlite"
-  register: fmd_legacy_db
-
-- name: Procurar o banco no volume cifrado
-  ansible.builtin.stat:
-    path: "{{ fmd_data_dir }}/fmddata/db/fmd.sqlite"
-  register: fmd_current_db
-
-- name: Exigir a cópia dos dados antigos antes de subir
-  ansible.builtin.assert:
-    that: not (fmd_legacy_db.stat.exists and not fmd_current_db.stat.exists)
-    fail_msg: >-
-      Há um banco do FMD em {{ fmd_legacy_dir }} e nenhum em {{ fmd_data_dir }}.
-      Copie os dados antes (docs/fmd.md, "Migrar os dados"); subir agora criaria
-      um FMD vazio e um nó Tailscale novo.
-
 - name: Criar o diretório da stack
   ansible.builtin.file:
     path: "{{ fmd_dir }}"

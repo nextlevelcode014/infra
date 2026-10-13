@@ -25,7 +25,7 @@ modelo.
 | Anubis | VPS | `anubis.md` | — |
 | Stack Arr | Pi | `arr-stack.md` | `arr-stack-restore.md` |
 | Exit node | Pi | `exit-node.md` | — |
-| FMD | Pi | `fmd.md` | *falta* |
+| FMD | Pi | `fmd.md` | `fmd-restore.md` |
 | Forgejo | LXC | `forgejo.md` | `forgejo-restore.md` |
 | gluetun | Pi | `gluetun.md` | — |
 | Immich | Pi | `immich.md` | — |

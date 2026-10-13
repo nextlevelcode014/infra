@@ -1,6 +1,6 @@
-# Gerido pelo Ansible — não editar à mão. Origem: self-hosted/fmd/compose.yml.
-# Mudanças: dados no LUKS, porta {{ fmd_web_port }} no IP Tailscale para o
-# Caddy (fmd.lab), e o sidecar opcional (fmd_tailscale_sidecar).
+# Gerido pelo Ansible — não editar à mão. Dados no LUKS, porta {{ fmd_web_port }}
+# no IP Tailscale para o Caddy (fmd.lab) e o sidecar opcional
+# (fmd_tailscale_sidecar).
 services:
 {% if fmd_tailscale_sidecar %}
   # Sidecar Tailscale: é ele que tem identidade de rede. O fmd roda DENTRO

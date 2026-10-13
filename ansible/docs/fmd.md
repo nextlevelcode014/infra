@@ -1,16 +1,19 @@
 # FMD (FindMyDevice) no Raspberry Pi
 
-`playbooks/fmd.yml` aplica o FMD que antes subia por `make up SVC=fmd` no
-`self-hosted`. Ele tem dois acessos:
+`playbooks/fmd.yml` sobe o servidor do FMD no Pi, com um sidecar Tailscale
+que publica o acesso de emergência pelo Funnel e um Anubis na frente dele.
 
-| Acesso | Para quê |
+| O quê | Onde |
 |---|---|
-| `https://fmd.<tailnet>.ts.net` (Funnel, **público**) | emergência: abrir de qualquer aparelho, sem entrar na tailnet |
-| `https://fmd.lab.nextlevelcode.pro` (Caddy, só tailnet) | uso normal |
+| Uso normal (só tailnet) | `https://fmd.lab.nextlevelcode.pro` (Caddy → `ts_ip:8085`, rota em `caddy_lab_pi_routes`) |
+| Emergência (**público**) | `https://fmd.<tailnet>.ts.net` (Funnel do sidecar → Anubis → FMD) |
+| Dados | `/mnt/secure/appdata/fmd` (`fmd_data_dir`): `fmddata/` (SQLite em WAL) e `tailscale-state/` (identidade do nó e certificado do Funnel) |
+| Stack | `/opt/fmd`: `fmd-tailscale`, `fmd-anubis` e `fmd`, os dois últimos na rede do sidecar |
 
-Nada em `*.nextlevelcode.pro` público. O compose é o do `self-hosted`, com os
-dados no LUKS (`/mnt/secure/appdata/fmd`) e a porta `8085` publicada pelo
-sidecar, no IP Tailscale, para o Caddy.
+O Funnel é público de propósito: se o celular sumiu, você abre o FMD de
+qualquer aparelho emprestado, sem tailnet. Nada em `*.nextlevelcode.pro`
+público. O FMD exige HTTPS (Web Crypto), por isso o `fmd.lab` passa pelo
+Caddy e não há acesso por IP.
 
 ## Segurança do acesso público
 
@@ -29,78 +32,75 @@ app de 2FA quase sempre sumiu junto. O que protege:
   navegador. Bot nenhum chega a tentar senha nem a travar a conta. Pela
   tailnet (o app do celular) e pelo `fmd.lab` passa direto (`docs/anubis.md`).
 
-## Backup
+## Antes de aplicar
 
-Diário, no borgmatic do Pi (`/etc/borgmatic/fmd.yaml`, `docs/backup.md`),
-prefixo `fmd-*`. Para só o `fmd` (o sidecar e o
-Funnel continuam) por alguns segundos, porque o SQLite está em modo WAL.
+- **Vault** (`inventory/group_vars/all/vault.yml`, modelo em
+  `vault.yml.example`):
+  - `vault_fmd_registration_token` (`openssl rand -base64 32`): o app pede
+    para criar conta;
+  - `vault_fmd_ts_authkey`: auth key do Tailscale para o sidecar. Só é usada
+    quando o nó não tem estado (instância nova, ou `tailscale-state/`
+    perdido); com o estado restaurado, o nó volta com a identidade de antes.
+- **ACL** (`tailscale/policy.hujson`), já na política: `tag:caddy` →
+  `tag:pi:8085`, membros → `tag:public:443`, e o `nodeAttrs` que dá `funnel`
+  a `tag:public`. Sem o último, o sidecar sobe e o Funnel não abre.
 
-## Primeira aplicação
+## Instalação
 
-No `self-hosted`, o `link-data` nunca foi aplicado ao FMD: o banco, o estado do
-sidecar (identidade do nó e certificado do Funnel) e o `.env` com o token estão
-em `/home/ubuntu/self-hosted/fmd`, na raiz **sem criptografia**. A migração
-leva tudo para o LUKS. O role para sozinho se encontrar banco no caminho antigo
-e nenhum no novo.
-
-1. **Vault.** Os valores estão hoje no Pi:
-
-   ```bash
-   ssh ubuntu@nextlevelcode.<tailnet>.ts.net grep -E '^(TS_AUTHKEY|FMD_REGISTRATIONTOKEN)=' /home/ubuntu/self-hosted/fmd/.env
-   ansible-vault edit inventory/group_vars/all/vault.yml
-   ```
-
-   `TS_AUTHKEY` → `vault_fmd_ts_authkey`, `FMD_REGISTRATIONTOKEN` →
-   `vault_fmd_registration_token`.
-
-2. **ACL do Tailscale** (console): o `tag:caddy` precisa alcançar o Pi em
-   `tcp:8085`.
-
-3. **Testar no pi-lab** (sem sidecar):
+1. **Testar no pi-lab** (sem sidecar nem Anubis: entraria na tailnet como
+   outro `fmd`, com Funnel):
 
    ```bash
    ansible-playbook playbooks/fmd.yml --ask-vault-pass --limit pi_staging
    ```
 
-   Confira: `http://192.168.50.203:8085` responde (a página reclama da falta de
-   HTTPS, e é esperado: o Web Crypto só funciona com HTTPS).
+   Confira: `curl -s -o /dev/null -w '%{http_code}\n' http://192.168.50.203:8085`
+   devolve `200` (a página em si reclama da falta de HTTPS, e é esperado).
 
-4. **Migrar os dados no Pi** (o FMD fica fora por um ou dois minutos):
+2. **Dados.** Com backup a trazer, restaure antes de aplicar
+   (`docs/fmd-restore.md`): o banco e o estado do sidecar voltam, e o Funnel
+   continua em `fmd.<tailnet>.ts.net` sem nó novo. Os passos 3 e 5 não se
+   aplicam.
 
-   ```bash
-   ssh -t ubuntu@nextlevelcode.<tailnet>.ts.net '
-     docker compose -f ~/self-hosted/fmd/compose.yml down &&
-     sudo mkdir -p /mnt/secure/appdata/fmd &&
-     sudo rsync -a ~/self-hosted/fmd/fmddata/ /mnt/secure/appdata/fmd/fmddata/ &&
-     sudo rsync -a ~/self-hosted/fmd/tailscale-state/ /mnt/secure/appdata/fmd/tailscale-state/'
-   ```
+3. **Nó antigo, só sem estado restaurado.** O sidecar vai entrar na tailnet
+   com a auth key como `fmd`. Se um nó `fmd` antigo ainda existir no console, o
+   novo vira `fmd-1` e o Funnel muda de nome: remova o antigo antes de
+   aplicar (console → Machines). É manual porque mexer em nós é do console.
 
-   Confira: `sudo ls /mnt/secure/appdata/fmd/fmddata/db` mostra o `fmd.sqlite`, e
-   `sudo ls /mnt/secure/appdata/fmd/tailscale-state` o `tailscaled.state`.
+   Confira: o console não lista nenhum nó `fmd`.
 
-5. **Aplicar no Pi:**
+4. **Aplicar no Pi e no Caddy** (o do Proxmox e o reserva do Pi leem a mesma
+   rota):
 
    ```bash
    ansible-playbook playbooks/fmd.yml --ask-vault-pass --limit rpi
    ansible-playbook playbooks/caddy.yml --ask-vault-pass
+   ansible-playbook playbooks/caddy-pi.yml --ask-vault-pass
    ```
 
    Confira:
 
    ```bash
    ssh ubuntu@nextlevelcode.<tailnet>.ts.net docker exec fmd-tailscale tailscale funnel status
-   curl -s -o /dev/null -w '%{http_code}\n' https://fmd.<tailnet>.ts.net/
    curl -s -o /dev/null -w '%{http_code}\n' https://fmd.lab.nextlevelcode.pro/
    ```
 
-   O Funnel continua em `fmd.<tailnet>.ts.net` (mesmo nó, sem nova aprovação),
-   os dois respondem `200`, e o login com a sua conta mostra os aparelhos.
+   O primeiro mostra `Funnel on` com proxy para `127.0.0.1:8923` (o Anubis),
+   e o segundo devolve `200`. No console, o nó `fmd` tem `tag:containers` e
+   `tag:public`.
 
-6. **Apagar a cópia em claro na raiz.** Só depois do passo 5 conferido:
+5. **Conta, só em instância nova.** No app FMD do celular: servidor
+   `https://fmd.lab.nextlevelcode.pro` (o celular na tailnet), token de
+   cadastro do vault e a senha longa da seção acima. É manual porque a conta
+   nasce no app.
 
-   ```bash
-   ssh -t ubuntu@nextlevelcode.<tailnet>.ts.net 'sudo rm -rf ~/self-hosted/fmd/fmddata ~/self-hosted/fmd/tailscale-state ~/self-hosted/fmd/.env'
-   ```
+   Confira: o login em `https://fmd.lab.nextlevelcode.pro` mostra o aparelho
+   com a última localização.
+
+6. **Funnel de fora** (dados móveis, sem tailnet): abrir
+   `https://fmd.<tailnet>.ts.net`.
+
+   Confira: aparece o desafio do Anubis, depois o login do FMD.
 
 7. **Primeiro backup:**
 
@@ -108,4 +108,48 @@ e nenhum no novo.
    ssh -t ubuntu@nextlevelcode.<tailnet>.ts.net sudo borgmatic -c /etc/borgmatic/fmd.yaml --verbosity 1 --stats
    ```
 
-A partir daqui, não use mais `make up SVC=fmd` no `self-hosted`.
+   Confira: os monitores *FMD*, *FMD (Funnel)* e *Backup FMD* ficam verdes no
+   Uptime Kuma.
+
+## Backup
+
+Prefixo `fmd-*`, no borgmatic do Pi (`/etc/borgmatic/fmd.yaml`,
+`docs/backup.md`). Leva `fmddata/` e o `tailscale-state/`: num Pi
+reconstruído, o Funnel volta com a mesma URL. Para só o `fmd` por alguns
+segundos, porque o SQLite está em WAL; o sidecar e o Funnel continuam.
+Monitor *Backup FMD*. Restore: `docs/fmd-restore.md`.
+
+## Operação
+
+- **Reiniciar a stack: `up -d --force-recreate`, nunca `restart`.** O `fmd`
+  e o `fmd-anubis` vivem na rede do sidecar. O `restart` reinicia os três ao
+  mesmo tempo, e os dois tentam entrar numa rede que ainda não existe e
+  ficam parados. O `up` respeita a ordem do compose:
+
+  ```bash
+  ssh ubuntu@nextlevelcode.<tailnet>.ts.net sudo docker compose -f /opt/fmd/compose.yml up -d --force-recreate
+  ```
+
+  Confira: `docker ps --filter name=fmd` mostra os três `Up`.
+
+- **Funnel fora com o `fmd.lab` no ar** (monitor *FMD (Funnel)* vermelho,
+  "socket disconnected before secure TLS connection"): a conexão da internet
+  não chega ao sidecar. Teste as entradas do Funnel uma a uma, de fora da
+  tailnet:
+
+  ```bash
+  for ip in $(dig +short @9.9.9.9 fmd.<tailnet>.ts.net A); do
+    curl -sS -m 20 --resolve fmd.<tailnet>.ts.net:443:$ip -o /dev/null \
+      -w "$ip %{http_code}\n" https://fmd.<tailnet>.ts.net/api/v1/version
+  done
+  ```
+
+  Todas falhando: recrie a stack (acima), para o sidecar se registrar de
+  novo. Só uma falhando com a config igual: é do lado do Tailscale; espere e,
+  se persistir, chamado no suporte com os IPs e o horário.
+
+## Limitações
+
+- O monitor *FMD (Funnel)* passa pelo `/api/v1/version`, o único caminho que o
+  Anubis libera da internet. Ele prova que o Funnel chega ao FMD, não que o
+  login funciona.
