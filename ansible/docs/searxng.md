@@ -1,62 +1,85 @@
 # SearXNG no Raspberry Pi
 
-`playbooks/searxng.yml` aplica o SearXNG que antes subia por
-`make up SVC=searxng` no `self-hosted`. O `searxng-core` sai pela VPN: vive na
-netns do gluetun, que publica a WebUI na porta `8082` do IP Tailscale do Pi. O
-acesso passa a ser `https://searxng.lab.nextlevelcode.pro`, pelo Caddy do Proxmox.
-O sidecar Tailscale (`searxng.<tailnet>.ts.net`) **sai**.
+`playbooks/searxng.yml` sobe o SearXNG no Pi, saindo pela VPN: o
+`searxng-core` vive na rede do gluetun (`docs/gluetun.md`), que publica a
+WebUI na porta `8082` do IP Tailscale.
 
-O `settings.yml` agora é renderizado pelo Ansible
-(`roles/searxng/templates/settings.yml.j2`), com o `secret_key` vindo do vault.
-Para mudar uma engine, edite o template e reaplique.
+| O quê | Onde |
+|---|---|
+| Interface | `https://searxng.lab.nextlevelcode.pro` (Caddy → `ts_ip:8082`, rota em `caddy_lab_pi_routes`) |
+| Config | `/mnt/secure/appdata/searxng/core-config` (`searxng_config_dir`): o `settings.yml` renderizado |
+| Stack | `/opt/searxng`: `searxng-core` (na rede do gluetun) e `searxng-valkey` (cache, na `vpn_net`) |
 
-## Testar no pi-lab
+O `settings.yml` sai de `roles/searxng/templates/settings.yml.j2`: engines
+ligadas e desligadas, timeouts e o `secret_key`, que vem do vault. Mudar uma
+engine é editar o template e reaplicar.
 
-```bash
-ansible-playbook playbooks/searxng.yml --ask-vault-pass --limit pi_staging
-```
+## Antes de aplicar
 
-Confira: `curl -s -o /dev/null -w '%{http_code}\n' http://192.168.50.203:8082/`
-deve responder `200`.
+- **Vault:** `vault_searxng_secret_key` (`openssl rand -hex 32`). Ele assina
+  os cookies das preferências: trocar desloga todos os navegadores.
+- **gluetun** com a config WireGuard (`docs/gluetun.md`, "Antes de aplicar").
+  O `searxng.yml` aplica o role do gluetun como dependência.
+- **ACL** (`tailscale/policy.hujson`), já na política: `tag:caddy` →
+  `tag:pi:8082`. Sem ele, o Caddy dá timeout sem erro nenhum no SearXNG.
 
-## Primeira aplicação no Pi
+## Instalação
 
-1. Copiar o `secret_key` atual para o vault. Com o mesmo valor, ninguém perde
-   as preferências salvas no navegador.
+1. **Testar no pi-lab:**
 
    ```bash
-   ssh ubuntu@nextlevelcode sudo grep secret_key /mnt/secure/appdata/searxng/core-config/settings.yml
-   ansible-vault edit inventory/group_vars/all/vault.yml
+   ansible-playbook playbooks/searxng.yml --ask-vault-pass --limit pi_staging
    ```
 
-   O valor vai em `vault_searxng_secret_key`.
+   Confira: `curl -s -o /dev/null -w '%{http_code}\n' http://192.168.50.203:8082/`
+   devolve `200`.
 
-2. Aplicar o gluetun (porta `8082` nova; o role reinicia o `qbittorrent` e o
-   `searxng-core`), o SearXNG e o Caddy:
+2. **Aplicar no Pi e no Caddy** (o do Proxmox e o reserva do Pi leem a mesma
+   rota):
 
    ```bash
-   ansible-playbook playbooks/gluetun.yml --ask-vault-pass --limit rpi
    ansible-playbook playbooks/searxng.yml --ask-vault-pass --limit rpi --check --diff
    ansible-playbook playbooks/searxng.yml --ask-vault-pass --limit rpi
    ansible-playbook playbooks/caddy.yml --ask-vault-pass
+   ansible-playbook playbooks/caddy-pi.yml --ask-vault-pass
    ```
 
-3. Conferir:
+   Confira: `curl -s -o /dev/null -w '%{http_code}\n' https://searxng.lab.nextlevelcode.pro/`
+   devolve `200`, e uma busca traz resultados.
 
-   ```bash
-   curl -s -o /dev/null -w '%{http_code}\n' https://searxng.lab.nextlevelcode.pro/
-   ssh ubuntu@nextlevelcode docker compose ls --filter name=searxng
-   ```
+3. **Monitor:** o *SearXNG* já está em `group_vars/vps/monitors.yml`.
 
-   O primeiro deve responder `200`; o segundo, mostrar `/opt/searxng/compose.yml`.
+   Confira: fica verde no Uptime Kuma.
 
-   Se o Caddy der timeout, é a ACL do Tailscale: o grant `tag:caddy` → Pi
-   precisa liberar `tcp:8082`. O mesmo aconteceu com o Vaultwarden (ver o plano de
-   migração no `self-hosted`).
+## Backup
 
-4. Remover o nó antigo `searxng` do console do Tailscale (Machines → `searxng`
-   → Remove). O container do sidecar o Compose já removeu; o nó fica no
-   console até ser apagado à mão, porque a API exigiria outro token só para isso.
-   Confira que ele não aparece mais em `tailscale status`.
+Nenhum: a config inteira vem do repo e do vault, e o Valkey é só cache. As
+preferências de cada pessoa ficam no cookie do navegador.
 
-A partir daqui, não use mais `make up SVC=searxng` no `self-hosted`.
+## Operação
+
+- **Engine falhando** (busca pela metade, "timeout" ou "unexpected crash"
+  numa engine): veja as estatísticas que o próprio SearXNG mantém, desde o
+  último restart:
+
+  ```bash
+  ssh ubuntu@nextlevelcode.<tailnet>.ts.net 'curl -s "http://$(tailscale ip -4):8082/stats/errors"'
+  ```
+
+  Ou `https://searxng.lab.nextlevelcode.pro/stats` no navegador, com tempo de
+  resposta e confiabilidade por engine. O log do container quase não registra
+  timeout. Engine que falha sempre sai no `settings.yml.j2` (`disabled:
+  true`, com um comentário do porquê), como o Brave e o Pinterest, que pela
+  VPN são bloqueados ou têm o parser quebrado.
+
+- **Sem rede depois de recriar o gluetun:** o role do gluetun recria o
+  `searxng-core` sozinho (`docs/gluetun.md`, "Operação").
+
+- **Atualizar:** a imagem é `latest` e o `pi-atualizar.yml` a puxa. Engine
+  que volta a funcionar depois de uma atualização pode ser religada.
+
+## Limitações
+
+- Tudo sai pelo IP da ProtonVPN, compartilhado e conhecido: buscadores
+  grandes bloqueiam ou pedem captcha com frequência, e por isso o Google está
+  desligado.

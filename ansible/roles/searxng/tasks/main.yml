@@ -8,8 +8,7 @@
     mode: "0750"
   register: searxng_stack_dir_result
 
-# O container roda como uid 977 e escreve aqui (limiter.toml). Antes era um
-# chown manual depois do link-data.
+# O container roda como uid 977 e escreve aqui (limiter.toml).
 - name: Criar o diretório de config no volume cifrado
   ansible.builtin.file:
     path: "{{ searxng_config_dir }}"
@@ -34,7 +33,7 @@
     dest: "{{ searxng_dir }}/compose.yml"
     mode: "0644"
 
-# remove_orphans tira o sidecar tailscale-searxng que o compose antigo tinha.
+# remove_orphans tira container do projeto que já não está no compose.
 - name: Subir o SearXNG
   community.docker.docker_compose_v2:
     project_src: "{{ searxng_dir }}"
