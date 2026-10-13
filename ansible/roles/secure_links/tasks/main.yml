@@ -25,8 +25,8 @@
     mode: "0775"
   loop: "{{ secure_links_paths }}"
 
-# Sem force, igual ao bin/link-data: se o caminho já for um diretório real,
-# falha em vez de apagar dados. Mova à mão e rode de novo.
+# Sem force: se o caminho já for um diretório real, falha em vez de apagar
+# dados. Mova à mão e rode de novo.
 - name: Criar os symlinks para o volume cifrado
   ansible.builtin.file:
     src: "{{ appdata_dir }}{{ item }}"

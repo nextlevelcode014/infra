@@ -34,9 +34,7 @@ modelo.
 | Uptime Kuma | VPS | `uptime-kuma.md` | seção no próprio doc (sem role) |
 | Vaultwarden | LXC | `vaultwarden.md` | `vaultwarden-restore.md` |
 
-*falta* = o playbook existe, o doc não. Os docs anteriores a este padrão
-vão sendo adaptados um serviço por PR (#65); até lá, alguns ainda contam a
-migração do `self-hosted`.
+*falta* = o playbook existe, o doc não.
 
 ## Regras
 

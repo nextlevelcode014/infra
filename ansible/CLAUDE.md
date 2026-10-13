@@ -114,14 +114,14 @@ reserva: serviço novo do Pi entra ali, não no Caddyfile. Ida e volta em
 | `forgejo` | compose do Forgejo + Postgres |
 | `vaultwarden` | compose do Vaultwarden |
 | `pi_host` | base do Pi: LUKS no crypttab/fstab, `secure-unlock`, Docker com data-root cifrado, redes, disk-guard |
-| `secure_links` | symlinks de caminhos antigos para o LUKS (o `bin/link-data`); recebe `secure_links_paths` |
+| `secure_links` | symlinks para o LUKS de caminhos fixos que um compose usa fora dele (a stack Arr); recebe `secure_links_paths` |
 | `borg_client` | Borg + chave + senha + known_hosts + borgmatic com um timer por host; dependência de todo role com backup/restore. `tasks_from: backup` gera o config de um serviço (`docs/backup.md`) |
-| `gluetun` | gateway VPN do Pi (compose do `self-hosted/gluetun`) |
-| `arr_stack` | stack Arr do Pi (compose do `self-hosted/arr`) |
+| `gluetun` | gateway VPN do Pi (ProtonVPN, killswitch); recria os dependentes presos a um gluetun antigo |
+| `arr_stack` | stack Arr do Pi (Jellyfin, *arr, qBittorrent pela VPN, decluttarr) |
 | `searxng` | SearXNG do Pi; `settings.yml` renderizado, porta publicada pelo gluetun |
 | `adguard` | AdGuard do Pi; DNS em `lan_ip` e `ts_ip`, sem sidecar |
 | `fmd` | FMD do Pi; sidecar com Funnel opcional (`fmd_tailscale_sidecar`), Anubis no caminho do Funnel (`fmd_anubis`) |
-| `exit_node` | exit node `vpn-exit` (compose do `self-hosted/exit-node`, sem mudança) |
+| `exit_node` | exit node `vpn-exit` saindo pela ProtonVPN, com config WireGuard própria |
 | `nextcloud` | mastercontainer do AIO (os outros containers são do próprio AIO), coturn e o serve do host |
 | `anubis` | Anubis da VPS, uma instância por serviço (`anubis_instances`); `tasks_from: policy` só renderiza a política, para um Anubis em outra stack (FMD) |
 | `vps_host` | base de toda VPS: UFW (só 80/443 + `tailscale0`), sshd sem senha nem root, unattended-upgrades, fail2ban de fallback |
