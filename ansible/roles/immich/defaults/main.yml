@@ -1,6 +1,4 @@
 ---
-# Mesmo nome de projeto Compose ("immich") do self-hosted: ao aplicar pela
-# primeira vez, o Compose adota os containers e os volumes nomeados.
 immich_dir: /opt/immich
 
 # Fixada como em produção: o dump do banco só restaura na mesma versão.

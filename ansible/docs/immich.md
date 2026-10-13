@@ -1,70 +1,107 @@
 # Immich no Raspberry Pi
 
-`playbooks/immich.yml` aplica o Immich que antes subia por `make up SVC=immich`
-no `self-hosted`. O compose é o mesmo, com duas mudanças:
+`playbooks/immich.yml` sobe o Immich no Pi em `/opt/immich`, com o acesso só
+pelo Caddy.
 
-- **sem o sidecar Tailscale.** O acesso passa a ser só
-  `https://immich.lab.nextlevelcode.pro`, pelo Caddy do Proxmox;
-- a porta `2283` é publicada no IP Tailscale do Pi, para o Caddy chegar.
+| O quê | Onde |
+|---|---|
+| Interface e apps | `https://immich.lab.nextlevelcode.pro` (Caddy → `ts_ip:2283`, rota em `caddy_lab_pi_routes`) |
+| Fotos e vídeos | `/mnt/secure/appdata/immich/upload` (`immich_upload_location`), no LUKS |
+| Banco | `/mnt/secure/appdata/immich/postgres` (`immich_db_data_location`), no LUKS |
+| Stack | `/opt/immich`: `immich_server`, `immich_machine_learning`, `immich_redis`, `immich_postgres` |
 
-A versão fica fixa em `immich_version` (hoje `v3`): o dump do banco só restaura
-na mesma versão.
+A versão fica fixa em `immich_version` (hoje `v3`): o dump do banco só
+restaura na mesma versão, então atualizar é trocar essa variável de
+propósito. O compose parte do oficial do Immich
+(`roles/immich/templates/compose.yml.j2`, link no cabeçalho), com a porta só
+no IP Tailscale.
+
+## Antes de aplicar
+
+- **Vault:** `vault_immich_db_password`, **só letras e números**. O `.env` é
+  `env_file`, e o Compose interpola `$` nele: o Postgres receberia outra
+  senha, sem erro.
+- **ACL** (`tailscale/policy.hujson`), já na política: `tag:caddy` →
+  `tag:pi:2283`.
+
+## Instalação
+
+1. **Testar no pi-lab** (senha de banco de mentira em
+   `group_vars/pi_staging/vars.yml`):
+
+   ```bash
+   ansible-playbook playbooks/immich.yml --ask-vault-pass --limit pi_staging
+   ```
+
+   Confira: `curl -s http://192.168.50.203:2283/api/server/ping` devolve
+   `{"res":"pong"}`.
+
+2. **Aplicar no Pi e no Caddy** (o do Proxmox e o reserva do Pi leem a mesma
+   rota):
+
+   ```bash
+   ansible-playbook playbooks/immich.yml --ask-vault-pass --limit rpi --check --diff
+   ansible-playbook playbooks/immich.yml --ask-vault-pass --limit rpi
+   ansible-playbook playbooks/caddy.yml --ask-vault-pass
+   ansible-playbook playbooks/caddy-pi.yml --ask-vault-pass
+   ```
+
+   Confira: `https://immich.lab.nextlevelcode.pro` abre, e o monitor *Immich*
+   fica verde.
+
+3. **Admin, só em instância nova.** O primeiro acesso à interface cria a conta
+   de admin. É manual porque a senha não deve passar pelo repo.
+
+   Confira: o login funciona e a página de administração abre.
+
+4. **Apps** (celular, desktop): servidor `https://immich.lab.nextlevelcode.pro`,
+   com o aparelho na tailnet.
+
+   Confira: o upload de uma foto e de um vídeo aparece na interface.
 
 ## Backup
 
-Pronto, mas **desligado** (`immich_backup_enabled: false`): o repositório Borg
-compartilhado tem cota de 10 GB e as fotos têm ~30 GB. Quando o plano for
-ampliado, mude para `true` em `roles/immich/defaults/main.yml`, acrescente
-`immich: Immich` em `uptime_kuma_backups` (`group_vars/vps/monitors.yml`) e
-reaplique `playbooks/immich.yml` e `playbooks/uptime-kuma.yml`.
-
-Ligado, ele entra no borgmatic do Pi, depois dos outros serviços
-(`/etc/borgmatic/immich.yaml`, `docs/backup.md`): `pg_dump` para dentro do `UPLOAD_LOCATION` e
-`borg create` dele no repositório compartilhado, prefixo `immich-*`, sem thumbs
-e vídeos re-encodados (o Immich regenera). Não para os containers.
+**Desligado** (`immich_backup_enabled: false`): o repositório Borg
+compartilhado tem cota de 10 GB e as fotos têm ~30 GB (#31).
 
 **Enquanto estiver desligado, o único backup é o de 28/09 no omarchy**
 (`/home/sia/immich-backup-temp`, senha em `/root/.borg-immich-pass` no Pi).
 Não apague nenhum dos dois antes do primeiro backup no repositório
 compartilhado.
 
-## Primeira aplicação
+O config já está pronto. Para ligar, quando o plano for ampliado:
 
-A troca de acesso é de uma vez: ao aplicar, o sidecar sai e
-`immich.<tailnet>.ts.net` para de responder. Tenha o celular em mãos para trocar
-a URL logo depois.
-
-1. **Vault.** A senha do banco está hoje no Pi:
+1. `immich_backup_enabled: true` em `roles/immich/defaults/main.yml`, e
+   `immich: Immich` em `uptime_kuma_backups` (`group_vars/vps/monitors.yml`).
+2. Reaplicar:
 
    ```bash
-   ssh ubuntu@nextlevelcode sudo grep '^DB_PASSWORD=' /mnt/secure/env/immich.env
-   ansible-vault edit inventory/group_vars/all/vault.yml
-   ```
-
-   O valor vai em `vault_immich_db_password`.
-
-2. **ACL do Tailscale** (console): o `tag:caddy` precisa alcançar o Pi em
-   `tcp:2283`.
-
-3. **Aplicar** (recria o `immich_server` e remove o `immich_tailscale`; o banco
-   não é tocado):
-
-   ```bash
-   ansible-playbook playbooks/immich.yml --ask-vault-pass --limit rpi --check --diff
    ansible-playbook playbooks/immich.yml --ask-vault-pass --limit rpi
-   ansible-playbook playbooks/caddy.yml --ask-vault-pass
+   ansible-playbook playbooks/uptime-kuma.yml --ask-vault-pass
    ```
 
-   Confira: `https://immich.lab.nextlevelcode.pro` abre o login, e
-   `ssh ubuntu@nextlevelcode docker compose ls --filter name=immich` mostra
-   `/opt/immich/compose.yml`.
+3. Primeiro backup à mão, e conferir o tempo: com o Immich, o borgmatic do Pi
+   precisa terminar antes das 03:10, quando a VPS começa (`docs/backup.md`).
 
-4. **Trocar a URL nos apps** (celular, desktop) para
-   `https://immich.lab.nextlevelcode.pro` e testar o upload de uma foto e de um
-   vídeo.
+   ```bash
+   ssh -t ubuntu@nextlevelcode.<tailnet>.ts.net sudo borgmatic -c /etc/borgmatic/immich.yaml --verbosity 1 --stats
+   ```
 
-5. **Remover o nó `immich` no console do Tailscale** (Machines → `immich` →
-   Remove). O container o Compose já removeu; o nó fica listado até ser apagado
-   à mão.
+   Confira: o monitor *Backup Immich* fica verde.
 
-A partir daqui, não use mais `make up SVC=immich` no `self-hosted`.
+Ligado, ele roda depois dos outros serviços do Pi, com prefixo `immich-*`:
+`pg_dump` para dentro do `upload/` e `borg create` dele, sem thumbs e vídeos
+re-encodados (o Immich gera de novo). **Não para os containers**: o banco sai
+consistente pelo dump, e as fotos não mudam depois de gravadas.
+
+Não há restore automatizado ainda (#29).
+
+## Operação
+
+- **Atualizar:** trocar `immich_version` e reaplicar, lendo antes as notas da
+  versão (o Immich muda o compose e migra o banco entre versões). O
+  `pi-atualizar.yml` só puxa a imagem da tag fixa.
+
+## Limitações
+
+- Sem backup no repositório compartilhado até ampliar a cota (#31).
