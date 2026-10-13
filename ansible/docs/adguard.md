@@ -56,9 +56,32 @@ tinha.
 
    O primeiro devolve o IP; o segundo, `0.0.0.0` (bloqueado).
 
-4. **Nameserver da tailnet no console do Tailscale** (DNS → Nameservers):
-   `<ts_ip>` entra. Mantenha o fallback da Cloudflare. Confira num
-   dispositivo da tailnet que a navegação segue.
+4. **Nameservers da tailnet no console do Tailscale** (DNS → Nameservers),
+   nesta ordem: `<ts_ip>` (AdGuard), depois **Quad9** escolhido na lista
+   de provedores do "Add nameserver" (entra como `9.9.9.9` e já traz os outros
+   endereços do Quad9; o console recusa o `149.112.112.112` à parte). O Quad9
+   é o mesmo upstream do AdGuard (`https://dns.quad9.net/dns-query`,
+   configurado na interface dele), então só um provedor vê as consultas, e
+   com o Pi fora ele ainda bloqueia malware e phishing. É passo de console
+   porque o DNS da tailnet não está na `policy.hujson`.
+
+   O fallback não espera o AdGuard falhar: o Tailscale dispara para os
+   nameservers com um pequeno atraso entre eles e fica com a primeira
+   resposta. Se o AdGuard demora, a consulta sai pelo Quad9 sem bloqueio de
+   anúncio. Domínio bloqueado que às vezes resolve é isso, não falha do
+   AdGuard.
+
+   Confira, num dispositivo da tailnet:
+
+   ```bash
+   tailscale dns status                          # AdGuard e Quad9 entre os resolvers
+   dig +short @100.100.100.100 doubleclick.net   # 0.0.0.0: AdGuard respondendo
+   curl -s https://on.quad9.net | grep -o "YES\|NO"   # YES: termina no Quad9
+   ```
+
+   O `on.quad9.net` diz YES tanto pelo AdGuard quanto pelo fallback, porque
+   os dois caminhos terminam no Quad9. Ele prova que a Cloudflare saiu, não
+   qual caminho a consulta fez.
 
 5. **Caddy:**
 
@@ -121,7 +144,7 @@ O AdGuard escuta no IP da LAN do Pi (`lan_ip`, lido dos fatos), e não em
 `0.0.0.0`. Se esse IP muda (roteador trocado, faixa nova), o DNS da LAN para
 até reaplicar o playbook. A tailnet também perde o AdGuard: o container publica
 a 53 nos dois IPs, e num restart ou reboot não sobe se um deles sumir. Até
-reaplicar, a tailnet segue pelo fallback da Cloudflare.
+reaplicar, a tailnet segue pelo fallback do Quad9.
 
 1. **No roteador novo**, a reserva fixa do Pi (MAC de
    `cat /sys/class/net/eth0/address`) com um IP da faixa nova, e o nome
