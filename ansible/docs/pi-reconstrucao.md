@@ -47,7 +47,7 @@ Sem isto, a reconstrução trava. Confira agora, não no dia do problema.
    ```
 
 4. **Roteador:** se o Pi trocou de placa, o MAC mudou. Atualize a reserva do
-   DHCP no OpenWrt para o MAC novo (`docs/adguard.md`, "Roteador OpenWrt").
+   DHCP no OpenWrt para o MAC novo (`docs/adguard.md`, "Instalação", passo 6).
 
 ## 2. Config, dados e serviços
 

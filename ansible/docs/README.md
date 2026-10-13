@@ -21,7 +21,7 @@ modelo.
 
 | Serviço | Host | Doc | Restore |
 |---|---|---|---|
-| AdGuard | Pi | `adguard.md` | *falta* |
+| AdGuard | Pi | `adguard.md` | `adguard-restore.md` |
 | Anubis | VPS | `anubis.md` | — |
 | Stack Arr | Pi | `arr-stack.md` | `arr-stack-restore.md` |
 | Exit node | Pi | `exit-node.md` | — |
