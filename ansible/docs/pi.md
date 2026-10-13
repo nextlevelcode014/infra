@@ -21,8 +21,50 @@ O que ele faz:
 
 ## Passos manuais
 
-Ficam fora do Ansible porque precisam da passphrase do LUKS ou de login
-interativo, e nenhum dos dois pode viver no repo.
+Ficam fora do Ansible porque precisam da passphrase do LUKS, de login
+interativo ou da mão no disco, e nenhum dos três cabe no repo.
+
+### Instalar o Ubuntu
+
+O SSD é gravado no seu computador, pelo Raspberry Pi Imager, e a `p3` do
+LUKS é criada **antes do primeiro boot**. Não dá para deixar para depois: a
+imagem do Ubuntu sai só com `p1` (boot) e `p2` (raiz), e no primeiro boot o
+cloud-init roda o `growpart`, que estica a `p2` até o fim do disco. Raiz em
+ext4 montada não encolhe, então quem esquece este passo regrava o SSD.
+
+1. **Gravar no Imager:** Raspberry Pi 5 → Other general-purpose OS → Ubuntu →
+   Ubuntu Server 26.04 (64-bit) → o SSD. Em "Edit settings": hostname
+   `nextlevelcode`, usuário **`ubuntu`** (vira o uid 1000, que o `pi_host`
+   espera), SSH ligado só com chave pública (a sua `.pub`). Wi-Fi não: o Pi
+   fica no cabo.
+
+2. **Reservar a `p3`**, com o SSD ainda no seu computador. Ache o disco pelo
+   tamanho (o SSD do Pi tem ~931G) e confira que as partições estão
+   desmontadas (o desktop costuma montar a `p1` sozinho):
+
+   ```bash
+   lsblk -o NAME,SIZE,FSTYPE,MOUNTPOINTS
+   sudo umount /dev/sdX1 /dev/sdX2 2>/dev/null
+   sudo parted /dev/sdX resizepart 2 20GiB
+   sudo parted /dev/sdX mkpart primary 20GiB 100%
+   ```
+
+   A `p3` fica sem filesystem: ela vira LUKS no passo 2 da próxima seção.
+   O ext4 da raiz não precisa de `resize2fs`, porque o cloud-init o estica até
+   os 20GiB no primeiro boot. O `growpart` não acha espaço livre colado na `p2`
+   e não faz nada.
+
+   Confira: `lsblk /dev/sdX` mostra `sdX2` com ~19G e `sdX3` com o resto,
+   sem `FSTYPE`.
+
+3. **Primeiro boot:** SSD no Pi, cabo de rede, fonte. Espere uns minutos (o
+   cloud-init cria o usuário) e entre pela LAN, pelo IP que o roteador deu:
+
+   ```bash
+   ssh ubuntu@<ip-da-lan> lsblk
+   ```
+
+   Deve mostrar `sda2` em `/` com ~19G e `sda3` ainda sem filesystem.
 
 ### Uma vez, num Pi zerado
 
@@ -36,8 +78,9 @@ interativo, e nenhum dos dois pode viver no repo.
 
    Confira do seu computador: `ssh ubuntu@nextlevelcode true`.
 
-2. **Partição LUKS** na partição reservada (`p3`). Guarde a passphrase
-   **fora do Pi**: no Bitwarden acessado de outro dispositivo e em papel.
+2. **Partição LUKS** na `p3` reservada na instalação (no Pi, `/dev/sda3`).
+   Guarde a passphrase **fora do Pi**: no Bitwarden acessado de outro
+   dispositivo e em papel.
    Sem ela, os dados somem — e não pode ficar só no Vaultwarden que roda aqui.
 
    ```bash

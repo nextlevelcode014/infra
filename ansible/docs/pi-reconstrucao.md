@@ -19,8 +19,9 @@ Sem isto, a reconstrução trava. Confira agora, não no dia do problema.
 
 ## 1. Sistema e acesso
 
-1. Instalar Ubuntu Server 26.04 (ARM64) com o usuário `ubuntu` (uid 1000) e
-   SSH ligado.
+1. Instalar Ubuntu Server 26.04 (ARM64) pelo Raspberry Pi Imager, com o usuário
+   `ubuntu` e a `p3` reservada **antes do primeiro boot**: `docs/pi.md`,
+   "Instalar o Ubuntu".
 2. **Tailscale no host.** Antes, remova o nó antigo `nextlevelcode` no console,
    para o nome ficar livre:
 
