@@ -2,9 +2,9 @@
 vaultwarden_restore_confirmation: ""
 vaultwarden_restore_work_dir: "/var/tmp/vaultwarden-restore"
 
-# Caminho padrão dentro do archive Borg (com a barra inicial removida).
-# self-hosted/ legada: home/ubuntu/self-hosted/vaultwarden/vw-data
-# Novo LXC:           opt/vaultwarden/vw-data
+# Caminho do vw-data dentro do archive (o Borg tira a barra inicial). O
+# padrão é o do LXC; o archive do Pi tem mnt/secure/appdata/vaultwarden/vw-data
+# (docs/vaultwarden-restore.md, volta da contingência).
 vaultwarden_restore_data_archive_path: "opt/vaultwarden/vw-data"
 
 # Hostname da máquina cujos backups valem para o restore (o LXC de produção). Archives

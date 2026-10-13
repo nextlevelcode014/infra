@@ -32,7 +32,7 @@ modelo.
 | Nextcloud AIO | Pi | `nextcloud.md` | — |
 | SearXNG | Pi | `searxng.md` | — |
 | Uptime Kuma | VPS | `uptime-kuma.md` | seção no próprio doc (sem role) |
-| Vaultwarden | LXC | *falta* | `vaultwarden-restore.md` |
+| Vaultwarden | LXC | `vaultwarden.md` | `vaultwarden-restore.md` |
 
 *falta* = o playbook existe, o doc não. Os docs anteriores a este padrão
 vão sendo adaptados um serviço por PR (#65); até lá, alguns ainda contam a

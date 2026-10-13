@@ -60,8 +60,8 @@
   when: not vaultwarden_standby
 
 # Standby: imagens baixadas (o restore não depende de registry na hora do
-# desastre) e nenhum container rodando. remove_orphans tira também os sidecars
-# Tailscale da instância antiga do self-hosted, que usava o mesmo projeto.
+# desastre) e nenhum container rodando. remove_orphans tira também container
+# do projeto que já não está no compose.
 - name: Baixar as imagens (standby)
   community.docker.docker_compose_v2_pull:
     project_src: "{{ vaultwarden_dir }}"
