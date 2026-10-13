@@ -1,7 +1,6 @@
 ---
-# Tailscale exit node que sai pela ProtonVPN. O compose é o do self-hosted,
-# sem mudança: as regras de roteamento e a trava contra vazamento estão
-# explicadas nele.
+# Tailscale exit node que sai pela ProtonVPN. As regras de roteamento e a
+# trava contra vazamento estão explicadas no compose.yml.
 - name: Criar o diretório da stack
   ansible.builtin.file:
     path: "{{ exit_node_dir }}"

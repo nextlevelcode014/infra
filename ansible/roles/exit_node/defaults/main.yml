@@ -1,7 +1,7 @@
 ---
 # O compose fixa o projeto em "exit-node" (name:), então o volume com a
-# identidade do nó (exit-node_tailscale-exit-state) é adotado: o vpn-exit
-# continua o mesmo nó da tailnet.
+# identidade do nó (exit-node_tailscale-exit-state) é sempre o mesmo: o
+# vpn-exit continua o mesmo nó da tailnet entre aplicações.
 exit_node_dir: /opt/exit-node
 
 exit_node_ts_authkey: "{{ vault_exit_node_ts_authkey }}"
