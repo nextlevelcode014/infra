@@ -6,8 +6,15 @@ aqui só se configura o que roda dentro da máquina.**
 ## Comandos
 
 ```bash
-ansible-playbook site.yml --ask-vault-pass
+ansible-playbook playbooks/<serviço>.yml --ask-vault-pass --limit <host> --check --diff
+ansible-playbook site.yml --ask-vault-pass --limit 'all:!pi_staging'
 ```
+
+O normal é o playbook do serviço que mudou. O `site.yml` aplica tudo e
+**recusa o pi-lab** (uma play no começo aborta se o `pi_staging` estiver no
+alvo): os playbooks do Pi miram `pi_hosts`, que inclui o pi-lab, e sem o
+limit cada um rodaria lá também. `-e site_inclui_pi_lab=true` desliga a
+trava.
 
 Todo comando Ansible pede a senha do vault, mesmo para hosts que não usam
 segredo nenhum: o Ansible carrega **todos** os arquivos de

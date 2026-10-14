@@ -73,8 +73,9 @@ ansible-playbook playbooks/adguard.yml --ask-vault-pass --limit rpi
   nos dois.
 - **Restore nunca é efeito colateral:** os `*-restore.yml` são playbooks
   separados e pedem uma confirmação explícita (`-e <serviço>_restore_confirmation=...`).
-- O `site.yml` importa os playbooks principais em ordem; prefira o playbook
-  do serviço que mudou.
+- O `site.yml` importa os playbooks principais em ordem. Ele recusa o
+  pi-lab: rode com `--limit 'all:!pi_staging'`. Mesmo assim, prefira o
+  playbook do serviço que mudou.
 
 ## Estrutura
 

@@ -1,4 +1,24 @@
 ---
+# Aplica tudo, menos o pi-lab: os playbooks do Pi miram pi_hosts, que inclui
+# o pi_staging, e um site.yml sem --limit rodaria cada um também no pi-lab.
+#
+#   ansible-playbook site.yml --ask-vault-pass --limit 'all:!pi_staging'
+#
+# A trava abaixo roda só se o pi-lab estiver no alvo, e aí aborta tudo antes
+# de qualquer mudança (any_errors_fatal). O fail não conecta no host. Para
+# incluir o pi-lab de propósito: -e site_inclui_pi_lab=true.
+- name: Recusar o pi-lab no site.yml
+  hosts: pi_staging
+  gather_facts: false
+  any_errors_fatal: true
+  tasks:
+    - name: Parar se o --limit deixa o pi-lab entrar
+      ansible.builtin.fail:
+        msg: >-
+          O alvo inclui o pi-lab. Rode com --limit 'all:!pi_staging', ou
+          -e site_inclui_pi_lab=true se for de propósito.
+      when: not (site_inclui_pi_lab | default(false) | bool)
+
 - import_playbook: playbooks/lxc.yml
 - import_playbook: playbooks/caddy.yml
 - import_playbook: playbooks/forgejo.yml
