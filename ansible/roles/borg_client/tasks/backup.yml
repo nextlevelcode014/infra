@@ -51,9 +51,9 @@
           # O default do role traz keep_hourly: 3, e o merge é por chave.
           retention: "{{ {'keep_hourly': 0} | combine(borg_backup_retention) }}"
           # O repositório é um só: um check por serviço leria tudo várias
-          # vezes por mês. Os scripts também não faziam check.
-          checks:
-            - name: disabled
+          # vezes por mês. Quem pula o check é o skip_actions (em extra); a
+          # lista vazia só substitui a do role, que agendaria checks.
+          checks: []
           hooks:
             commands: "{{ borg_backup_commands }}"
             # Só fim e falha: o monitor fica verde por backup concluído, e
@@ -62,6 +62,7 @@
               push_url: "{{ borg_backup_push_url }}"
               states: [finish, fail]
           extra:
+            skip_actions: [check]
             # O prune e o check olham só os archives deste serviço.
             match_archives: "sh:{{ borg_backup_name }}-*"
             # Com o LUKS fechado (Pi recém-ligado, timer Persistent), o
