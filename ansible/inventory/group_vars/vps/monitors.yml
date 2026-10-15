@@ -47,13 +47,17 @@ uptime_kuma_monitors:
   - {id: qbittorrent, group: pi, type: http, name: qBittorrent, url: "https://qbittorrent.lab.nextlevelcode.pro"}
   - {id: searxng, group: pi, type: http, name: SearXNG, url: "https://searxng.lab.nextlevelcode.pro"}
   - {id: immich, group: pi, type: http, name: Immich, url: "https://immich.lab.nextlevelcode.pro/api/server/ping"}
-  - {id: nextcloud, group: pi, type: http, name: Nextcloud, url: "https://nextcloud.lab.nextlevelcode.pro/status.php"}
+  # O backup diário do AIO para os containers por ~4 min por volta da 01:00 e o
+  # status.php dá 502; com 6 retries (~7 min) isso não vira e-mail.
+  - {id: nextcloud, group: pi, type: http, name: Nextcloud, url: "https://nextcloud.lab.nextlevelcode.pro/status.php", max_retries: 6}
   - {id: fmd, group: pi, type: http, name: FMD, url: "https://fmd.lab.nextlevelcode.pro"}
   # O Funnel entra pela infraestrutura do Tailscale direto no Pi, sem passar
   # pela VPS; resolve por DNS público, então vê o que a internet vê. Passa
   # pelo Anubis: só o /api/v1/version escapa do desafio (que responde 200 e
-  # deixaria o monitor sempre verde).
-  - {id: fmd-funnel, group: pi, type: http, name: "FMD (Funnel)", url: "https://fmd.<tailnet>.ts.net/api/v1/version"}
+  # deixaria o monitor sempre verde). Daqui (VPS, Alemanha) até o Pi o caminho
+  # oscila por poucos minutos várias vezes ao dia; com 10 retries (~11 min) só
+  # queda de verdade vira e-mail. O Funnel é só para emergência: o atraso não pesa.
+  - {id: fmd-funnel, group: pi, type: http, name: "FMD (Funnel)", url: "https://fmd.<tailnet>.ts.net/api/v1/version", max_retries: 10}
 
   # --- Proxmox --------------------------------------------------------------
   - {id: proxmox-ping, group: proxmox, type: ping, name: "Proxmox (ping)", hostname: <proxmox_host>}
