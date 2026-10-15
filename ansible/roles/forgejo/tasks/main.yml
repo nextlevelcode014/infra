@@ -46,13 +46,16 @@
     - forgejo
     - forgejo/conf
 
+# É o PGDATA: o Postgres só sobe com ele no próprio usuário (uid 70 na imagem
+# alpine) e em 0700, e o entrypoint corrige isso a cada start. Pôr outro dono
+# aqui tiraria a escrita do banco em produção até o próximo restart.
 - name: Criar diretório do PostgreSQL
   ansible.builtin.file:
     path: "{{ forgejo_dir }}/postgres"
     state: directory
-    owner: root
+    owner: "70"
     group: root
-    mode: "0755"
+    mode: "0700"
 
 - name: Renderizar docker-compose.yml
   ansible.builtin.template:
