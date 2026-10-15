@@ -62,6 +62,7 @@ ansible-playbook playbooks/pi-completo.yml --ask-vault-pass --limit rpi \
 | restores | Arr, AdGuard e FMD (com o estado do nó do Funnel) voltam do Borg |
 | serviços | gluetun, Arr, SearXNG, AdGuard, FMD, Immich, exit-node, Nextcloud |
 | `pi-recuperacao.yml` | Forgejo e Vaultwarden em standby, **sem** restore |
+| `caddy-pi.yml` | Caddy reserva do `*.lab`, só no IP Tailscale; atende quando o `*.lab` da Cloudflare aponta para o Pi |
 
 Sem o `-e pi_restaurar_tudo=RESTAURAR_PI`, nada é restaurado e os serviços
 sobem vazios.

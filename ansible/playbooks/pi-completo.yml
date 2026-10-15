@@ -32,3 +32,4 @@
 - import_playbook: exit-node.yml
 - import_playbook: nextcloud.yml
 - import_playbook: pi-recuperacao.yml
+- import_playbook: caddy-pi.yml
