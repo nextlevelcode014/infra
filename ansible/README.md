@@ -2,34 +2,8 @@
 
 Configuração das máquinas do homelab da NextLevelCode: o que roda dentro de
 cada máquina, do sistema aos serviços. Criar máquina (os containers do
-Proxmox) é do repo [`terraform`](https://forge.nextlevelcode.pro/nextlevelcode/terraform); aqui só se configura.
-
-## As máquinas
-
-```
-                        internet
-                           │
-              Cloudflare (forge, status)
-                           │
-          ┌────────────────┴────────────────┐
-          │  VPS Hetzner (`hetzner`)         │  domínios públicos,
-          │  Caddy · Anubis · Uptime Kuma    │  monitoramento fora de casa
-          └────────────────┬────────────────┘
-                           │ tailnet (Tailscale)
-        ┌──────────────────┴──────────────────┐
-        │                                     │
-┌───────┴────────────────────┐   ┌────────────┴───────────────────────┐
-│ Proxmox (`pve`, notebook)  │   │ Raspberry Pi 5 (`nextlevelcode`)   │
-│ LXCs: Caddy (*.lab),       │   │ LUKS em /mnt/secure; Jellyfin e    │
-│ Forgejo, Vaultwarden,      │   │ *arr, AdGuard, FMD, SearXNG,       │
-│ pi-lab (staging do Pi)     │   │ Immich, Nextcloud, exit node;      │
-│                            │   │ reserva do Forgejo e Vaultwarden   │
-└────────────────────────────┘   └────────────────────────────────────┘
-```
-
-Os serviços privados ficam em `https://<serviço>.lab.nextlevelcode.pro`, só
-na tailnet. Tudo é acessado pelo Tailscale; a ACL da tailnet está em
-[`tailscale/`](tailscale/README.md).
+Proxmox) é do [`terraform/`](../terraform/); aqui só se configura. Os
+comandos abaixo rodam de dentro de `ansible/`.
 
 ## Antes de rodar
 
@@ -48,8 +22,8 @@ na tailnet. Tudo é acessado pelo Tailscale; a ACL da tailnet está em
 3. **Tailscale** na máquina de onde se roda: Pi, VPS e Proxmox são
    alcançados pela tailnet.
 
-4. **Repo `terraform` ao lado deste** (`../terraform`), com `terraform apply`
-   feito: os LXCs não estão em arquivo de inventário nenhum, vêm do state.
+4. **`terraform apply` feito em `../terraform`:** os LXCs não estão em
+   arquivo de inventário nenhum, vêm do state.
 
    ```bash
    ansible-inventory --graph
@@ -100,9 +74,3 @@ ansible-playbook playbooks/adguard.yml --ask-vault-pass --limit rpi
   no lugar do Proxmox.
 - [`CLAUDE.md`](CLAUDE.md): o papel de cada playbook e role, as convenções e
   as armadilhas já encontradas. Vale ler antes de mudar qualquer coisa.
-
-## Fluxo de mudança
-
-Nada vai direto para o `main`: branch, PR no Forgejo, squash merge. Passo
-que não dá para automatizar (console, login, token) entra no doc do serviço,
-na ordem em que acontece, com o comando e como conferir.

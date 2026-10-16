@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Configuração das máquinas do homelab. **Criar container é o repo `terraform`;
+Configuração das máquinas do homelab. **Criar container é o `../terraform/`;
 aqui só se configura o que roda dentro da máquina.**
 
 ## Comandos
@@ -39,7 +39,7 @@ Os containers **não** estão em arquivo nenhum: aparecem como recursos
 
 Cada host do grupo `lxc` chega com `ansible_host` (IP fixo da LAN),
 `ansible_user=root`, `ansible_ssh_private_key_file` e `lxc_vmid` — os três
-primeiros definidos em `inventory.tf`, no repo terraform.
+primeiros definidos em `inventory.tf`, em `../terraform/`.
 
 `requirements.yml` traz collections que hoje não são usadas por nenhum
 playbook (`community.proxmox`, `geerlingguy.pip`). Ficam de propósito: serão

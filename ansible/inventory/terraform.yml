@@ -1,6 +1,6 @@
 plugin: cloud.terraform.terraform_provider
 # Resolvido a partir do cwd do ansible-playbook, não do diretório deste
 # arquivo. Rode do root do repo (`ansible-playbook site.yml`) e o caminho
-# cai em `../terraform`, sibling deste repo.
+# cai em `../terraform`, o diretório irmão no repo infra.
 project_path: ../terraform
 

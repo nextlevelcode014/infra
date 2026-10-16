@@ -1,7 +1,7 @@
 # CLAUDE.md
 
 Provisionamento dos containers LXC do homelab no Proxmox. **Aqui só se cria
-infra; configurar o que roda dentro é o repo `ansible`.**
+infra; configurar o que roda dentro é o `../ansible/`.**
 
 Proxmox só é alcançável pela Tailscale — sem ela nada aqui funciona.
 
@@ -50,7 +50,7 @@ datastore `local-lvm`, template Ubuntu 26.04.
    no grupo `staging` (`groups = ["lxc", "staging"]`), para o Ansible poder
    mirar só nela com `--limit staging` e ter `group_vars/staging.yml` próprio.
 3. `terraform apply`.
-4. Ir no repo `ansible` e escrever o role do serviço.
+4. Ir para `../ansible/` e escrever o role do serviço.
 
 Passo 2 é obrigatório: é o recurso `ansible_host` gravado no state que o
 plugin `cloud.terraform` lê como inventário. Sem ele o Ansible não vê a máquina.

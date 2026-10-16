@@ -215,7 +215,7 @@ o disco do Pi.
 
 ### Preparar o pi-lab
 
-1. No repo `terraform`, aplicar o volume `/mnt/secure` e o grupo `pi_staging`
+1. Em `../terraform/`, aplicar o volume `/mnt/secure` e o grupo `pi_staging`
    (recria o pi-lab):
 
    ```bash

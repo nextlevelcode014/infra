@@ -87,7 +87,7 @@ Confira de **fora da tailnet** (4G, ou outro aparelho sem Tailscale):
 ```bash
 curl -s -A 'Mozilla/5.0' https://forge.nextlevelcode.pro/ | grep -io 'not a bot' | head -1
 curl -s -o /dev/null -w '%{http_code}\n' https://forge.nextlevelcode.pro/api/healthz
-git clone https://forge.nextlevelcode.pro/nextlevelcode/ansible.git /tmp/anubis-teste && rm -rf /tmp/anubis-teste
+git clone https://forge.nextlevelcode.pro/nextlevelcode/infra.git /tmp/anubis-teste && rm -rf /tmp/anubis-teste
 curl -s -A 'Mozilla/5.0' https://fmd.<tailnet>.ts.net/ | grep -io 'not a bot' | head -1
 curl -s https://fmd.<tailnet>.ts.net/api/v1/version
 ```
