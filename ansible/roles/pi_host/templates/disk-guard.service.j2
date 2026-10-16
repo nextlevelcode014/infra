@@ -1,8 +1,10 @@
 # Gerido pelo Ansible — não editar à mão. Limiares em roles/pi_host/defaults.
 [Unit]
 Description=Guarda de espaço livre do volume cifrado (para o {{ pi_disk_guard_container }} antes de encher)
-# Sem o volume montado o script sai limpo, mas isto evita rodar à toa no boot.
-RequiresMountsFor={{ secure_mount_dir }}
+# Só roda com o volume já montado. RequiresMountsFor não serve: ele MONTA,
+# o mount puxa o systemd-cryptsetup, e no boot fica um pedido de passphrase
+# pendurado que reaparece no secure-unlock (via systemctl start docker).
+ConditionPathIsMountPoint={{ secure_mount_dir }}
 After=docker.service
 
 [Service]

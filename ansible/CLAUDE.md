@@ -197,6 +197,12 @@ Vale não repetir:
   `shlex.split` + `execvp`, então `VAR=x comando` falha com
   `No such file or directory: 'VAR=x'` (procura um binário com esse nome).
   Para env var inline use `/usr/bin/env VAR=x comando`.
+- **`RequiresMountsFor` no LUKS pede a passphrase.** Ele não espera o mount,
+  ele **monta**: o mount puxa o `systemd-cryptsetup@secure`, que fica
+  esperando senha desde o boot e aparece no terminal no próximo
+  `systemctl start` (o `secure-unlock` pedia três vezes). Unit que só deve
+  rodar com o volume aberto usa `ConditionPathIsMountPoint`, como o
+  `disk-guard`. O drop-in do Docker mantém o `RequiresMountsFor` de propósito.
 - **Handler de reload antes do de restart quebra host novo.** O `apt install
   caddy` já sobe o Caddy do pacote, sem o plugin da Cloudflare; o reload
   manda o Caddyfile novo para esse processo e ele recusa com `unknown module:
