@@ -10,8 +10,13 @@ A VPS fica fora de casa e serve duas coisas:
 
 ## Base
 
-Todo playbook da VPS aplica antes o role `vps_host` (e o `playbooks/vps.yml`
-aplica só ele):
+Na frente da VM fica o **firewall da Hetzner Cloud** (`vps-publica`, do
+`terraform/hetzner/`): só `80`/`443` TCP, `41641` UDP (Tailscale direto) e
+ICMP chegam nela. Ele vale mesmo com o UFW desligado, e é ele que deixa a 22
+fechada desde o boot.
+
+Dentro dela, todo playbook da VPS aplica antes o role `vps_host` (e o
+`playbooks/vps.yml` aplica só ele):
 
 - **UFW:** entrada negada por padrão; abertos só `80` e `443` para a internet
   (IPv4 e IPv6) e tudo que chega pela `tailscale0`. Na tailnet, quem filtra é
@@ -46,7 +51,13 @@ usuário `hetzner` não fica no grupo `docker`.
 
 O que vem antes de o Ansible conseguir entrar, mais o DNS público:
 
-1. **Criar a VPS** (Ubuntu 26.04) com o usuário `hetzner` e sudo sem senha:
+1. **Criar a VPS** (Ubuntu 26.04) com o usuário `hetzner` e sudo sem senha.
+   Reinstalar (*Rebuild* no console, depois de desligar a `rebuild_protection`)
+   mantém o mesmo servidor, então o firewall da Hetzner continua na frente.
+   VPS nova é outro servidor: o `terraform/hetzner/` ainda não sabe criá-la
+   (infra#16), e até ela entrar no Terraform não tem firewall da Hetzner.
+
+   O sudo sem senha:
 
    ```bash
    echo 'hetzner ALL=(ALL) NOPASSWD:ALL' | sudo tee /etc/sudoers.d/hetzner
@@ -76,8 +87,8 @@ O que vem antes de o Ansible conseguir entrar, mais o DNS público:
    O curinga `*.lab` fica como está (Caddy do Proxmox; na contingência,
    Caddy reserva do Pi, `docs/pi-recuperacao.md`). A VPS não atende o `*.lab`.
 
-4. **Base, antes de tudo:** até aqui a VPS está com a 22 pública aberta (só
-   chave, a da criação na Hetzner). O primeiro playbook a fecha:
+4. **Base, antes de tudo:** o primeiro playbook liga o UFW, o sshd endurecido
+   e o resto da base:
 
    ```bash
    ansible-playbook playbooks/vps.yml --ask-vault-pass
