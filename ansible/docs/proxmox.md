@@ -2,7 +2,7 @@
 
 O Proxmox roda num notebook (Lenovo IdeaPad 3 15ALC6) ligado na tomada 24/7.
 `playbooks/proxmox.yml` aplica o role `proxmox_host`, que configura a máquina
-física. Os containers são do `lxc.yml`; criá-los é do repo `terraform`.
+física. Os containers são do `lxc.yml`; criá-los é do `../terraform/`.
 
 ```bash
 ansible-playbook playbooks/proxmox.yml --ask-vault-pass

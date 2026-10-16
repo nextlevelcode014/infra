@@ -36,7 +36,7 @@ some na próxima aplicação**. Mudança de config é no defaults e reaplicar.
 
 ## Instalação
 
-1. **LXC pelo Terraform**, no repo `terraform`:
+1. **LXC pelo Terraform**, em `../terraform/`:
 
    ```bash
    cd ../terraform && terraform plan && terraform apply

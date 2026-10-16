@@ -28,7 +28,7 @@ visíveis sem login. O web só existe pelo domínio público: não há rota no
 
 ## Instalação
 
-1. **LXC pelo Terraform**, no repo `terraform`:
+1. **LXC pelo Terraform**, em `../terraform/`:
 
    ```bash
    cd ../terraform && terraform plan && terraform apply

@@ -3,7 +3,7 @@
 A VPS (`ubuntu-4gb-fsn1-1`, CX23 em Falkenstein) e o firewall da Hetzner
 Cloud na frente dela. Stack separada da do Proxmox, com **state próprio**
 (`hetzner/terraform.tfstate`): um erro aqui não toca os containers, e vice-
-versa. O que roda dentro da VPS é o repo `ansible` (`docs/vps.md`).
+versa. O que roda dentro da VPS é do `ansible/` (`ansible/docs/vps.md`).
 
 ## Firewall
 

@@ -37,7 +37,7 @@
             "ip":  ["tcp:443"],
         },
         // Pi direto: DNS do AdGuard e o coturn do Talk (TURN/STUN + relay; o
-        // intervalo é nextcloud_turn_min/max_port no repo ansible).
+        // intervalo é nextcloud_turn_min/max_port em ansible/).
         {
             "src": ["autogroup:member"],
             "dst": ["tag:pi"],
