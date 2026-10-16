@@ -1,0 +1,14 @@
+# Ignorar: estado local e arquivos com segredo.
+# O terraform.tfvars guarda o token da API do Proxmox — nunca entra no git.
+# O exemplo (terraform.tfvars.example) é versionado de propósito.
+.terraform/
+*.tfstate
+*.tfstate.backup
+crash.log
+terraform.tfvars
+terraform.tfvars.json
+
+# O .terraform.lock.hcl NÃO é ignorado, e isso é de propósito.
+# É ele que fixa as versões dos providers. Sem ele no git, um `terraform init`
+# em outra máquina pode puxar outra versão do bpg/proxmox e mudar o plano sem
+# nenhum aviso. Versione sempre.

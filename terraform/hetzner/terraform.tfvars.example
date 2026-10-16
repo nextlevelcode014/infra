@@ -1,0 +1,2 @@
+# Security → API tokens, leitura e escrita. Guardado no Vaultwarden.
+hcloud_token = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
