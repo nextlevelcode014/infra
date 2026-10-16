@@ -213,6 +213,15 @@ Vale não repetir:
   ele que cria o diretório. Com acesso só pelo Tailscale SSH, ele nunca subiu.
   O `vps_host` cria o `/run/sshd` antes do `validate` e reinicia com
   `systemctl try-restart` (não liga o serviço parado).
+- **O `caddy.service` do pacote roda com `--environ`** e imprime o ambiente
+  no journal a cada start, token da Cloudflare junto. O drop-in do role
+  `caddy` troca o `ExecStart` (com um `ExecStart=` vazio antes, senão o
+  systemd recusa o segundo). Vale para qualquer unit de pacote que receba
+  segredo por `EnvironmentFile`: confira o `ExecStart` antes.
+- **Serviço que escuta no IP Tailscale falha no boot** com `bind: cannot
+  assign requested address` se subir antes do `tailscaled` atribuir o IP. O
+  Caddy do Pi ficou fora até o restart manual. `Restart=on-failure` com
+  `RestartSec` resolve sem depender da ordem do boot.
 
 ## ACL do Tailscale
 

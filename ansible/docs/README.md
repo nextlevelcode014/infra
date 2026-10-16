@@ -15,6 +15,7 @@ modelo.
 | `pi-recuperacao.md` | Pi no lugar do Proxmox (contingência) e a volta |
 | `proxmox.md` | host do Proxmox (notebook) |
 | `vps.md` | base da VPS e VPS nova |
+| `caddy.md` | os três Caddys (Proxmox, VPS, Pi) e a troca do token da Cloudflare |
 | `backup.md` | borgmatic, monitor push e serviço novo com backup |
 
 ### Serviços

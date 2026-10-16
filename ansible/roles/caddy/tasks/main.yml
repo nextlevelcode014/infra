@@ -147,6 +147,12 @@
     group: root
     mode: "0755"
 
+# O ExecStart do pacote usa --environ, que imprime todo o ambiente no journal
+# a cada start, token da Cloudflare incluído. O ExecStart= vazio limpa o do
+# pacote; sem ele o systemd recusa um segundo ExecStart.
+# O Restart cobre o boot: no Pi o Caddy escuta só no IP Tailscale, que pode
+# ainda não existir quando ele sobe (bind: cannot assign requested address),
+# e sem retry o *.lab fica fora até alguém reiniciar à mão.
 - name: Drop-in do systemd com EnvironmentFile
   ansible.builtin.copy:
     dest: "{{ caddy_systemd_drop_in }}"
@@ -156,6 +162,10 @@
     content: |
       [Service]
       EnvironmentFile={{ caddy_env_file }}
+      ExecStart=
+      ExecStart=/usr/bin/caddy run --config {{ caddy_config_dir }}/Caddyfile
+      Restart=on-failure
+      RestartSec=5
   notify:
     - Reload systemd
     - Restart caddy
