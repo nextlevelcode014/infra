@@ -18,7 +18,8 @@ visíveis sem login. O web só existe pelo domínio público: não há rota no
 ## Antes de aplicar
 
 - **Vault** (`inventory/group_vars/all/vault.yml`, modelo em
-  `vault.yml.example`): `vault_forgejo_db_password` e as quatro
+  `vault.yml.example`): `vault_forgejo_db_password`, as duas
+  `vault_forgejo_signing_ssh_*` (seção "Assinatura dos merges") e as quatro
   `vault_forgejo_borg_*`, que são do Borg de todos os serviços.
 - **ACL** (`tailscale/policy.hujson`), já na política: membros da tailnet →
   `tag:forgejo:2222` (Git), `tag:caddy-vps` → `tag:forgejo:3000` (web
@@ -107,6 +108,94 @@ visíveis sem login. O web só existe pelo domínio público: não há rota no
 
    Confira: `ssh -T forgejo` responde com o seu usuário, e
    `git ls-remote origin` funciona num clone (`ssh://git@forgejo-lxc:2222/<org>/<repo>.git`).
+
+## Assinatura dos merges
+
+O squash merge de um PR não reaproveita o commit da branch: o Forgejo cria um
+commit novo no servidor, e a chave de quem escreveu não está lá. Por isso ele
+assina esses commits com uma chave **da instância** (`[repository.signing]`
+no compose, `MERGES=always`). A assinatura diz "mergeado por este Forgejo";
+a autoria continua no autor do commit e na assinatura dele na branch. O
+committer passa a ser `forgejo_signing_name` <`forgejo_signing_email`>
+(`roles/forgejo/defaults/main.yml`).
+
+A chave fica em `forgejo/signing/` (`key` e `key.pub`), escrita pelo role a
+partir do vault, e entra no backup com o resto de `forgejo/`. Na contingência
+o Pi assina com a mesma chave.
+
+### Chave nova (uma vez, ou para trocar)
+
+É manual porque a chave privada não pode passar pelo repo, e o vault só se
+edita com a senha dele.
+
+1. **Gerar**, sem passphrase (o Forgejo assina sem ninguém digitar nada):
+
+   ```bash
+   ssh-keygen -t ed25519 -N '' -C forgejo-signing -f /tmp/forgejo-signing
+   ```
+
+2. **Pôr no vault** o conteúdo de `/tmp/forgejo-signing` em
+   `vault_forgejo_signing_ssh_private_key` (bloco `|`, como no `.example`) e o
+   de `/tmp/forgejo-signing.pub` em `vault_forgejo_signing_ssh_public_key`:
+
+   ```bash
+   ansible-vault edit inventory/group_vars/all/vault.yml
+   ```
+
+   Confira: `ansible-vault view inventory/group_vars/all/vault.yml | grep -c forgejo_signing`
+   dá `2`. Guarde a chave também no Vaultwarden e apague as duas de `/tmp`.
+
+3. **Aplicar** onde o Forgejo está no ar. Reinicia o Forgejo: o push e a web
+   caem por alguns segundos. Qual dos dois vale é o `proxmox_fora` do
+   `inventory/group_vars/all/vars.yml`.
+
+   - `proxmox_fora: false`, Forgejo no LXC do Proxmox:
+
+     ```bash
+     ansible-playbook playbooks/forgejo.yml --ask-vault-pass
+     ```
+
+   - `proxmox_fora: true`, Forgejo no Pi (contingência). Não há playbook só
+     do Forgejo no Pi: o `pi-recuperacao.yml` reaplica também o `pi_host` e o
+     Vaultwarden, então olhe o diff antes. Fora a chave e o compose do
+     Forgejo, ele não deve mudar nada:
+
+     ```bash
+     ansible-playbook playbooks/pi-recuperacao.yml --ask-vault-pass --limit rpi --check --diff
+     ansible-playbook playbooks/pi-recuperacao.yml --ask-vault-pass --limit rpi
+     ```
+
+   Confira, com `<host>` sendo `forgejo` (Proxmox) ou `rpi` (Pi):
+
+   ```bash
+   ansible <host> --ask-vault-pass -m command -a 'curl -s localhost:3000/api/v1/signing-key.ssh'
+   ```
+
+   devolve a chave pública que está no vault.
+
+4. **Testar com um merge:** depois do próximo squash merge,
+
+   ```bash
+   git fetch origin && git log -1 --format='%G? %cn' origin/main
+   ```
+
+   mostra `U Forgejo NextLevelCode`: assinado, mas por uma chave que o seu
+   git ainda não conhece. Na web, o commit aparece como verificado.
+
+5. **Confiar na chave**, em cada computador que confere assinatura: uma linha
+   no `gpg.ssh.allowedSignersFile` (`git config gpg.ssh.allowedSignersFile`
+   mostra qual é), com o e-mail do committer:
+
+   ```bash
+   pub=$(ansible-vault view inventory/group_vars/all/vault.yml \
+     | sed -n 's/^vault_forgejo_signing_ssh_public_key: "\(.*\)"$/\1/p')
+   echo "forgejo@nextlevelcode.pro namespaces=\"git\" $pub" \
+     >> "$(git config gpg.ssh.allowedSignersFile)"
+   ```
+
+   Confira: o `git log` do passo 4 passa a mostrar `G`. Os merges anteriores
+   a esta mudança continuam `N`: assinatura não se põe em commit que já
+   existe sem reescrever o histórico.
 
 ## Backup
 

@@ -45,6 +45,29 @@
   loop:
     - forgejo
     - forgejo/conf
+    - forgejo/signing
+
+# Chave da assinatura dos merges (docs/forgejo.md). O Forgejo procura a
+# privada no mesmo caminho da pública, sem o .pub. Ela entra também no backup
+# do Borg, junto com o resto de forgejo/.
+- name: Instalar a chave de assinatura
+  ansible.builtin.copy:
+    content: "{{ item.content }}"
+    dest: "{{ forgejo_dir }}/forgejo/signing/{{ item.name }}"
+    owner: "{{ forgejo_user }}"
+    group: "{{ forgejo_group }}"
+    mode: "{{ item.mode }}"
+  loop:
+    - name: key
+      content: "{{ forgejo_signing_ssh_private_key | trim }}\n"
+      mode: "0600"
+    - name: key.pub
+      content: "{{ forgejo_signing_ssh_public_key | trim }}\n"
+      mode: "0644"
+  loop_control:
+    label: "{{ item.name }}"
+  no_log: true
+  register: forgejo_signing_key
 
 # É o PGDATA: o Postgres só sobe com ele no próprio usuário (uid 70 na imagem
 # alpine) e em 0700, e o entrypoint corrige isso a cada start. Pôr outro dono
@@ -70,6 +93,18 @@
     state: present
     pull: always
   when: not forgejo_standby
+
+# O Forgejo lê a chave só ao subir. Se o compose mudou, o passo acima já
+# recriou o container; isto cobre a troca só da chave.
+- name: Reiniciar o Forgejo para ler a chave nova
+  community.docker.docker_compose_v2:
+    project_src: "{{ forgejo_dir }}"
+    services: [server]
+    state: restarted
+  when:
+    - not forgejo_standby
+    - forgejo_signing_key is changed
+    - forgejo_compose_render is not changed
 
 # Standby: imagens baixadas (o restore não depende de registry na hora do
 # desastre) e nenhum container rodando. remove_orphans tira também container

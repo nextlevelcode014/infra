@@ -30,6 +30,16 @@ vault_tailscale_authkey: "tskey-auth-CHANGE-ME"
 # exclusiva para este stack.
 vault_forgejo_db_password: "CHANGE-ME"
 
+# Chave SSH com que o Forgejo assina os merges que ele mesmo cria (squash
+# dos PRs). É da instância, não de uma pessoa, e não tem passphrase: o
+# Forgejo assina sem ninguém digitar nada. Como gerar: docs/forgejo.md,
+# "Assinatura dos merges".
+vault_forgejo_signing_ssh_private_key: |
+  -----BEGIN OPENSSH PRIVATE KEY-----
+  CHANGE-ME
+  -----END OPENSSH PRIVATE KEY-----
+vault_forgejo_signing_ssh_public_key: "ssh-ed25519 AAAA... forgejo-signing"
+
 # Repositório Borg único de todos os serviços (prefixo por serviço). O nome
 # "forgejo" é histórico. Caminhos e opções que não são segredo ficam em
 # vars.yml (borg_*). O Pi de recuperação precisa destes valores sem depender

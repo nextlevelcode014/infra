@@ -6,6 +6,11 @@ forgejo_db_image: "postgres:16-alpine"
 forgejo_user: "1000"
 forgejo_group: "1000"
 
+# Identidade de committer dos commits que o Forgejo assina (os squash merges
+# dos PRs). O autor continua sendo quem abriu o PR.
+forgejo_signing_name: "Forgejo NextLevelCode"
+forgejo_signing_email: "forgejo@nextlevelcode.pro"
+
 # Modo standby (Pi de recuperação): compose e imagens prontos, containers
 # parados e sem backup. Quem sobe o serviço é o forgejo-restore.yml,
 # com o archive mais recente da produção. Ver docs/pi-recuperacao.md.

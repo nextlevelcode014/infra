@@ -44,6 +44,8 @@ forgejo_domain: "forge.nextlevelcode.pro"
 forgejo_ssh_domain: "forgejo-lxc"
 forgejo_dir: "/opt/forgejo"
 forgejo_db_password: "{{ vault_forgejo_db_password }}"
+forgejo_signing_ssh_private_key: "{{ vault_forgejo_signing_ssh_private_key }}"
+forgejo_signing_ssh_public_key: "{{ vault_forgejo_signing_ssh_public_key }}"
 
 # Caddy (homelab, privado na tailnet)
 # Domínio wildcard *.lab.nextlevelcode.pro, acessível via Tailscale split

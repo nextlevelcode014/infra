@@ -18,6 +18,16 @@ services:
       - FORGEJO__security__INSTALL_LOCK=true
       - FORGEJO__service__DISABLE_REGISTRATION=true
       - FORGEJO__service__REQUIRE_SIGNIN_VIEW=false
+      # Assinatura dos commits que o próprio Forgejo cria, como o squash dos
+      # PRs. A chave mora no volume de dados (./forgejo/signing).
+      - FORGEJO__repository.signing__FORMAT=ssh
+      - FORGEJO__repository.signing__SIGNING_KEY=/var/lib/gitea/signing/key.pub
+      - FORGEJO__repository.signing__SIGNING_NAME={{ forgejo_signing_name }}
+      - FORGEJO__repository.signing__SIGNING_EMAIL={{ forgejo_signing_email }}
+      # O padrão só assina se o main e os commits do PR já estiverem
+      # assinados (basesigned, commitssigned). Os merges antigos não estão,
+      # então o padrão nunca assinaria o primeiro.
+      - FORGEJO__repository.signing__MERGES=always
     volumes:
       - ./forgejo:/var/lib/gitea
       - ./forgejo/conf:/etc/gitea
