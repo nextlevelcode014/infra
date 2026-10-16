@@ -1,3 +1,4 @@
 node_name          = "proxmox"
 gateway            = "192.168.50.1"
 proxmox_api_token  = "USER@TOKEN!SECRET=xxx"  # crie em Datacenter > Permissions > API Tokens
+proxmox_endpoint   = "https://proxmox.<tailnet>.ts.net:8006"  # nome MagicDNS do Proxmox

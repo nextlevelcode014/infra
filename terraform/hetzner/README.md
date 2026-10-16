@@ -37,6 +37,7 @@ Não dá para gerar pela CLI: o console da Hetzner exige login.
 Confira o firewall, de fora da tailnet (outra rede, ou o celular no 4G):
 
 ```bash
-nc -zv -w 5 <ip-publico-da-vps> 22      # timeout
-nc -zv -w 5 <ip-publico-da-vps> 443     # succeeded
+IP=$(terraform state show -no-color hcloud_server.vps | awk -F'"' '/ ipv4_address /{print $2}')
+nc -zv -w 5 "$IP" 22      # timeout
+nc -zv -w 5 "$IP" 443     # succeeded
 ```

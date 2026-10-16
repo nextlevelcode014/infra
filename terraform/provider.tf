@@ -1,6 +1,6 @@
+# Fica no terraform.tfvars (fora do git): leva o nome da tailnet.
 variable "proxmox_endpoint" {
-  type    = string
-  default = "https://proxmox.<tailnet>.ts.net:8006"
+  type = string
 }
 
 provider "proxmox" {
