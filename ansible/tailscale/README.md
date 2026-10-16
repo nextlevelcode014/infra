@@ -14,7 +14,10 @@ homelab — não compensa para uma tailnet de uma pessoa.
 Depois do merge do PR:
 
 1. Abrir <https://login.tailscale.com/admin/acls/file>.
-2. Colar o conteúdo inteiro de `policy.hujson` e salvar.
+2. Colar o conteúdo inteiro de `policy.hujson`, trocar
+   `<ip-tailscale-do-desktop>` pelo IP real (o que já está no console, ou
+   `tailscale ip -4` no desktop) e salvar. O IP fica fora do repo porque o
+   repo é público; esquecida a troca, o console recusa o save por IP inválido.
 3. Conferir: o save só completa se a seção `tests` passar. Erro de teste = a
    mudança reabriu algo que devia estar fechado; corrija no repo, não no console.
 

@@ -7,8 +7,12 @@
 timezone: America/Fortaleza
 ntp_server: pool.ntp.org
 
+# Tailnet e IPs Tailscale. Os valores reais ficam no vault.yml, fora do git:
+# não são segredo, mas o repo é público e eles mapeiam a rede.
+tailnet: "{{ vault_tailnet }}"
+
 # Proxmox
-proxmox_host: "<proxmox_host>"
+proxmox_host: "{{ vault_proxmox_tailscale_ip }}"
 proxmox_node: "proxmox"
 proxmox_user: "root@pam"
 proxmox_token_id: "ansible"
@@ -22,8 +26,8 @@ proxmox_fora: true
 
 # IPs Tailscale. A VPS não resolve nomes da tailnet, então quem fala com o Pi
 # ou com o Forgejo de lá (Caddy, Anubis, Uptime Kuma) usa o IP.
-pi_tailscale_ip: "<ts_ip>"
-forgejo_tailscale_ip: "{{ pi_tailscale_ip if proxmox_fora else '<ip-tailscale-do-forgejo>' }}"
+pi_tailscale_ip: "{{ vault_pi_tailscale_ip }}"
+forgejo_tailscale_ip: "{{ pi_tailscale_ip if proxmox_fora else vault_forgejo_lxc_tailscale_ip }}"
 
 # Tailscale (artis3n.tailscale.machine)
 # --hostname usa o inventory_hostname com sufixo -lxc para distinguir

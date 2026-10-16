@@ -68,7 +68,7 @@ resto:
 | | `false` (normal) | `true` (contingência) |
 |---|---|---|
 | Forgejo e Vaultwarden no Pi | standby, sem backup | no ar, com backup às 02:30 |
-| Anubis do `forge` e monitor do SSH do Git | `forgejo-lxc` (`<ip-tailscale-do-forgejo>`) | Pi |
+| Anubis do `forge` e monitor do SSH do Git | `forgejo-lxc` | Pi |
 
 Quem atende o `*.lab` não é variável, é o DNS: Caddy do Proxmox no normal,
 Caddy reserva do Pi na contingência (passo 8).

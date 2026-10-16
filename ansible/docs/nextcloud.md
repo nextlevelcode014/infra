@@ -74,7 +74,7 @@ domínio, e no pi-lab o ensaio não diria muito.
    curl -s https://nextcloud.lab.nextlevelcode.pro/status.php
    ```
 
-   O primeiro mostra `<ts_ip>:11000` (o `ts_ip`); o segundo, um JSON com
+   O primeiro mostra `<ts_ip>:11000`; o segundo, um JSON com
    `"installed":true`. Em *Administração → Visão geral*, nenhum aviso de
    proxy reverso ou de domínio.
 

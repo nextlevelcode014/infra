@@ -8,6 +8,15 @@
 # os mesmos usados em inventory/group_vars/all/vars.yml — se renomear aqui,
 # renomee lá também.
 
+# Tailnet e IPs Tailscale. Não são segredo: ficam aqui só para não aparecerem
+# no repo público. vars.yml os expõe como tailnet, proxmox_host,
+# pi_tailscale_ip e forgejo_tailscale_ip. O IP de cada nó é o de
+# `tailscale ip -4` nele, ou a coluna da esquerda de `tailscale status`.
+vault_tailnet: "<tailnet>.ts.net"
+vault_proxmox_tailscale_ip: "100.x.y.z"
+vault_pi_tailscale_ip: "100.x.y.z"
+vault_forgejo_lxc_tailscale_ip: "100.x.y.z"
+
 # Token da API do Proxmox (ansible@pve / ansible-token), usado pelos módulos
 # community.proxmox.*
 vault_proxmox_token_secret: "CHANGE-ME"

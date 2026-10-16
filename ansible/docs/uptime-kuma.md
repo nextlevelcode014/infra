@@ -21,11 +21,11 @@ Caddy do Proxmox. O Caddy da VPS só aceita conexões da tailnet nesse site.
 ## Aplicação
 
 1. **Registro na Cloudflare** (zona `nextlevelcode.pro`): tipo `A`, nome
-   `uptime.lab`, valor `<ip-tailscale-da-vps>` (IP Tailscale da VPS), **DNS only**
+   `uptime.lab`, valor: o IP Tailscale da VPS (`tailscale ip -4` nela), **DNS only**
    (nuvem cinza). Manual porque o DNS público não é gerido por este repo.
 
    Confira: `dig +short @1.1.1.1 uptime.lab.nextlevelcode.pro` devolve
-   `<ip-tailscale-da-vps>`, e `jellyfin.lab` continua devolvendo o IP do Caddy do
+   esse IP, e `jellyfin.lab` continua devolvendo o IP do Caddy do
    Proxmox.
 
 2. **ACL do Tailscale** (console):

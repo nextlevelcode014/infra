@@ -5,6 +5,6 @@
 vps:
   hosts:
     hetzner:
-      ansible_host: hetzner.<tailnet>.ts.net
+      ansible_host: "hetzner.{{ tailnet }}"
       ansible_user: hetzner
       ansible_become: true

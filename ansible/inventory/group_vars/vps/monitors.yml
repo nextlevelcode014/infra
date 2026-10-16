@@ -57,10 +57,10 @@ uptime_kuma_monitors:
   # deixaria o monitor sempre verde). Daqui (VPS, Alemanha) até o Pi o caminho
   # oscila por poucos minutos várias vezes ao dia; com 10 retries (~11 min) só
   # queda de verdade vira e-mail. O Funnel é só para emergência: o atraso não pesa.
-  - {id: fmd-funnel, group: pi, type: http, name: "FMD (Funnel)", url: "https://fmd.<tailnet>.ts.net/api/v1/version", max_retries: 10}
+  - {id: fmd-funnel, group: pi, type: http, name: "FMD (Funnel)", url: "https://fmd.{{ tailnet }}/api/v1/version", max_retries: 10}
 
   # --- Proxmox --------------------------------------------------------------
-  - {id: proxmox-ping, group: proxmox, type: ping, name: "Proxmox (ping)", hostname: <proxmox_host>}
+  - {id: proxmox-ping, group: proxmox, type: ping, name: "Proxmox (ping)", hostname: "{{ proxmox_host }}"}
   - {id: vaultwarden, group: proxmox, type: http, name: Vaultwarden, url: "https://vault.lab.nextlevelcode.pro/alive"}
   - {id: forgejo-ssh, group: proxmox, type: port, name: "Forgejo (SSH)", hostname: "{{ forgejo_tailscale_ip }}", port: 2222}
 

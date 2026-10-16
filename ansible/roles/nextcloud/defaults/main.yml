@@ -14,7 +14,7 @@ nextcloud_apache_ip_binding: "{{ ts_ip }}"
 nextcloud_coturn_dir: /opt/coturn-turn
 nextcloud_turn_secret: "{{ vault_nextcloud_turn_secret }}"
 nextcloud_turn_relay_ip: "{{ ts_ip }}"
-nextcloud_ts_tailnet: <tailnet>.ts.net
+nextcloud_ts_tailnet: "{{ tailnet }}"
 
 # Portas UDP de relay do coturn: uma por participante que passa pelo relay
 # numa chamada. Precisa ser o MESMO intervalo liberado na ACL do Tailscale

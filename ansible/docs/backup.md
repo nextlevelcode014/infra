@@ -100,7 +100,7 @@ ficar verde no Uptime Kuma.
    `forgejo-lxc` é o SSH do Git):
 
    ```bash
-   ssh root@<ip-tailscale-do-forgejo> curl -s -o /dev/null -w '%{http_code}\n' https://uptime.lab.nextlevelcode.pro/api/push/x
+   ssh root@forgejo-lxc curl -s -o /dev/null -w '%{http_code}\n' https://uptime.lab.nextlevelcode.pro/api/push/x
    ```
 
    Qualquer código HTTP (404 inclusive) prova que a rede passa; `000` é a

@@ -33,7 +33,7 @@ Sem isto, a reconstrução trava. Confira agora, não no dia do problema.
    Confira: `ssh ubuntu@nextlevelcode.<tailnet>.ts.net true`.
 
    O Pi novo ganha **outro IP Tailscale**. Anote: ele substitui o
-   `<ts_ip>` no nameserver do console (DNS do AdGuard) e em toda regra de
+   o `ts_ip` do Pi no nameserver do console (DNS do AdGuard) e em toda regra de
    ACL que use o IP em vez de nome ou tag.
 
 3. **LUKS** na partição reservada, como em `docs/pi.md` ("Uma vez, num Pi

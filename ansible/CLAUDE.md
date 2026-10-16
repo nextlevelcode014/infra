@@ -228,6 +228,12 @@ Em `inventory/group_vars/all/vault.yml` (cifrado, fora do git): token do
 Proxmox, auth key do Tailscale e senha do Postgres do Forgejo. O template do
 que vai lá é `vault.yml.example`.
 
+O repo é público. O nome da tailnet e os IPs Tailscale não são segredo, mas
+também ficam no vault (`vault_tailnet`, `vault_*_tailscale_ip`) e entram no
+resto como `tailnet`, `proxmox_host`, `pi_tailscale_ip` e
+`forgejo_tailscale_ip`. Nos docs eles aparecem como `<tailnet>.ts.net` e
+`<proxmox_host>`. Valor novo desse tipo vai para o vault, não para o repo.
+
 Todo runbook manual vai em arquivo `.md` no repo, em ordem de execução, com o
 comando literal e como conferir que funcionou. O padrão dos docs (um por
 serviço, um de restore por playbook de restore, as seções e as regras) e o

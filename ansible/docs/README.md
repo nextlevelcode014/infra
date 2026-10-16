@@ -44,8 +44,10 @@ modelo.
 - **Passo a passo em ordem de execução.** Cada passo tem o comando literal e
   uma linha "Confira:" com o que deve aparecer. Passo manual (console, login,
   token, browser) leva uma linha dizendo por que não dá para automatizar.
-- **IP e porta pelo nome e pelo valor:** `ts_ip` (hoje `<ts_ip>`). Quando
-  o valor muda, o nome continua certo e mostra onde procurar.
+- **IP e porta pelo nome, nunca pelo valor:** `ts_ip`, `<proxmox_host>`. O
+  repo é público, então tailnet e IPs Tailscale ficam no `vault.yml`
+  (`vault.yml.example` diz quais); nos comandos, o nome da tailnet aparece
+  como `<tailnet>.ts.net`. IP da LAN (`192.168.50.x`) pode ir pelo valor.
 - **Nada de referência ao que não está no repo** ("o runbook da
   infraestrutura"). Se o passo depende de outro doc, cite o arquivo e a seção.
 - **Restore em arquivo próprio** quando há `playbooks/<serviço>-restore.yml`,

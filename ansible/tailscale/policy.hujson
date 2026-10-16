@@ -9,6 +9,8 @@
     "ipsets": {},
 
     // IPs Tailscale dos desktops de administração. Ficam sem tag (user-owned).
+    // O IP real não fica no repo: troque o placeholder ao colar no console
+    // (tailscale/README.md).
     "hosts": {
         "infra-admin-1": "<ip-tailscale-do-desktop>",
     },

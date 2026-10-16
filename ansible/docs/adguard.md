@@ -6,7 +6,7 @@ próprio host e a interface web atrás do Caddy:
 | O quê | Onde |
 |---|---|
 | DNS para a LAN (roteador) | `lan_ip:53` (hoje `192.168.50.187`), TCP/UDP |
-| DNS para a tailnet | `ts_ip:53` (hoje `<ts_ip>`), TCP/UDP |
+| DNS para a tailnet | `ts_ip:53`, TCP/UDP |
 | Interface web | `https://adguard.lab.nextlevelcode.pro` (Caddy → `ts_ip:8084`, rota em `caddy_lab_pi_routes`) |
 | Dados | `/mnt/secure/appdata/adguard` (`adguard_data_dir`): `conf/` e `work/` |
 
@@ -106,7 +106,7 @@ configurado na interface do AdGuard, não no repo.
    `192.168.50.187`, e `doubleclick.net` resolve para `0.0.0.0`.
 
 7. **Nameservers da tailnet no console do Tailscale** (DNS → Nameservers),
-   nesta ordem: `<ts_ip>` (AdGuard), depois **Quad9** escolhido na lista
+   nesta ordem: o `ts_ip` do Pi (AdGuard), depois **Quad9** escolhido na lista
    de provedores do "Add nameserver" (entra como `9.9.9.9` e já traz os outros
    endereços do Quad9; o console recusa o `149.112.112.112` à parte). O Quad9
    é o mesmo upstream do AdGuard, então só um provedor vê as consultas, e com

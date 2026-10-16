@@ -12,7 +12,7 @@ homelab não usa, por privacidade).
 
 | Serviço | Caminho | Onde roda o Anubis |
 |---|---|---|
-| `forge.nextlevelcode.pro` | Caddy da VPS → `anubis-forgejo` (`127.0.0.1:8923`) → Forgejo (`<ip-tailscale-do-forgejo>:3000`) | VPS, `playbooks/anubis.yml` |
+| `forge.nextlevelcode.pro` | Caddy da VPS → `anubis-forgejo` (`127.0.0.1:8923`) → Forgejo (`forgejo_tailscale_ip:3000`) | VPS, `playbooks/anubis.yml` |
 | `fmd.<tailnet>.ts.net` (Funnel) | sidecar `fmd-tailscale` → `fmd-anubis` (`:8923`) → FMD (`:8080`) | Pi, na stack do FMD, `playbooks/fmd.yml` |
 
 O endereço do Funnel atende a internet **e** a tailnet (o MagicDNS resolve o
@@ -115,6 +115,6 @@ ssh hetzner@hetzner 'sudo docker logs --since 10m anubis-forgejo'
 ssh ubuntu@nextlevelcode.<tailnet>.ts.net 'docker logs --since 10m fmd-anubis'
 ```
 
-- Forgejo: `caddy_vps_forgejo_upstream: <ip-tailscale-do-forgejo>:3000` em
+- Forgejo: `caddy_vps_forgejo_upstream: "{{ forgejo_tailscale_ip }}:3000"` em
   `inventory/group_vars/vps/vars.yml` e reaplicar o `caddy-vps.yml`.
 - FMD: `ansible-playbook playbooks/fmd.yml --ask-vault-pass -e fmd_anubis=false`.
