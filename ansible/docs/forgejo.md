@@ -115,9 +115,11 @@ O squash merge de um PR não reaproveita o commit da branch: o Forgejo cria um
 commit novo no servidor, e a chave de quem escreveu não está lá. Por isso ele
 assina esses commits com uma chave **da instância** (`[repository.signing]`
 no compose, `MERGES=always`). A assinatura diz "mergeado por este Forgejo";
-a autoria continua no autor do commit e na assinatura dele na branch. O
-committer passa a ser `forgejo_signing_name` <`forgejo_signing_email`>
-(`roles/forgejo/defaults/main.yml`).
+a autoria continua no autor do commit e na assinatura dele na branch. Autor
+e committer do merge não mudam: continuam sendo quem escreveu e quem
+mergeou. O `forgejo_signing_name` e o `forgejo_signing_email`
+(`roles/forgejo/defaults/main.yml`) são obrigatórios na config, mas não
+aparecem nesses commits.
 
 A chave fica em `forgejo/signing/` (`key` e `key.pub`), escrita pelo role a
 partir do vault, e entra no backup com o resto de `forgejo/`. Na contingência
@@ -176,15 +178,18 @@ edita com a senha dele.
 4. **Testar com um merge:** depois do próximo squash merge,
 
    ```bash
-   git fetch origin && git log -1 --format='%G? %cn' origin/main
+   git fetch origin && git log -1 --format='%G? %GK' origin/main
    ```
 
-   mostra `U Forgejo NextLevelCode`: assinado, mas por uma chave que o seu
-   git ainda não conhece. Na web, o commit aparece como verificado.
+   mostra `U` e a impressão digital da chave: assinado, mas por uma chave que
+   o seu git ainda não conhece. Ela tem que ser a mesma de
+   `ssh-keygen -lf /tmp/forgejo-signing.pub` (ou da chave pública do vault).
+   `N` quer dizer que o Forgejo não assinou: olhe o log do container.
 
 5. **Confiar na chave**, em cada computador que confere assinatura: uma linha
    no `gpg.ssh.allowedSignersFile` (`git config gpg.ssh.allowedSignersFile`
-   mostra qual é), com o e-mail do committer:
+   mostra qual é). O e-mail na frente é só o nome da chave nesse arquivo: o
+   git acha a linha pela chave, não pelo committer.
 
    ```bash
    pub=$(ansible-vault view inventory/group_vars/all/vault.yml \

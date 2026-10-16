@@ -6,8 +6,9 @@ forgejo_db_image: "postgres:16-alpine"
 forgejo_user: "1000"
 forgejo_group: "1000"
 
-# Identidade de committer dos commits que o Forgejo assina (os squash merges
-# dos PRs). O autor continua sendo quem abriu o PR.
+# Identidade que o [repository.signing] exige junto da chave. Nos squash
+# merges ela não aparece: o committer continua sendo quem mergeou (visto no
+# PR #21), só a assinatura é da instância.
 forgejo_signing_name: "Forgejo NextLevelCode"
 forgejo_signing_email: "forgejo@nextlevelcode.pro"
 
