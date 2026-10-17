@@ -36,11 +36,18 @@ A senha mestra protege tudo junto e é o único item sem cópia: ela é longa,
 | `terraform.tfvars` | `terraform/` | anexo `terraform.tfvars` |
 | `terraform.tfvars` da Hetzner | `terraform/hetzner/` | anexo `hetzner.tfvars` |
 | Passphrase do LUKS do Pi | na sua cabeça | campo extra |
-| `terraform.tfstate` (os dois) | `terraform/`, `terraform/hetzner/` | ainda sem cópia: #8 |
+| `terraform.tfstate` | `terraform/` | anexo `terraform.tfstate` |
+| `terraform.tfstate` da Hetzner | `terraform/hetzner/` | anexo `hetzner.tfstate` |
+| Chave SSH dos LXCs | `~/.ssh/id_ed25519` e `.pub` | anexos com os mesmos nomes |
+
+O state muda a cada `apply`: a cópia no KeePass é provisória, até ele ir
+para um state remoto (#8). A `id_ed25519` precisa de cópia porque o
+`terraform/local.tf` lê a `.pub` e grava nos containers: com uma chave nova,
+o plan quer mudar os quatro LXCs.
 
 Não precisam de cópia: o clone do repo (está no Forgejo, e qualquer clone
-serve), os `*.example` (estão no git) e a chave SSH `~/.ssh/id_ed25519`
-(chave nova se instala pelo console do Proxmox, e o resto é Tailscale SSH).
+serve) e os `*.example` (estão no git). Formatar o desktop tem passo a passo
+próprio: [`maquina-nova.md`](maquina-nova.md).
 Os itens só do Pi (archives do Borg, backup do Nextcloud) estão em
 `ansible/docs/pi-reconstrucao.md`.
 
@@ -49,7 +56,7 @@ Os itens só do Pi (archives do Borg, backup do Nextcloud) estão em
 Passo manual: o KeePass pede a senha mestra de forma interativa.
 
 1. Crie a entrada `infra`, preencha a senha do Ansible Vault e a passphrase
-   do LUKS, e anexe os três arquivos da tabela (aba *Avançado* → *Anexos* no
+   do LUKS, e anexe os arquivos da tabela (aba *Avançado* → *Anexos* no
    KeePassXC). Salve o `.kdbx`.
 2. Copie o `.kdbx` para os outros aparelhos, como você já faz.
 
@@ -63,7 +70,8 @@ ansible-vault view /tmp/vault.yml >/dev/null && echo ok && rm /tmp/vault.yml
 ## Quando refazer
 
 Toda vez que um dos arquivos mudar (`ansible-vault edit`, token novo no
-`tfvars`): troque o anexo e copie o `.kdbx` de novo para os aparelhos.
+`tfvars`, qualquer `terraform apply`): troque o anexo e copie o `.kdbx` de
+novo para os aparelhos.
 Para saber se a cópia ficou para trás, salve o anexo e compare:
 
 ```bash
@@ -72,12 +80,6 @@ cmp ansible/inventory/group_vars/all/vault.yml /tmp/vault.yml && echo igual
 
 ## Restaurar
 
-Num computador novo, com o repo clonado, salve os anexos da entrada `infra`
-nos lugares da tabela:
-
-- `vault.yml` → `ansible/inventory/group_vars/all/vault.yml`
-- `terraform.tfvars` → `terraform/terraform.tfvars`
-- `hetzner.tfvars` → `terraform/hetzner/terraform.tfvars`
-
-Confira: `ansible-vault view ansible/inventory/group_vars/all/vault.yml`
-abre, e `terraform plan` dentro de `terraform/` conecta no Proxmox.
+Num computador novo, salve os anexos da entrada `infra` nos lugares da
+tabela. A ordem completa (Tailscale, chaves, clone, conferências) está em
+[`maquina-nova.md`](maquina-nova.md), seção *Na máquina nova*.

@@ -50,6 +50,9 @@ Por estarem fora do git, esses arquivos só existem no notebook: as cópias
 fora da infra, e como fazê-las, estão em
 [`docs/fora-da-infra.md`](docs/fora-da-infra.md).
 
+Formatar o desktop de onde se roda a infra, ou começar numa máquina nova:
+[`docs/maquina-nova.md`](docs/maquina-nova.md).
+
 ## Fluxo de mudança
 
 Nada vai direto para o `main`: branch, PR no Forgejo, squash merge. Passo
