@@ -46,6 +46,10 @@ cifrado, os do Terraform no `terraform.tfvars`, e os dois têm um
 IPs Tailscale também ficam fora: nos docs eles aparecem como
 `<tailnet>.ts.net` e `<ts_ip>`.
 
+Por estarem fora do git, esses arquivos só existem no notebook: as cópias
+fora da infra, e como fazê-las, estão em
+[`docs/fora-da-infra.md`](docs/fora-da-infra.md).
+
 ## Fluxo de mudança
 
 Nada vai direto para o `main`: branch, PR no Forgejo, squash merge. Passo

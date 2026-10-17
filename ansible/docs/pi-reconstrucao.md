@@ -8,13 +8,15 @@ os dados do Borg e sobe todos os serviços, nessa ordem: os dados voltam
 
 Sem isto, a reconstrução trava. Confira agora, não no dia do problema.
 
+O `vault.yml`, a senha dele e a passphrase do LUKS valem para a infra toda:
+onde guardar e como copiar está em `docs/fora-da-infra.md`, na raiz do repo.
+O que é só do Pi:
+
 | O quê | Onde deve estar |
 |---|---|
-| Passphrase do LUKS | Bitwarden acessado de outro aparelho + papel |
-| Senha do Ansible Vault | fora do Pi e fora do Vaultwarden do homelab |
-| Clone deste repo (`ansible`) | no seu computador. Se o Forgejo estiver fora, é o único |
+| Clone deste repo (`infra`) | no seu computador. Se o Forgejo estiver fora, é o único |
 | Backups Borg (`arr-*`, `adguard-*`, `fmd-*`) | BorgBase (senha e chave estão no vault) |
-| Senha de criptografia do backup do Nextcloud AIO | anotada fora do Pi. O AIO pede para restaurar |
+| Senha de criptografia do backup do Nextcloud AIO | no KeePass, como em `docs/fora-da-infra.md`. O AIO pede para restaurar |
 | Backup do Nextcloud | hoje no celular (Termux), ver #44 |
 
 ## 1. Sistema e acesso
