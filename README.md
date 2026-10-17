@@ -51,3 +51,9 @@ IPs Tailscale também ficam fora: nos docs eles aparecem como
 Nada vai direto para o `main`: branch, PR no Forgejo, squash merge. Passo
 que não dá para automatizar (console, login, token) entra no doc do serviço,
 na ordem em que acontece, com o comando e como conferir.
+
+## Decisões
+
+O porquê das escolhas que não são óbvias pelo código fica em
+[`docs/decisoes/`](docs/decisoes/README.md), um ADR por decisão. Antes de
+desfazer algo que parece estranho, procure lá.

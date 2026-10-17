@@ -21,3 +21,8 @@ só pode mostrar placeholder e os endereços genéricos do Tailscale
 
 Mudança que toca as duas partes (container novo e a config dele) vai num PR
 só.
+
+**Decisões ficam em `docs/decisoes/`** (ADR). Antes de desfazer algo que
+parece estranho, procure lá. Decisão nova que não é óbvia pelo código (o que
+se descartou, uma regra para o que vier depois) leva um ADR no mesmo PR; ADR
+aceito não se reescreve, é substituído (`docs/decisoes/README.md`).

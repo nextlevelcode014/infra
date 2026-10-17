@@ -144,10 +144,12 @@ Ficam de fora:
 
 - **Nextcloud AIO**: o mastercontainer e os containers dele se atualizam pela
   interface do próprio AIO.
-- **Forgejo e Vaultwarden em standby**: o role deles já faz `pull: always`.
+- **Forgejo e Vaultwarden em standby**: não têm container rodando; o role
+  deles baixa as imagens a cada aplicação (`docs/decisoes/0004`, na raiz).
 
-Quase tudo está em `:latest` (e o Immich em `release`), então um pull pode
-trazer versão nova com mudança que quebra. Confira depois:
+Várias stacks ainda estão em `:latest` (`docs/padrao-de-role.md`, "Fora do
+padrão"), então um pull pode trazer versão nova com mudança que quebra.
+Confira depois:
 
 ```bash
 ssh ubuntu@nextlevelcode 'docker ps --format "{{.Names}} {{.Status}}" | grep -v "Up"'
@@ -250,7 +252,7 @@ no Raspberry de verdade.
 
 ## Adicionar um serviço no Pi
 
-O `arr_stack` é o modelo. Um role novo precisa de:
+O role segue `docs/padrao-de-role.md`. O que é próprio do Pi:
 
 1. `meta/main.yml` com as dependências:
 

@@ -111,6 +111,11 @@ reserva: serviço novo do Pi entra ali, não no Caddyfile. Ida e volta em
 
 ## Roles
 
+Role de serviço segue `docs/padrao-de-role.md`: estrutura, nomes de
+variável, imagem com tag fixa, `compose_stack`. O que ainda não segue está
+listado lá, em "Fora do padrão"; ao mexer num desses roles, migre e tire a
+linha.
+
 | Role | O que é |
 |---|---|
 | `common` | timezone + NTP de máquina física |

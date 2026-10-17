@@ -1,0 +1,69 @@
+# Decisões (ADR)
+
+Cada arquivo aqui é um **ADR** (*Architecture Decision Record*): uma decisão
+que mudou como o infra funciona, com o porquê. O código mostra *o que* foi
+feito; o ADR guarda *por que*, e o que foi descartado, para que daqui a seis
+meses a pergunta "isso foi de propósito?" tenha resposta.
+
+## Quando escrever
+
+Escreva um ADR quando a decisão:
+
+- seria estranha para quem lê o código sem contexto ("por que não tem timer?");
+- descartou uma alternativa óbvia;
+- vira regra para o que vier depois (padrão de role, onde fica segredo).
+
+Não precisa de ADR para o que o código já explica sozinho, nem para correção
+de bug. Na dúvida, um ADR curto custa menos que esquecer.
+
+## Como
+
+1. Copie o modelo abaixo para `NNNN-<decisao-em-kebab-case>.md`, com o
+   próximo número livre. O nome diz a decisão, não o assunto:
+   `0003-atualizacao-do-pi-sob-demanda.md`, não `0003-atualizacoes.md`.
+2. Preencha e acrescente uma linha no índice.
+3. Vai no mesmo PR da mudança que ele explica.
+
+**ADR aceito não se reescreve.** Mudou de ideia? Escreva um ADR novo e, no
+antigo, troque só o status para `Substituída por NNNN`. O histórico de por que
+se mudou de ideia vale tanto quanto a decisão.
+
+Decisão antiga registrada depois do fato leva a data em que foi tomada e a
+fonte (PR, commit ou comentário de onde o motivo foi tirado).
+
+## Índice
+
+| ADR | Decisão | Status |
+|---|---|---|
+| [0001](0001-registrar-decisoes-em-adr.md) | Registrar decisões em ADR | Aceita |
+| [0002](0002-terraform-cria-ansible-configura.md) | Terraform cria a máquina, Ansible configura | Aceita |
+| [0003](0003-atualizacao-do-pi-sob-demanda.md) | Atualização do Pi sob demanda, só imagem | Aceita |
+| [0004](0004-standby-com-imagens-ja-baixadas.md) | Standby com as imagens já baixadas | Aceita |
+| [0005](0005-imagem-com-tag-fixa-em-variavel.md) | Imagem com tag fixa, em variável | Aceita |
+| [0006](0006-role-compose-stack-compartilhado.md) | Um role compartilhado para o ciclo do compose | Aceita |
+
+## Modelo
+
+```markdown
+# NNNN. <Decisão, como frase afirmativa>
+
+- **Status:** Aceita
+- **Data:** AAAA-MM-DD
+- **Fonte:** <PR/commit, só em decisão registrada depois do fato>
+
+## Contexto
+
+O problema e as forças em jogo, sem a solução ainda.
+
+## Decisão
+
+O que foi decidido, em uma ou duas frases diretas.
+
+## Alternativas descartadas
+
+- **<Alternativa>:** por que não.
+
+## Consequências
+
+O que fica mais fácil, o que fica mais difícil e o que passa a ser regra.
+```
