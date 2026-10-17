@@ -70,13 +70,15 @@ uptime_kuma_monitors:
 
 # Backups do borgmatic: {borg_backup_name: rótulo}, um monitor push cada. O
 # nome tem que ser o borg_backup_name do role do serviço (dele sai o token).
-# O immich entra junto com immich_backup_enabled; antes disso cairia toda noite.
+# O immich vai para o Borg offsite: noite com a máquina desligada é backup
+# que não houve, e o monitor cai como cairia com qualquer outro.
 uptime_kuma_backups:
   forgejo: Forgejo
   vaultwarden: Vaultwarden
   arr: Stack Arr
   adguard: AdGuard
   fmd: FMD
+  immich: Immich
   uptime-kuma: Uptime Kuma
 
 # Reboot pendente há mais de 3 dias ou apt-daily-upgrade falhando (role

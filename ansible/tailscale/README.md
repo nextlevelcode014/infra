@@ -15,9 +15,10 @@ Depois do merge do PR:
 
 1. Abrir <https://login.tailscale.com/admin/acls/file>.
 2. Colar o conteúdo inteiro de `policy.hujson`, trocar
-   `<ip-tailscale-do-desktop>` pelo IP real (o que já está no console, ou
-   `tailscale ip -4` no desktop) e salvar. O IP fica fora do repo porque o
-   repo é público; esquecida a troca, o console recusa o save por IP inválido.
+   `<ip-tailscale-do-desktop>` e `<ip-tailscale-do-borg-offsite>` pelos
+   IPs reais (os que já estão no console, ou `tailscale ip -4` em cada
+   máquina) e salvar. Os IPs ficam fora do repo porque o repo é público;
+   esquecida a troca, o console recusa o save por IP inválido.
 3. Conferir: o save só completa se a seção `tests` passar. Erro de teste = a
    mudança reabriu algo que devia estar fechado; corrija no repo, não no console.
 
@@ -45,6 +46,7 @@ nome do nó antes: o nome MagicDNS pode diferir do hostname.
 | Máquinas do repo `lab` | `tag:lab`, pela auth key efêmera (não se aplica à mão) |
 | Runner do GitHub Actions dos testes do `lab` | `tag:lab-ci`, pelo OAuth client (não se aplica à mão) |
 | Desktop de administração | sem tag — fica em `hosts.infra-admin-1` |
+| Borg offsite (desktop fora de casa) | sem tag — fica em `hosts.borg-offsite` |
 
 Desktop não leva tag: com tag o nó deixa de ser dispositivo pessoal e sai de
 `autogroup:self` e `autogroup:member`. O IP dele é o de `tailscale ip -4` no

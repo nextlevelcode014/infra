@@ -1,0 +1,6 @@
+# Gerido pelo Ansible (roles/borg_server) — não editar à mão.
+# Cada chave só roda o borg serve, e só no repositório dela; o restrict
+# tira shell, encaminhamento de porta, agente e X11.
+{% for repo in borg_server_repos if repo.key | trim %}
+command="borg serve --restrict-to-repository {{ borg_server_dir }}/{{ repo.name }}",restrict {{ repo.key | trim }}
+{% endfor %}

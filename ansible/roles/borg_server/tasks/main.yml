@@ -1,0 +1,123 @@
+---
+# O resto da infra é Ubuntu; aqui é pacman e o sshd do Arch.
+- name: Recusar host que não é Arch
+  ansible.builtin.assert:
+    that: ansible_facts.os_family == 'Archlinux'
+    fail_msg: O borg_server só conhece o Arch (Omarchy). docs/borg-offsite.md.
+
+- name: Instalar Borg e OpenSSH
+  community.general.pacman:
+    name:
+      - borg
+      - openssh
+    state: present
+
+# --- Disco ---------------------------------------------------------------------
+# nofail: sem o NVMe o desktop ainda dá boot. O backup é que falha, porque o
+# diretório do repositório não existe no disco do sistema.
+- name: Montar o disco do Borg
+  ansible.posix.mount:
+    path: "{{ borg_server_dir }}"
+    src: "LABEL={{ borg_server_disk_label }}"
+    fstype: ext4
+    opts: defaults,noatime,nofail,x-systemd.device-timeout=10s
+    state: mounted
+
+# --- Usuário borg ------------------------------------------------------------------
+# Precisa de shell: o command= do authorized_keys roda por ela. Sem senha, e
+# o sshd só o deixa entrar com uma das chaves presas a um repositório.
+- name: Criar o usuário borg
+  ansible.builtin.user:
+    name: "{{ borg_server_user }}"
+    system: true
+    home: "{{ borg_server_home }}"
+    create_home: true
+    shell: /bin/bash
+    password: "!"
+
+- name: Dar o disco ao borg
+  ansible.builtin.file:
+    path: "{{ borg_server_dir }}"
+    state: directory
+    owner: "{{ borg_server_user }}"
+    group: "{{ borg_server_user }}"
+    mode: "0700"
+
+# Vazio: quem roda o borg init é o cliente (borgmatic repo-create, o AIO na
+# primeira tentativa), com a senha dele. O --restrict-to-repository aceita o
+# init no caminho exato.
+- name: Criar o diretório de cada repositório
+  ansible.builtin.file:
+    path: "{{ borg_server_dir }}/{{ item.name }}"
+    state: directory
+    owner: "{{ borg_server_user }}"
+    group: "{{ borg_server_user }}"
+    mode: "0700"
+  loop: "{{ borg_server_repos }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Criar o diretório SSH do borg
+  ansible.builtin.file:
+    path: "{{ borg_server_home }}/.ssh"
+    state: directory
+    owner: "{{ borg_server_user }}"
+    group: "{{ borg_server_user }}"
+    mode: "0700"
+
+# Arquivo inteiro: chave que sai da lista sai do servidor.
+- name: Prender cada chave ao seu repositório
+  ansible.builtin.template:
+    src: authorized_keys.j2
+    dest: "{{ borg_server_home }}/.ssh/authorized_keys"
+    owner: "{{ borg_server_user }}"
+    group: "{{ borg_server_user }}"
+    mode: "0600"
+
+# --- sshd ------------------------------------------------------------------------
+- name: Ler os drop-ins do sshd_config.d
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    line: Include /etc/ssh/sshd_config.d/*.conf
+    insertbefore: BOF
+  notify: Reiniciar sshd
+
+- name: Criar o sshd_config.d
+  ansible.builtin.file:
+    path: /etc/ssh/sshd_config.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Endurecer o sshd
+  ansible.builtin.template:
+    src: sshd-nextlevelcode.conf.j2
+    dest: /etc/ssh/sshd_config.d/00-nextlevelcode.conf
+    owner: root
+    group: root
+    mode: "0644"
+    validate: /usr/bin/sshd -t -f %s
+  notify: Reiniciar sshd
+
+- name: Ligar o sshd
+  ansible.builtin.systemd_service:
+    name: sshd
+    state: started
+    enabled: true
+
+# O Omarchy liga o UFW com entrada negada. Sem UFW, nada a fazer: o
+# AllowUsers do sshd já recusa quem não vem da tailnet.
+- name: Ver se o UFW existe
+  ansible.builtin.stat:
+    path: /usr/bin/ufw
+  register: borg_server_ufw
+
+- name: Liberar o SSH na tailnet
+  community.general.ufw:
+    rule: allow
+    direction: in
+    interface: tailscale0
+    port: "22"
+    proto: tcp
+  when: borg_server_ufw.stat.exists

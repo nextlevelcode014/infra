@@ -17,6 +17,7 @@ modelo.
 | `vps.md` | base da VPS e VPS nova |
 | `caddy.md` | os três Caddys (Proxmox, VPS, Pi) e a troca do token da Cloudflare |
 | `backup.md` | borgmatic, monitor push e serviço novo com backup |
+| `borg-offsite.md` | Borg offsite: repositórios do Immich e do Nextcloud AIO |
 | `padrao-de-role.md` | contrato de todo role de serviço e o que ainda está fora dele |
 
 ### Serviços

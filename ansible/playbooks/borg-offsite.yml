@@ -1,0 +1,9 @@
+---
+# Servidor Borg offsite (docs/borg-offsite.md). Fora do site.yml: a máquina
+# só fica ligada com certeza na janela do backup, e no resto do tempo o
+# site.yml pararia nela.
+- name: Configurar o Borg offsite
+  hosts: borg_servers
+  gather_facts: true
+  roles:
+    - role: borg_server

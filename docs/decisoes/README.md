@@ -41,6 +41,7 @@ fonte (PR, commit ou comentário de onde o motivo foi tirado).
 | [0004](0004-standby-com-imagens-ja-baixadas.md) | Standby com as imagens já baixadas | Aceita |
 | [0005](0005-imagem-com-tag-fixa-em-variavel.md) | Imagem com tag fixa, em variável | Aceita |
 | [0006](0006-role-compose-stack-compartilhado.md) | Um role compartilhado para o ciclo do compose | Aceita |
+| [0007](0007-immich-e-nextcloud-num-borg-offsite-proprio.md) | Immich e Nextcloud fazem backup num Borg offsite próprio | Aceita |
 
 ## Modelo
 

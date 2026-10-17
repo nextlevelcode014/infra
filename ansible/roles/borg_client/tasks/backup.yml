@@ -10,6 +10,8 @@
 #   borg_backup_commands  "commands" do borgmatic, ex. parar e subir a stack
 #                         em volta do create (opcional)
 #   borg_backup_active    false tira o config (standby, serviço desligado)
+#   borg_backup_repo      repositório (opcional; padrão: o compartilhado)
+#   borg_backup_repo_label  rótulo dele nos logs do borgmatic (opcional)
 
 - name: Configurar o backup de {{ borg_backup_name }}
   when: borg_backup_enabled and borg_backup_active
@@ -34,8 +36,8 @@
         borgbackup_config:
           name: "{{ borg_backup_name }}.yaml"
           repositories:
-            - path: "{{ borg_repo }}"
-              label: compartilhado
+            - path: "{{ borg_backup_repo }}"
+              label: "{{ borg_backup_repo_label }}"
           source_directories: "{{ borg_backup_sources }}"
           exclude_patterns: "{{ borg_backup_excludes }}"
           # Os três abaixo repetem o que os scripts antigos faziam (os

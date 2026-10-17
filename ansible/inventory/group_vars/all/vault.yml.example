@@ -54,6 +54,20 @@ vault_forgejo_borg_ssh_private_key: |
 # Chave pública do servidor Borg, sem o hostname no início.
 vault_forgejo_borg_known_host_key: "ssh-ed25519 AAAA..."
 
+# Borg offsite (docs/borg-offsite.md): repositórios do Immich e do Nextcloud
+# AIO. Usa a mesma chave e a mesma senha do repositório
+# compartilhado; o que muda é o servidor.
+vault_borg_offsite_tailscale_ip: "100.x.y.z"
+# Chave pública de host da máquina, sem o IP no início:
+#   ssh-keyscan -t ed25519 <ip> | cut -d' ' -f2-
+vault_borg_offsite_known_host_key: "ssh-ed25519 AAAA..."
+# Pública da vault_forgejo_borg_ssh_private_key, autorizada só no repositório
+# do Immich. No Pi: sudo ssh-keygen -y -f /root/.ssh/id_ed25519
+vault_borg_offsite_pi_public_key: "ssh-ed25519 AAAA..."
+# Pública que a interface do AIO mostra depois da primeira tentativa de
+# backup. Vazia até lá: o repositório do Nextcloud fica sem chave.
+vault_borg_offsite_aio_public_key: ""
+
 # Token do Cloudflare para DNS-01 (https://dash.cloudflare.com/profile/api-tokens).
 # Scope: Zone:DNS:Edit em todas as zonas que os caddies (VPS + homelab)
 # atendem — mínimo: nextlevelcode.pro e lab.nextlevelcode.pro.

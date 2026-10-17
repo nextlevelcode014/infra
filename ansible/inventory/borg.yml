@@ -1,0 +1,13 @@
+---
+# Borg offsite: máquina fora de casa, alcançada pela tailnet, com um disco
+# só para os repositórios do Immich e do Nextcloud AIO. Hoje é um desktop
+# Arch (Omarchy) de uso normal, que nem sempre está ligado: por isso fica
+# fora do site.yml. docs/borg-offsite.md.
+# Ansible entra pelo OpenSSH da tailnet com o usuário infra (sudo sem senha),
+# criado à mão no bootstrap; a chave é a ~/.ssh/id_ed25519 do desktop.
+borg_servers:
+  hosts:
+    borg-offsite:
+      ansible_host: "{{ borg_offsite_host }}"
+      ansible_user: infra
+      ansible_become: true

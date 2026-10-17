@@ -87,9 +87,9 @@ domínio, e no pi-lab o ensaio não diria muito.
    Confira: o ❗ ao lado do TURN e o aviso do HPB somem, e uma chamada de
    teste conecta.
 
-4. **Backup do AIO** (instância nova): na interface, o local do backup e
-   *Create backup*. Guarde a senha de criptografia que ele mostra **fora do
-   Pi**: sem ela, o backup não restaura.
+4. **Backup do AIO** (instância nova): o repositório no Borg offsite,
+   como em "Backup" abaixo. Guarde a senha de criptografia que ele mostra
+   **fora do Pi**: sem ela, o backup não restaura.
 
 5. **Clientes** (desktop, celular): conta com
    `https://nextcloud.lab.nextlevelcode.pro`, com o aparelho na tailnet.
@@ -97,8 +97,58 @@ domínio, e no pi-lab o ensaio não diria muito.
 ## Backup
 
 Não passa pelo borgmatic: é o Borg embutido do AIO, configurado na interface
-dele, com retenção em `BORG_RETENTION_POLICY` no compose. O destino hoje é o
-celular (Termux); levar para o repositório compartilhado é a #44.
+dele, com retenção em `BORG_RETENTION_POLICY` no compose. O destino é um
+repositório remoto no Borg offsite (`/srv/borg/nextcloud`,
+`docs/borg-offsite.md`), pela tailnet. O AIO para os containers durante o
+backup e avisa uma falha no próprio Nextcloud; não há monitor no Uptime
+Kuma.
+
+### Apontar para o Borg offsite
+
+Uma vez, com o Borg offsite pronto (`docs/borg-offsite.md`, passos 1 a 5).
+Manual: o destino do backup só se configura na interface do AIO.
+
+1. **Repositório remoto.** Na interface do AIO
+   (`https://nextlevelcode.<tailnet>.ts.net:8080`), com os containers
+   parados, seção de backup: troque o destino atual (o celular) por
+   *Reset backup location*, deixe o caminho local vazio e preencha o
+   repositório remoto:
+
+   ```
+   ssh://borg@<borg_offsite_ts_ip>:22/srv/borg/nextcloud
+   ```
+
+   Pelo IP Tailscale da máquina (`vault_borg_offsite_tailscale_ip`), e não
+   pelo nome: o container de backup do AIO não usa o DNS da tailnet.
+
+   Confira: o campo mostra o repositório remoto.
+
+2. **Chave do AIO.** *Create backup*: a primeira tentativa falha e a
+   interface mostra uma chave pública. Ponha a chave no vault e reaplique o
+   Borg offsite:
+
+   ```bash
+   ansible-vault edit inventory/group_vars/all/vault.yml   # vault_borg_offsite_aio_public_key
+   ansible-playbook playbooks/borg-offsite.yml --ask-vault-pass
+   ```
+
+   Confira: `ssh infra@<borg_offsite_ts_ip> sudo cat /var/lib/borg/.ssh/authorized_keys`
+   tem a linha do `/srv/borg/nextcloud`.
+
+3. **Primeiro backup.** *Create backup* de novo. Confira que a senha de
+   criptografia que a interface mostra é a que está no KeePass
+   (`docs/pi-reconstrucao.md`); se mudou, troque lá.
+
+   Confira: o backup aparece na lista da interface, e
+   `ssh infra@<borg_offsite_ts_ip> sudo du -sh /srv/borg/nextcloud`
+   mostra o tamanho do Nextcloud.
+
+4. **Backup diário**, na mesma seção, num horário dentro da janela em que a
+   máquina fica ligada (`docs/borg-offsite.md`, "Operação"), depois do
+   borgmatic do Pi: 04:00. Confira o fuso que a interface indica.
+
+   Confira: a interface mostra o backup diário ligado, e no dia seguinte há
+   um backup novo na lista.
 
 ## Restore
 
@@ -117,5 +167,5 @@ antes, para a interface existir.
 
 ## Limitações
 
-- O backup do Nextcloud não está no repositório compartilhado nem tem
-  monitor no Uptime Kuma (#44).
+- Uma cópia só, no Borg offsite (`docs/borg-offsite.md`, "Limitações"), e
+  sem monitor no Uptime Kuma.

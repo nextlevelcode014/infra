@@ -39,6 +39,7 @@ A senha mestra protege tudo junto e é o único item sem cópia: ela é longa,
 | `terraform.tfstate` | `terraform/` | anexo `terraform.tfstate` |
 | `terraform.tfstate` da Hetzner | `terraform/hetzner/` | anexo `hetzner.tfstate` |
 | Chave SSH dos LXCs | `~/.ssh/id_ed25519` e `.pub` | anexos com os mesmos nomes |
+| Chave do repositório Borg do Immich | no repositório, no Borg offsite | anexo `borg-immich.key` (`ansible/docs/immich.md`, "Ligar o backup") |
 
 O state muda a cada `apply`: a cópia no KeePass é provisória, até ele ir
 para um state remoto (#8). A `id_ed25519` precisa de cópia porque o

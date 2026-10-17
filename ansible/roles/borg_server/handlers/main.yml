@@ -1,0 +1,6 @@
+---
+# A sessão do Ansible já aberta sobrevive ao restart do sshd.
+- name: Reiniciar sshd
+  ansible.builtin.systemd_service:
+    name: sshd
+    state: restarted
