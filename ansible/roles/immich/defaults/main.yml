@@ -12,7 +12,5 @@ immich_db_database_name: immich
 # Só letras e números: o .env é env_file e o Compose interpola '$' nele.
 immich_db_password: "{{ vault_immich_db_password }}"
 
-# Backup Borg no Borg offsite (borg_offsite_repo_immich), prefixo
-# immich-*. Não vai para o repositório compartilhado: as fotos (~30 GB) não
-# cabem na cota de 10 GB do BorgBase (docs/borg-offsite.md).
+# Backup Borg no repositório compartilhado (borg_repo), prefixo immich-*.
 immich_backup_enabled: true

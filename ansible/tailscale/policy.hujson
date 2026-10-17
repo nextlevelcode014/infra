@@ -13,9 +13,6 @@
     // (tailscale/README.md).
     "hosts": {
         "infra-admin-1": "<ip-tailscale-do-desktop>",
-        // Borg offsite: desktop de uso normal fora de casa, por isso sem
-        // tag, como o de administração (docs/borg-offsite.md).
-        "borg-offsite": "<ip-tailscale-do-borg-offsite>",
     },
 
     "grants": [
@@ -125,15 +122,6 @@
             "src": ["tag:pi"],
             "dst": ["tag:caddy"],
             "ip":  ["tcp:443"],
-        },
-
-        // Backup do Immich (borgmatic) e do Nextcloud (Borg do AIO) no
-        // Borg offsite. Lá o sshd só aceita o usuário borg, preso ao
-        // borg serve de cada repositório.
-        {
-            "src": ["tag:pi"],
-            "dst": ["borg-offsite"],
-            "ip":  ["tcp:22"],
         },
 
         // --- VPS --------------------------------------------------------------
@@ -302,13 +290,13 @@
         {
             "src":    "tag:vps",
             "accept": ["tag:caddy:443", "tag:pi:443", "tag:pi:53", "tag:forgejo:2222"],
-            "deny":   ["tag:pi:22", "tag:proxmox:22", "tag:proxmox:8006", "borg-offsite:22"],
+            "deny":   ["tag:pi:22", "tag:proxmox:22", "tag:proxmox:8006"],
         },
-        // O Pi só fala com o Caddy (HPB do Nextcloud), com o Uptime Kuma
-        // (aviso de backup) e com o Borg offsite.
+        // O Pi só fala com o Caddy (HPB do Nextcloud) e com o Uptime Kuma
+        // (aviso de backup).
         {
             "src":    "tag:pi",
-            "accept": ["tag:caddy:443", "tag:caddy-vps:443", "borg-offsite:22"],
+            "accept": ["tag:caddy:443", "tag:caddy-vps:443"],
             "deny":   ["tag:proxmox:22", "tag:proxmox-lxc:22", "tag:vps:22"],
         },
         // O lab não alcança nada da infra.
@@ -320,7 +308,7 @@
                 "tag:proxmox-lxc:22", "tag:proxmox-lxc:8080",
                 "tag:forgejo:2222", "tag:forgejo:3000",
                 "tag:caddy:443", "tag:caddy-vps:443",
-                "tag:vps:22", "borg-offsite:22",
+                "tag:vps:22",
             ],
         },
         // O CI do lab chega no Coolify do lab, e em mais nada.

@@ -61,82 +61,28 @@ no IP Tailscale.
 
 ## Backup
 
-Prefixo `immich-*` no borgmatic do Pi (`docs/backup.md`), num repositório
-próprio no Borg offsite (`docs/borg-offsite.md`), e não no
-compartilhado: as fotos (~30 GB) não cabem na cota de 10 GB do BorgBase
-(ADR 0007). Mesma chave e mesma senha do compartilhado.
+Prefixo `immich-*` no borgmatic do Pi (`docs/backup.md`), no repositório
+compartilhado. Roda depois dos outros serviços do Pi: `pg_dump` para dentro
+do `upload/` e `borg create` dele, sem thumbs e vídeos re-encodados (o
+Immich gera de novo). **Não para os containers**: o banco sai consistente
+pelo dump, e as fotos não mudam depois de gravadas. Monitor *Backup Immich*.
 
-Roda depois dos outros serviços do Pi: `pg_dump` para dentro do `upload/` e
-`borg create` dele, sem thumbs e vídeos re-encodados (o Immich gera de
-novo). **Não para os containers**: o banco sai consistente pelo dump, e as
-fotos não mudam depois de gravadas. Monitor *Backup Immich*.
-
-Com a máquina offsite desligada o backup falha em 10 s (`ConnectTimeout`) e o
-monitor cai; os outros serviços do Pi, antes dele, não são afetados.
-
-Restore: ainda não automatizado (#10). À mão, com o `borg` do Pi apontando
-para `borg_offsite_repo_immich`.
-
-### Ligar o backup
-
-Uma vez, depois do Borg offsite pronto (`docs/borg-offsite.md`, passos 1 a 5):
-
-1. **Aplicar o config e o monitor:**
-
-   ```bash
-   ansible-playbook playbooks/immich.yml --ask-vault-pass --limit rpi --check --diff
-   ansible-playbook playbooks/immich.yml --ask-vault-pass --limit rpi
-   ansible-playbook playbooks/uptime-kuma.yml --ask-vault-pass
-   ```
-
-   Confira: `ssh ubuntu@nextlevelcode.<tailnet>.ts.net sudo ls /etc/borgmatic`
-   lista o `immich.yaml`.
-
-2. **Criar o repositório.** Manual porque só acontece uma vez, e o Ansible
-   não depende da máquina offsite ligada para aplicar o Immich.
-
-   ```bash
-   ssh -t ubuntu@nextlevelcode.<tailnet>.ts.net sudo borgmatic -c /etc/borgmatic/immich.yaml repo-create --encryption repokey-blake2
-   ```
-
-   Confira: `sudo borgmatic -c /etc/borgmatic/immich.yaml repo-info` no Pi
-   mostra o repositório, cifrado (`repokey BLAKE2b`).
-
-3. **Exportar a chave do repositório** para o KeePass
-   (`../docs/fora-da-infra.md`). A chave mora dentro do repositório
-   (`repokey`): com o cabeçalho dele corrompido, só a cópia exportada e a
-   senha abrem os archives. Manual porque o KeePass pede a senha mestra.
-
-   ```bash
-   ssh ubuntu@nextlevelcode.<tailnet>.ts.net sudo borgmatic -c /etc/borgmatic/immich.yaml key export
-   ```
-
-   Confira: a saída começa com `BORG_KEY` e está na entrada `infra`, como o
-   anexo `borg-immich.key`.
-
-4. **Primeiro backup à mão** (~30 GB pela internet; os seguintes só
-   levam o que mudou):
-
-   ```bash
-   ssh -t ubuntu@nextlevelcode.<tailnet>.ts.net sudo borgmatic -c /etc/borgmatic/immich.yaml --verbosity 1 --stats
-   ```
-
-   Confira: termina sem `ERROR`, e o monitor *Backup Immich* fica verde.
-
-5. **Apagar o backup provisório**, só depois do passo 4: o de 28/09 no
-   omarchy (`/home/sia/immich-backup-temp`) e a senha dele no Pi
-   (`/root/.borg-immich-pass`). Até o primeiro backup no Borg offsite, eles são
-   a única cópia das fotos.
-
-   Confira: `sudo borgmatic -c /etc/borgmatic/immich.yaml repo-list` no Pi
-   lista um archive `immich-*` de hoje antes de apagar.
+Restore: ainda não automatizado (#10). À mão, com o `borg` do Pi e o
+prefixo `immich-*`.
 
 ## Operação
 
 - **Atualizar:** trocar `immich_version` e reaplicar, lendo antes as notas da
   versão (o Immich muda o compose e migra o banco entre versões). O
   `pi-atualizar.yml` só puxa a imagem da tag fixa.
+- **Backup grande** (muitas fotos novas de uma vez): rode à mão, de dia. Ele
+  segura a trava do repositório compartilhado, e o backup da VPS (03:00)
+  desiste depois de 10 min (`docs/backup.md`).
+
+  ```bash
+  ssh -t ubuntu@nextlevelcode.<tailnet>.ts.net sudo borgmatic -c /etc/borgmatic/immich.yaml --verbosity 1 --stats
+  ```
 
 ## Limitações
 
-- Uma cópia só, no Borg offsite (`docs/borg-offsite.md`, "Limitações").
+- Uma cópia só fora de casa, no BorgBase, dentro da cota do plano.

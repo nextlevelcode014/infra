@@ -1,6 +1,6 @@
 # 0007. Immich e Nextcloud fazem backup num Borg offsite próprio
 
-- **Status:** Aceita
+- **Status:** Substituída por 0008
 - **Data:** 2026-10-17
 
 ## Contexto

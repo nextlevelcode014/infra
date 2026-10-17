@@ -35,15 +35,6 @@
     path: "{{ borg_ssh_key | dirname }}/known_hosts"
     state: present
 
-# Em todo cliente, mesmo quem não usa: um restore do Immich em outra máquina
-# não precisa de passo a mais.
-- name: Adicionar o Borg offsite ao known_hosts
-  ansible.builtin.known_hosts:
-    name: "{{ borg_offsite_host }}"
-    key: "{{ borg_offsite_host }} {{ vault_borg_offsite_known_host_key }}"
-    path: "{{ borg_ssh_key | dirname }}/known_hosts"
-    state: present
-
 # --- borgmatic ----------------------------------------------------------------
 # Um timer por host, que roda todos os configs de borg_backup_config_dir em
 # sequência (cada serviço põe o seu lá com tasks_from: backup). O role da

@@ -70,8 +70,6 @@ uptime_kuma_monitors:
 
 # Backups do borgmatic: {borg_backup_name: rótulo}, um monitor push cada. O
 # nome tem que ser o borg_backup_name do role do serviço (dele sai o token).
-# O immich vai para o Borg offsite: noite com a máquina desligada é backup
-# que não houve, e o monitor cai como cairia com qualquer outro.
 uptime_kuma_backups:
   forgejo: Forgejo
   vaultwarden: Vaultwarden

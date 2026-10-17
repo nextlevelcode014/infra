@@ -38,9 +38,8 @@
   when: not (ansible_check_mode and immich_stack_dir_result is changed)
 
 # --- Backup -----------------------------------------------------------------
-# Repositório no Borg offsite, não o compartilhado; o borg_client já
-# instalou Borg, chave, senha e o known_host dele. O config do borgmatic só
-# entra com immich_backup_enabled.
+# Repositório compartilhado; o borg_client já instalou Borg, chave e senha.
+# O config do borgmatic só entra com immich_backup_enabled.
 
 # Não para os containers: o banco sai consistente pelo pg_dump, e as fotos são
 # arquivos que não mudam depois de gravados. O dump fica dentro do
@@ -55,8 +54,6 @@
   vars:
     borg_backup_name: immich
     borg_backup_active: "{{ immich_backup_enabled }}"
-    borg_backup_repo: "{{ borg_offsite_repo_immich }}"
-    borg_backup_repo_label: offsite
     borg_backup_sources:
       - "{{ immich_upload_location }}"
     borg_backup_excludes:

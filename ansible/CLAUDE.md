@@ -24,14 +24,13 @@ inventário — é assim mesmo. Para automatizar, existe a linha
 
 ## Inventário
 
-`ansible.cfg` aponta para o diretório `inventory/`, que junta cinco fontes:
+`ansible.cfg` aponta para o diretório `inventory/`, que junta quatro fontes:
 
 | Arquivo | Onde rodam | Grupos |
 |---|---|---|
 | `static.ini` | Proxmox (`pve`) | `proxmox` |
 | `pi.yml` | Raspberry Pi 5 (`nextlevelcode`, user `ubuntu`) e o grupo das máquinas que se passam por ele | `pi_hosts` → `rpi`, `pi_staging` |
 | `vps.yml` | VPS da Hetzner (`hetzner`, user `hetzner`, Tailscale SSH) | `vps` |
-| `borg.yml` | Borg offsite (`borg-offsite`, desktop Omarchy fora de casa, user `infra` pelo OpenSSH) | `borg_servers` |
 | `terraform.yml` | plugin `cloud.terraform`, lendo o state do terraform | `lxc` |
 
 Os containers **não** estão em arquivo nenhum: aparecem como recursos
@@ -69,8 +68,7 @@ usadas depois.
 | `playbooks/caddy-vps.yml` | `vps` | Caddy da VPS: domínios públicos (forge, status page do Uptime Kuma) + sites privados em `*.lab` que moram nela |
 | `playbooks/anubis.yml` | `vps` | Anubis (prova de trabalho anti-bot) na frente dos domínios públicos da VPS; aplicar antes do `caddy-vps.yml` |
 | `playbooks/uptime-kuma.yml` | `vps` | Uptime Kuma na VPS (fora de casa), em `uptime.lab` pelo Caddy da VPS |
-| `playbooks/immich.yml` | `pi_hosts` | Immich do Pi + backup Borg no Borg offsite |
-| `playbooks/borg-offsite.yml` | `borg_servers` | servidor Borg offsite: disco dos repositórios, usuário `borg` com uma chave por repositório, sshd só da tailnet; fora do `site.yml` (vive desligado) |
+| `playbooks/immich.yml` | `pi_hosts` | Immich do Pi + backup Borg |
 | `playbooks/pi-completo.yml` | `pi_hosts` | Pi inteiro na ordem certa; com `-e pi_restaurar_tudo=RESTAURAR_PI` traz os dados do Borg antes (`docs/pi-reconstrucao.md`) |
 | `playbooks/pi-atualizar.yml` | `pi_hosts` | atualização sob demanda: `apt dist-upgrade` + pull + `up -d` das stacks + dependentes do gluetun + prune; só imagem, sem config; não reinicia, avisa se o SO pedir |
 | `playbooks/pi-lab-limpar.yml` | `pi_staging` | depois de um ensaio: derruba as stacks, apaga os dados restaurados e as credenciais do Borg do pi-lab |
@@ -141,8 +139,7 @@ linha.
 | `vps_host` | base de toda VPS: UFW (só 80/443 + `tailscale0`), sshd sem senha nem root, unattended-upgrades, fail2ban de fallback |
 | `reboot_watch` | timer de hora em hora que avisa um monitor push quando o reboot está pendente há 3+ dias ou o `apt-daily-upgrade` falhou; dependência do `vps_host` e do `pi_host`, pula LXC |
 | `uptime_kuma` | Uptime Kuma + AutoKuma + Docker na VPS, sem o usuário no grupo `docker`; monitores em `group_vars/vps/monitors.yml` |
-| `immich` | Immich do Pi, acesso só pelo Caddy; backup no Borg offsite (`borg_backup_repo`) |
-| `borg_server` | servidor Borg num desktop Arch: monta o disco dos repositórios, usuário `borg` com `borg serve --restrict-to-repository` por chave, sshd só da tailnet |
+| `immich` | Immich do Pi, acesso só pelo Caddy; backup no repositório compartilhado |
 | `borg_restore` | miolo de todos os restores: escolhe o archive (prefixo + máquina de origem), extrai (no Pi, dentro do LUKS) e valida |
 | `*_restore` | restore Borg do serviço, exige `-e <svc>_restore_confirmation`; `-e restore_on_pi=true` restaura no Pi de recuperação |
 | `geerlingguy.docker` | vendido, instala o engine |
@@ -240,9 +237,9 @@ grant lá — sem ele o serviço sobe e fica inacessível sem erro.
 
 ## Segredos
 
-Os backups vão para um repositório Borg só (BorgBase), com prefixo por
-serviço; a exceção é o Immich, num repositório próprio no Borg offsite,
-onde também fica o backup do Nextcloud AIO (`docs/borg-offsite.md`). Quem faz backup é o
+Os backups vão para um repositório Borg só (BorgBase, plano pago), com
+prefixo por serviço; a exceção é o Nextcloud AIO, que usa o Borg dele num
+repositório separado na mesma conta (`docs/nextcloud.md`). Quem faz backup é o
 borgmatic, e cada backup avisa um monitor push no Uptime Kuma, com token
 derivado da senha do Borg (`docs/backup.md`). O que não é segredo
 (caminho da chave, passcommand, opções de SSH, retenção, compressão, horário

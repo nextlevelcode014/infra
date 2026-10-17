@@ -87,8 +87,8 @@ domínio, e no pi-lab o ensaio não diria muito.
    Confira: o ❗ ao lado do TURN e o aviso do HPB somem, e uma chamada de
    teste conecta.
 
-4. **Backup do AIO** (instância nova): o repositório no Borg offsite,
-   como em "Backup" abaixo. Guarde a senha de criptografia que ele mostra
+4. **Backup do AIO** (instância nova): o repositório no BorgBase, como
+   em "Backup" abaixo. Guarde a senha de criptografia que ele mostra
    **fora do Pi**: sem ela, o backup não restaura.
 
 5. **Clientes** (desktop, celular): conta com
@@ -98,54 +98,50 @@ domínio, e no pi-lab o ensaio não diria muito.
 
 Não passa pelo borgmatic: é o Borg embutido do AIO, configurado na interface
 dele, com retenção em `BORG_RETENTION_POLICY` no compose. O destino é um
-repositório remoto no Borg offsite (`/srv/borg/nextcloud`,
-`docs/borg-offsite.md`), pela tailnet. O AIO para os containers durante o
-backup e avisa uma falha no próprio Nextcloud; não há monitor no Uptime
-Kuma.
+repositório remoto no BorgBase, na mesma conta do compartilhado mas
+**separado dele**: o AIO cria o repositório com uma senha que ele mesmo
+gera, e um repositório Borg só tem uma (ADR 0008). O AIO para os
+containers durante o backup e avisa uma falha no próprio Nextcloud; não há
+monitor no Uptime Kuma, e quem avisa de fora é o alerta do BorgBase.
 
-### Apontar para o Borg offsite
+### Configurar
 
-Uma vez, com o Borg offsite pronto (`docs/borg-offsite.md`, passos 1 a 5).
-Manual: o destino do backup só se configura na interface do AIO.
+Manual: o repositório nasce no console do BorgBase, e o destino do backup
+só se configura na interface do AIO.
 
-1. **Repositório remoto.** Na interface do AIO
+1. **Repositório no BorgBase.** No console, *New Repo*: nome
+   `nextcloud-aio`, a mesma região do compartilhado, e o alerta de
+   inatividade em 2 dias (o aviso que o Uptime Kuma não dá).
+
+   Confira: o repositório aparece na lista, com a URL
+   `ssh://<id>@<id>.repo.borgbase.com/./repo`.
+
+2. **Repositório remoto no AIO.** Na interface do AIO
    (`https://nextlevelcode.<tailnet>.ts.net:8080`), com os containers
-   parados, seção de backup: troque o destino atual (o celular) por
-   *Reset backup location*, deixe o caminho local vazio e preencha o
-   repositório remoto:
-
-   ```
-   ssh://borg@<borg_offsite_ts_ip>:22/srv/borg/nextcloud
-   ```
-
-   Pelo IP Tailscale da máquina (`vault_borg_offsite_tailscale_ip`), e não
-   pelo nome: o container de backup do AIO não usa o DNS da tailnet.
+   parados, seção de backup: deixe o caminho local vazio e cole a URL do
+   passo 1 no repositório remoto. Com um destino já configurado,
+   *Reset backup location* antes.
 
    Confira: o campo mostra o repositório remoto.
 
-2. **Chave do AIO.** *Create backup*: a primeira tentativa falha e a
-   interface mostra uma chave pública. Ponha a chave no vault e reaplique o
-   Borg offsite:
+3. **Chave do AIO.** *Create backup*: a primeira tentativa falha e a
+   interface mostra uma chave pública. No BorgBase, *Account → SSH Keys →
+   Add Key* com ela, e no repositório `nextcloud-aio`, *Edit*: a chave com
+   **acesso total** (não append-only: o prune do AIO precisa apagar).
 
-   ```bash
-   ansible-vault edit inventory/group_vars/all/vault.yml   # vault_borg_offsite_aio_public_key
-   ansible-playbook playbooks/borg-offsite.yml --ask-vault-pass
-   ```
+   Confira: a chave aparece no acesso do `nextcloud-aio`, e em nenhum
+   outro repositório.
 
-   Confira: `ssh infra@<borg_offsite_ts_ip> sudo cat /var/lib/borg/.ssh/authorized_keys`
-   tem a linha do `/srv/borg/nextcloud`.
-
-3. **Primeiro backup.** *Create backup* de novo. Confira que a senha de
+4. **Primeiro backup.** *Create backup* de novo. Confira que a senha de
    criptografia que a interface mostra é a que está no KeePass
    (`docs/pi-reconstrucao.md`); se mudou, troque lá.
 
-   Confira: o backup aparece na lista da interface, e
-   `ssh infra@<borg_offsite_ts_ip> sudo du -sh /srv/borg/nextcloud`
-   mostra o tamanho do Nextcloud.
+   Confira: o backup aparece na lista da interface, e o `nextcloud-aio`
+   no BorgBase mostra o espaço usado.
 
-4. **Backup diário**, na mesma seção, num horário dentro da janela em que a
-   máquina fica ligada (`docs/borg-offsite.md`, "Operação"), depois do
-   borgmatic do Pi: 04:00. Confira o fuso que a interface indica.
+5. **Backup diário**, na mesma seção, às 04:00: depois do borgmatic do Pi,
+   para os dois não disputarem o upload. Confira o fuso que a interface
+   indica.
 
    Confira: a interface mostra o backup diário ligado, e no dia seguinte há
    um backup novo na lista.
@@ -167,5 +163,5 @@ antes, para a interface existir.
 
 ## Limitações
 
-- Uma cópia só, no Borg offsite (`docs/borg-offsite.md`, "Limitações"), e
-  sem monitor no Uptime Kuma.
+- Uma cópia só fora de casa, no BorgBase, e sem monitor no Uptime Kuma:
+  falha só aparece no Nextcloud e no alerta de inatividade do BorgBase.

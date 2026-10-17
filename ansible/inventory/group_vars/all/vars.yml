@@ -133,13 +133,6 @@ borg_backup_push_url: "https://uptime.lab.nextlevelcode.pro/api/push/{{ borg_bac
 reboot_watch_name: "{{ inventory_hostname }}"
 reboot_watch_push_token: "{{ ((vault_forgejo_borg_password ~ '-reboot-' ~ reboot_watch_name) | hash('sha256'))[:32] }}"
 reboot_watch_push_url: "https://uptime.lab.nextlevelcode.pro/api/push/{{ reboot_watch_push_token }}"
-# Borg offsite: servidor Borg próprio fora de casa (role borg_server), para o
-# que não cabe na cota do BorgBase (Immich; o Nextcloud AIO usa o Borg dele,
-# apontado para a mesma máquina). Mesma chave SSH e mesma senha do
-# repositório compartilhado; o known_host é outro. docs/borg-offsite.md.
-borg_offsite_host: "{{ vault_borg_offsite_tailscale_ip }}"
-borg_offsite_dir: /srv/borg
-borg_offsite_repo_immich: "ssh://borg@{{ borg_offsite_host }}{{ borg_offsite_dir }}/immich"
 # Desligado nas máquinas de teste: um backup delas cairia no repositório de
 # produção com o mesmo prefixo e viraria "o mais recente" para o restore.
 borg_backup_enabled: true

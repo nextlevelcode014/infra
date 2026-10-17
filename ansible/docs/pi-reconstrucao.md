@@ -15,10 +15,9 @@ O que é só do Pi:
 | O quê | Onde deve estar |
 |---|---|
 | Clone deste repo (`infra`) | no seu computador. Se o Forgejo estiver fora, é o único |
-| Backups Borg (`arr-*`, `adguard-*`, `fmd-*`) | BorgBase (senha e chave estão no vault) |
-| Backup Borg do Immich (`immich-*`) | Borg offsite, `/srv/borg/immich` (mesma senha e chave; `docs/borg-offsite.md`) |
+| Backups Borg (`arr-*`, `adguard-*`, `fmd-*`, `immich-*`) | BorgBase (senha e chave estão no vault) |
 | Senha de criptografia do backup do Nextcloud AIO | no KeePass, como em `docs/fora-da-infra.md`. O AIO pede para restaurar |
-| Backup do Nextcloud | Borg offsite, `/srv/borg/nextcloud` (`docs/nextcloud.md`, "Backup") |
+| Backup do Nextcloud | BorgBase, repositório `nextcloud-aio` (`docs/nextcloud.md`, "Backup") |
 
 ## 1. Sistema e acesso
 
@@ -74,14 +73,14 @@ sobem vazios.
 
 - **Nextcloud:** na primeira tela do AIO
   (`https://nextlevelcode.<tailnet>.ts.net:8080`), escolha restaurar de um
-  backup, informe o repositório remoto do Borg offsite
-  (`docs/nextcloud.md`, "Backup", passo 1) e a senha de criptografia do
-  backup. O AIO novo gera outra chave SSH: a primeira tentativa falha e mostra
-  a chave, que entra no vault como no passo 2 de lá. O domínio
+  backup, informe a URL do `nextcloud-aio` no BorgBase e a senha de
+  criptografia do backup. O AIO novo gera outra chave SSH: a primeira
+  tentativa falha e mostra a chave, que entra no BorgBase como no passo 3
+  de `docs/nextcloud.md`, "Backup" (tire a chave do AIO antigo). O domínio
   (`nextcloud.lab.nextlevelcode.pro`) volta com o backup.
   Depois, ajuste o Talk como em `docs/nextcloud.md` ("Instalação", passo 3).
 - **Immich:** sem restore automatizado ainda (#10). Os archives `immich-*`
-  estão no Borg offsite (`borg_offsite_repo_immich`).
+  estão no repositório compartilhado.
 - **exit node:** a identidade do nó não está no backup. Ele entra como um nó
   novo: remova o `vpn-exit` antigo no console antes, para o nome ficar livre.
 - **Nós antigos no console:** remova o que sobrou do Pi anterior.
