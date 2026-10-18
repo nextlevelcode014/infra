@@ -119,7 +119,7 @@ O que ainda falta migrar. Ao migrar um role, tire a linha daqui. Imagem é a
 
 | Role | O que diverge |
 |---|---|
-| todos os outros | a própria cópia do ciclo do compose, sem o `compose_stack` (só o Forgejo e o Vaultwarden já usam) |
+| todos os outros | a própria cópia do ciclo do compose, sem o `compose_stack` (já usam: Forgejo, Vaultwarden, Uptime Kuma, Anubis) |
 | `adguard` | imagem `latest` |
 | `arr_stack` | todas as imagens `latest`, escritas no compose; compose estático em `files/` |
 | `exit_node` | imagens no compose (Tailscale `latest`); compose estático em `files/` |
@@ -128,4 +128,3 @@ O que ainda falta migrar. Ao migrar um role, tire a linha daqui. Imagem é a
 | `immich` | versão por `IMMICH_VERSION` no env, com `release` de reserva no compose |
 | `nextcloud` | AIO e socket proxy em `latest` (o AIO se atualiza pela própria interface: avaliar se é exceção); coturn no compose |
 | `searxng` | SearXNG `latest` e Valkey, escritos no compose |
-| `uptime_kuma`, `anubis` | doc fora do modelo de `docs/README.md` |

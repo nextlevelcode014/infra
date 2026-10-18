@@ -7,20 +7,12 @@
   vars:
     docker_users: []
 
-- name: Criar o diretório do Uptime Kuma
-  ansible.builtin.file:
-    path: "{{ uptime_kuma_dir }}"
-    state: directory
-    owner: root
-    group: root
-    mode: "0750"
-  register: uptime_kuma_dir_result
-
-- name: Renderizar o compose.yml
-  ansible.builtin.template:
-    src: compose.yml.j2
-    dest: "{{ uptime_kuma_dir }}/compose.yml"
-    mode: "0644"
+- name: Preparar o diretório da stack
+  ansible.builtin.include_role:
+    name: compose_stack
+    tasks_from: dir
+  vars:
+    compose_stack_dir: "{{ uptime_kuma_dir }}"
 
 # --- AutoKuma ---------------------------------------------------------------
 - name: Criar os diretórios do AutoKuma
@@ -136,13 +128,10 @@
                | map('regex_replace', '^', 'reboot-') | list))
 
 - name: Subir o Uptime Kuma
-  community.docker.docker_compose_v2:
-    project_src: "{{ uptime_kuma_dir }}"
-    files: [compose.yml]
-    state: present
-  # No --check de um host novo o diretório só "seria" criado, e o compose
-  # falha com "is not a directory". Pula só nesse caso.
-  when: not (ansible_check_mode and uptime_kuma_dir_result is changed)
+  ansible.builtin.include_role:
+    name: compose_stack
+  vars:
+    compose_stack_dir: "{{ uptime_kuma_dir }}"
 
 # O acesso é pelo Caddy da VPS (uptime.lab.nextlevelcode.pro, só tailnet),
 # configurado pelo playbooks/caddy-vps.yml.

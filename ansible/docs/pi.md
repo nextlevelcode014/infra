@@ -140,6 +140,18 @@ config nova continua sendo o playbook do serviço (ou o `pi-completo.yml`).
 Não reinicia: se o SO pedir reboot, o playbook avisa no fim, e o reboot fica
 com você porque derruba tudo até o `secure-unlock`.
 
+No fim, mostra o que mudou, por container (`jellyfin: 10.10.3 → 10.10.5
+(9c2e… → b71d…)`), e grava o log completo em `/var/log/atualizar/<data>.log`:
+nome, imagem, digest e versão de cada container antes e depois (role
+`registro_versoes`). A versão vem do label da imagem, ou da tag quando a
+imagem não tem label; o digest é o que identifica de verdade.
+
+Para voltar uma imagem: pegue o digest de antes no log, troque a tag por ele
+(`image: <repo>@sha256:<digest>`) na variável do role, ou no `compose.yml.j2`
+enquanto a imagem estiver escrita nele, e reaplique o playbook do serviço. O
+registry continua servindo o digest depois que o prune apaga a imagem local.
+Não desfaz migração de banco: é por isso que essas imagens têm versão exata.
+
 Ficam de fora:
 
 - **Nextcloud AIO**: o mastercontainer e os containers dele se atualizam pela

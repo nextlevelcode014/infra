@@ -71,7 +71,8 @@ usadas depois.
 | `playbooks/uptime-kuma.yml` | `vps` | Uptime Kuma na VPS (fora de casa), em `uptime.lab` pelo Caddy da VPS |
 | `playbooks/immich.yml` | `pi_hosts` | Immich do Pi + backup Borg |
 | `playbooks/pi-completo.yml` | `pi_hosts` | Pi inteiro na ordem certa; com `-e pi_restaurar_tudo=RESTAURAR_PI` traz os dados do Borg antes (`docs/pi-reconstrucao.md`) |
-| `playbooks/pi-atualizar.yml` | `pi_hosts` | atualização sob demanda: `apt dist-upgrade` + pull + `up -d` das stacks + dependentes do gluetun + prune; só imagem, sem config; não reinicia, avisa se o SO pedir |
+| `playbooks/pi-atualizar.yml` | `pi_hosts` | atualização sob demanda: `apt dist-upgrade` + pull + `up -d` das stacks + dependentes do gluetun + prune; só imagem, sem config; registra as versões antes e depois; não reinicia, avisa se o SO pedir |
+| `playbooks/vps-atualizar.yml` | `vps` | o mesmo na VPS (Anubis, Uptime Kuma), sem gluetun nem LUKS (`docs/vps.md`, "Atualizar") |
 | `playbooks/pi-lab-limpar.yml` | `pi_staging` | depois de um ensaio: derruba as stacks, apaga os dados restaurados e as credenciais do Borg do pi-lab |
 | `playbooks/*-restore.yml` | o grupo do serviço | restore Borg explícito (ver `docs/`) |
 
@@ -139,6 +140,7 @@ linha.
 | `nextcloud` | mastercontainer do AIO (os outros containers são do próprio AIO), coturn e o serve do host |
 | `anubis` | Anubis da VPS, uma instância por serviço (`anubis_instances`); `tasks_from: policy` só renderiza a política, para um Anubis em outra stack (FMD) |
 | `vps_host` | base de toda VPS: UFW (só 80/443 + `tailscale0`), sshd sem senha nem root, unattended-upgrades, fail2ban de fallback |
+| `registro_versoes` | nome, imagem, digest e versão de cada container antes (`tasks_from: antes`) e depois (`tasks_from: depois`) de uma atualização; log em `/var/log/atualizar` |
 | `reboot_watch` | timer de hora em hora que avisa um monitor push quando o reboot está pendente há 3+ dias, o `apt-daily-upgrade` falhou ou um repositório do apt não responde; dependência do `vps_host` e do `pi_host`, pula LXC |
 | `uptime_kuma` | Uptime Kuma + AutoKuma + Docker na VPS, sem o usuário no grupo `docker`; monitores em `group_vars/vps/monitors.yml` |
 | `immich` | Immich do Pi, acesso só pelo Caddy; backup no repositório compartilhado |

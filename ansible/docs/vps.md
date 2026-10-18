@@ -34,6 +34,52 @@ Dentro dela, todo playbook da VPS aplica antes o role `vps_host` (e o
   o Docker. Só vale para container recriado depois da mudança.
 - timezone, pelo role `common`.
 
+## Atualizar
+
+Atualização de **segurança** do Ubuntu entra sozinha (unattended-upgrades,
+acima). O resto é sob demanda (ADR 0003), quando você puder ficar de olho:
+pacotes que não são de segurança (os do `-updates` do Ubuntu e os dos
+repositórios de terceiros, como o do Docker) e as imagens das stacks.
+
+```bash
+ansible-playbook playbooks/vps-atualizar.yml --ask-vault-pass
+```
+
+Faz, nesta ordem: `apt dist-upgrade`, `pull` das imagens de cada stack
+(Anubis e Uptime Kuma), `up -d` de cada uma (recria só o container cuja
+imagem mudou) e apaga as imagens antigas. Só troca imagem: config nova
+continua sendo o playbook do serviço. Imagem com versão exata (Anubis,
+AutoKuma) não muda aqui; sobe trocando a variável (`docs/anubis.md` e
+`docs/uptime-kuma.md`, "Atualizar").
+
+Quando o pacote do Docker atualiza, o `dockerd` reinicia e todo container da
+VPS cai por alguns segundos, o Uptime Kuma junto: os monitores podem mandar
+um aviso de queda e de volta.
+
+No fim, mostra o que mudou por container e grava o log completo em
+`/var/log/atualizar/<data>.log`, com o digest de antes para voltar uma
+imagem (`docs/pi.md`, "Atualizar", tem o como).
+
+Confira:
+
+```bash
+ssh hetzner@hetzner 'sudo docker ps --format "{{.Names}} {{.Status}}" | grep -v "Up"'
+```
+
+Sem saída, nenhum container está parado ou reiniciando.
+
+Não reinicia: se o SO pedir reboot, o playbook avisa no fim. A VPS não tem
+LUKS, então o reboot é só esperar um minuto, sem o Uptime Kuma e os domínios
+públicos nesse tempo:
+
+```bash
+ssh hetzner@hetzner sudo reboot
+```
+
+Confira: `ssh hetzner@hetzner uptime` mostra o boot novo, e o monitor
+*Atualizações VPS* fica verde (`sudo systemctl start reboot-watch.service`
+para não esperar a hora cheia).
+
 Porta publicada pelo Docker passa por cima do UFW: compose na VPS publica
 sempre em `127.0.0.1:`, e o Caddy chega por localhost.
 

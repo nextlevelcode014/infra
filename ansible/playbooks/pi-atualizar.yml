@@ -32,6 +32,13 @@
       changed_when: false
       check_mode: false
 
+    # Antes do apt: o pacote do Docker pode reiniciar os containers, mas não
+    # troca imagem.
+    - name: Registrar as versões dos containers
+      ansible.builtin.include_role:
+        name: registro_versoes
+        tasks_from: antes
+
     - name: Atualizar os pacotes do SO
       ansible.builtin.apt:
         update_cache: true
@@ -72,6 +79,13 @@
     - name: Recriar os dependentes presos a um gluetun antigo
       ansible.builtin.include_tasks: "{{ playbook_dir }}/../roles/gluetun/tasks/dependentes.yml"
       when: pi_atualizar_stat.results[0].stat.exists
+
+    # Antes do prune: o log guarda o digest da imagem que ele vai apagar, que
+    # é o que serve para voltar (docs/pi.md, "Atualizar").
+    - name: Comparar as versões dos containers
+      ansible.builtin.include_role:
+        name: registro_versoes
+        tasks_from: depois
 
 - name: Limpar e avisar
   hosts: pi_hosts

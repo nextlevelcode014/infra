@@ -1,0 +1,10 @@
+---
+# Registro das versões dos containers antes e depois de uma atualização
+# (pi-atualizar.yml, vps-atualizar.yml). Duas entradas, com include_role:
+#
+#   tasks_from: antes    antes do pull
+#   tasks_from: depois   depois do up -d; grava o log e mostra o que mudou
+#
+# Um log por execução, em registro_versoes_dir; o digest de antes é o que
+# serve para voltar uma imagem (docs/pi.md, "Atualizar").
+registro_versoes_dir: /var/log/atualizar

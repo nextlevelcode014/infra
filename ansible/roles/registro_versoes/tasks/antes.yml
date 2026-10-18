@@ -1,0 +1,23 @@
+---
+# No --check nada é baixado nem recriado: não há o que registrar.
+- name: Registrar as versões de antes
+  when: not ansible_check_mode
+  block:
+    - name: Criar o diretório do registro de versões
+      ansible.builtin.file:
+        path: "{{ registro_versoes_dir }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0750"
+
+    # O nome vale para o depois também: os fatos passam de uma play para
+    # outra.
+    - name: Marcar a execução
+      ansible.builtin.set_fact:
+        registro_versoes_execucao: "{{ now(fmt='%Y-%m-%d-%H%M%S') }}"
+
+    - name: Gravar as versões de antes
+      ansible.builtin.script:
+        cmd: "versoes.sh antes {{ registro_versoes_dir }}/{{ registro_versoes_execucao }}.antes"
+      changed_when: false

@@ -1,0 +1,82 @@
+---
+# Atualiza a VPS sob demanda, no molde do pi-atualizar.yml (ADR 0003):
+# pacotes do SO, imagens das stacks e containers recriados com elas. Só
+# troca imagem: config nova continua sendo o playbook do serviço. Não
+# reinicia: se o SO pedir reboot, avisa no fim (docs/vps.md, "Atualizar").
+#
+# O pacote do Docker vem do repositório da Docker, fora do
+# unattended-upgrades: quando ele atualiza, o dockerd reinicia e todo
+# container da VPS cai por alguns segundos, o Uptime Kuma junto.
+
+- name: Atualizar o SO e baixar as imagens novas
+  hosts: vps
+  gather_facts: true
+  vars:
+    # Arquivo compose de cada stack. As de versão exata (Anubis, AutoKuma)
+    # entram também: o pull não muda nada nelas, e a lista fica sem exceção.
+    vps_atualizar_composes:
+      - /opt/anubis/compose.yml
+      - /opt/uptime-kuma/compose.yml
+  tasks:
+    - name: Registrar as versões dos containers
+      ansible.builtin.include_role:
+        name: registro_versoes
+        tasks_from: antes
+
+    - name: Atualizar os pacotes do SO
+      ansible.builtin.apt:
+        update_cache: true
+        upgrade: dist
+        autoremove: true
+
+    - name: Ver quais stacks existem neste host
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      loop: "{{ vps_atualizar_composes }}"
+      register: vps_atualizar_stat
+
+    - name: Baixar as imagens novas
+      community.docker.docker_compose_v2_pull:
+        project_src: "{{ item.item | dirname }}"
+        files: ["{{ item.item | basename }}"]
+      loop: "{{ vps_atualizar_stat.results }}"
+      loop_control:
+        label: "{{ item.item | dirname }}"
+      when: item.stat.exists
+
+    # up -d recria só o container cuja imagem mudou.
+    - name: Recriar os containers com imagem nova
+      community.docker.docker_compose_v2:
+        project_src: "{{ item.item | dirname }}"
+        files: ["{{ item.item | basename }}"]
+        state: present
+      loop: "{{ vps_atualizar_stat.results }}"
+      loop_control:
+        label: "{{ item.item | dirname }}"
+      when: item.stat.exists
+
+    # Antes do prune: o log guarda o digest da imagem que ele vai apagar.
+    - name: Comparar as versões dos containers
+      ansible.builtin.include_role:
+        name: registro_versoes
+        tasks_from: depois
+
+    # Só as sem tag (as antigas que o pull substituiu).
+    - name: Apagar as imagens substituídas
+      community.docker.docker_prune:
+        images: true
+        images_filters:
+          dangling: true
+
+    - name: Ver se o SO pede reboot
+      ansible.builtin.stat:
+        path: /var/run/reboot-required
+      register: vps_atualizar_reboot
+
+    - name: Avisar que falta reiniciar
+      ansible.builtin.debug:
+        msg: >-
+          O SO pede reboot. Reinicie quando puder ficar um minuto sem a VPS
+          (Uptime Kuma e os domínios públicos): ssh hetzner@hetzner sudo
+          reboot (docs/vps.md, "Atualizar").
+      when: vps_atualizar_reboot.stat.exists

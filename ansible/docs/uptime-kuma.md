@@ -1,34 +1,34 @@
 # Uptime Kuma na VPS
 
-`playbooks/uptime-kuma.yml` instala o Uptime Kuma na VPS da Hetzner
-(`hetzner` na tailnet). Ele roda fora de casa de propósito: se o Pi, o Proxmox
-ou a internet de casa caírem, o monitor continua de pé e avisa.
+`playbooks/uptime-kuma.yml` instala o Uptime Kuma e o AutoKuma na VPS da
+Hetzner (`hetzner` na tailnet). Ele roda fora de casa de propósito: se o Pi, o
+Proxmox ou a internet de casa caírem, o monitor continua de pé e avisa.
 
-| O quê | Como |
+| O quê | Onde |
 |---|---|
-| Acesso | `https://uptime.lab.nextlevelcode.pro`, pelo Caddy da VPS, só da tailnet |
-| Container | `louislam/uptime-kuma:2`, ouvindo só em `127.0.0.1:3001` |
-| Dados | `/opt/uptime-kuma/data` (SQLite: monitores, avisos, histórico) |
-| Backup | Borg no repositório compartilhado, prefixo `uptime-kuma-*`, 03:00 |
-| Monitores e aviso | **AutoKuma** (`ghcr.io/bigboot/autokuma:2.0.0`), a partir de `inventory/group_vars/vps/monitors.yml` |
+| Interface | `https://uptime.lab.nextlevelcode.pro` (Caddy da VPS → `127.0.0.1:3001`), só da tailnet |
+| Status page pública | `https://status.nextlevelcode.pro` (ver "Status page pública") |
+| Dados | `/opt/uptime-kuma/data` (SQLite: monitores, avisos, histórico, status page) |
+| Monitores e aviso | **AutoKuma**, a partir de `inventory/group_vars/vps/monitors.yml` |
+| Imagens | `uptime_kuma_image` (major, `:2`) e `uptime_kuma_autokuma_image` (versão exata) |
 | Docker | instalado pelo `geerlingguy.docker`, **sem** o usuário `hetzner` no grupo `docker` (use `sudo docker`) |
 
 Ele é servido pelo Caddy **da VPS**, não pelo do Proxmox: se o Proxmox cai, o
 monitor continua acessível. O nome `uptime.lab` tem um registro A próprio na
-Cloudflare, apontando para o IP Tailscale da VPS; o curinga `*.lab` continua no
-Caddy do Proxmox. O Caddy da VPS só aceita conexões da tailnet nesse site.
+Cloudflare, apontando para o IP Tailscale da VPS; o curinga `*.lab` continua
+no Caddy do Proxmox. O Caddy da VPS só aceita conexões da tailnet nesse site.
 
-## Aplicação
+## Antes de aplicar
 
 1. **Registro na Cloudflare** (zona `nextlevelcode.pro`): tipo `A`, nome
-   `uptime.lab`, valor: o IP Tailscale da VPS (`tailscale ip -4` nela), **DNS only**
-   (nuvem cinza). Manual porque o DNS público não é gerido por este repo.
+   `uptime.lab`, valor: o IP Tailscale da VPS (`tailscale ip -4` nela),
+   **DNS only** (nuvem cinza). Manual porque o DNS público não é gerido por
+   este repo.
 
-   Confira: `dig +short @1.1.1.1 uptime.lab.nextlevelcode.pro` devolve
-   esse IP, e `jellyfin.lab` continua devolvendo o IP do Caddy do
-   Proxmox.
+   Confira: `dig +short @1.1.1.1 uptime.lab.nextlevelcode.pro` devolve esse
+   IP, e `jellyfin.lab` continua devolvendo o IP do Caddy do Proxmox.
 
-2. **ACL do Tailscale** (console):
+2. **ACL do Tailscale** (`tailscale/policy.hujson`, colada no console):
 
    | De | Para | Portas | Para quê |
    |---|---|---|---|
@@ -41,21 +41,24 @@ Caddy do Proxmox. O Caddy da VPS só aceita conexões da tailnet nesse site.
    Monitor novo de ping ou porta para outro host precisa da regra
    correspondente; os HTTP pelos `*.lab` já passam pela regra do `tag:caddy`.
 
-3. **Caddy da VPS.** Antes, o token da Cloudflare da VPS (separado do do
-   Proxmox) vai para o vault:
+3. **Vault** (`ansible-vault edit inventory/group_vars/all/vault.yml`):
 
-   ```bash
-   ssh hetzner@hetzner.<tailnet>.ts.net sudo grep CLOUDFLARE_API_TOKEN /etc/caddy/cf-token.env
-   ansible-vault edit inventory/group_vars/all/vault.yml
-   ```
+   | Chave | O quê |
+   |---|---|
+   | `vault_caddy_vps_cloudflare_token` | token da Cloudflare do Caddy da VPS (separado do do Proxmox); numa VPS que já tinha Caddy: `ssh hetzner@hetzner sudo grep CLOUDFLARE_API_TOKEN /etc/caddy/cf-token.env` |
+   | `vault_uptime_kuma_username` / `_password` | o admin que você cria no passo 3 da instalação |
+   | `vault_uptime_kuma_smtp_username` | o endereço Proton que envia (ex.: `monitor@nextlevelcode.pro`) |
+   | `vault_uptime_kuma_smtp_password` | um **token SMTP** da Proton (*Settings → IMAP/SMTP → SMTP tokens*) |
+   | `vault_uptime_kuma_smtp_to` | quem recebe |
 
-   O valor vai em `vault_caddy_vps_cloudflare_token`. Na primeira vez:
-   - o binário custom passa a ficar fora do caminho do `apt` (`dpkg-divert`).
-     Antes, ele tinha sido copiado por cima do `/usr/bin/caddy` do pacote, e um
-     `apt upgrade` o trocaria pelo oficial, sem o plugin da Cloudflare;
-   - o Caddy sobe para a última versão e **reinicia**: o
-     `forge.nextlevelcode.pro` pisca por alguns segundos;
-   - o `cf-token.env` passa de `644` para `640 root:caddy`.
+## Instalação
+
+1. **Caddy da VPS.** Numa VPS cujo Caddy foi instalado à mão, a primeira
+   aplicação: tira o binário custom do caminho do `apt` (`dpkg-divert`; um
+   `apt upgrade` o trocaria pelo oficial, sem o plugin da Cloudflare), sobe o
+   Caddy para a última versão e o **reinicia** (o `forge.nextlevelcode.pro`
+   pisca alguns segundos), e passa o `cf-token.env` de `644` para
+   `640 root:caddy`.
 
    ```bash
    ansible-playbook playbooks/caddy-vps.yml --ask-vault-pass --check --diff
@@ -65,7 +68,7 @@ Caddy do Proxmox. O Caddy da VPS só aceita conexões da tailnet nesse site.
    Confira: `curl -s -o /dev/null -w '%{http_code}\n' https://forge.nextlevelcode.pro`
    responde como antes.
 
-4. **Uptime Kuma.** Na primeira vez instala o Docker na VPS:
+2. **Uptime Kuma.** Na primeira vez instala o Docker na VPS:
 
    ```bash
    ansible-playbook playbooks/uptime-kuma.yml --ask-vault-pass --check --diff
@@ -79,30 +82,19 @@ Caddy do Proxmox. O Caddy da VPS só aceita conexões da tailnet nesse site.
    Confira:
 
    ```bash
-   ssh hetzner@hetzner.<tailnet>.ts.net 'sudo docker ps --filter name=uptime-kuma; id -nG'
+   ssh hetzner@hetzner 'sudo docker ps --filter name=uptime-kuma; id -nG'
    curl -s -o /dev/null -w '%{http_code}\n' https://uptime.lab.nextlevelcode.pro/
    ```
 
    O `id -nG` não deve listar `docker`.
 
-5. **Primeiro acesso** em `https://uptime.lab.nextlevelcode.pro`: escolha
-   **SQLite** e crie o usuário admin. É manual porque o Uptime Kuma não aceita
-   esse usuário por variável de ambiente. Use o mesmo usuário e senha que vão
-   para o vault (passo 6): o AutoKuma entra com eles.
+3. **Primeiro acesso** em `https://uptime.lab.nextlevelcode.pro`: escolha
+   **SQLite** e crie o usuário admin com o usuário e a senha do vault. É
+   manual porque o Uptime Kuma não aceita esse usuário por variável de
+   ambiente; o AutoKuma entra com ele.
 
-6. **Vault e AutoKuma.** O aviso por e-mail e os monitores são criados pelo
-   AutoKuma, a partir de arquivos que o Ansible gera:
-
-   ```bash
-   ansible-vault edit inventory/group_vars/all/vault.yml
-   ```
-
-   | Chave | O quê |
-   |---|---|
-   | `vault_uptime_kuma_username` / `_password` | o admin do passo 5 |
-   | `vault_uptime_kuma_smtp_username` | o endereço Proton que envia (ex.: `monitor@nextlevelcode.pro`) |
-   | `vault_uptime_kuma_smtp_password` | um **token SMTP** da Proton (*Settings → IMAP/SMTP → SMTP tokens*) |
-   | `vault_uptime_kuma_smtp_to` | quem recebe |
+4. **AutoKuma**, que cria o aviso por e-mail e os monitores a partir de
+   arquivos que o Ansible gera. Agora que o admin existe:
 
    ```bash
    ansible-playbook playbooks/uptime-kuma.yml --ask-vault-pass
@@ -114,13 +106,26 @@ Caddy do Proxmox. O Caddy da VPS só aceita conexões da tailnet nesse site.
    (no formato **● AVISO**, porque o teste não traz o estado). Se você criou
    um aviso à mão antes, apague-o: ficaria duplicado.
 
-7. **Primeiro backup:**
+5. **Primeiro backup:**
 
    ```bash
-   ssh -t hetzner@hetzner.<tailnet>.ts.net 'cd ~ && sudo borgmatic -c /etc/borgmatic/uptime-kuma.yaml --verbosity 1 --stats'
+   ssh -t hetzner@hetzner 'cd ~ && sudo borgmatic -c /etc/borgmatic/uptime-kuma.yaml --verbosity 1 --stats'
    ```
 
-## O que monitorar
+   Confira: o monitor *Backup Uptime Kuma* fica verde.
+
+## Backup
+
+Prefixo `uptime-kuma-*` no borgmatic da VPS, às 03:00 (`docs/backup.md`):
+`/opt/uptime-kuma/data` inteiro. O Uptime Kuma e o AutoKuma **param** por
+alguns segundos enquanto o Borg copia o SQLite e voltam com
+`up -d --wait` (o AutoKuma só depois do healthcheck do Uptime Kuma; sozinho
+ele ficava sem conexão). Monitor *Backup Uptime Kuma*, que o próprio Uptime
+Kuma recebe. Restore: "Restore", no fim.
+
+## Operação
+
+### O que monitorar
 
 A lista fica em `inventory/group_vars/vps/monitors.yml`. Cada item vira um
 arquivo `.json` em `/opt/uptime-kuma/autokuma/monitors`, e o AutoKuma cria ou
@@ -138,15 +143,15 @@ e reaplicar `playbooks/uptime-kuma.yml`. Item que sai da lista tem o monitor
   MagicDNS: assim o monitor do Funnel vê o que a internet vê. Por isso ping e
   porta usam o IP Tailscale; os `*.lab` são públicos e resolvem normalmente.
 - Sonarr, Radarr e Prowlarr usam `/ping`: a raiz redireciona para
-  `http://…/login` (eles não sabem que estão atrás de HTTPS), na porta 80, que
-  a VPS não alcança.
+  `http://…/login` (eles não sabem que estão atrás de HTTPS), na porta 80,
+  que a VPS não alcança.
 - Todo monitor tem `max_retries: 2` (`uptime_kuma_monitor_defaults`): um
   container parado alguns segundos pelo backup não vira e-mail.
 - **Não edite pela interface os monitores do AutoKuma:** a próxima
   sincronização desfaz a mudança. Monitor criado à mão fica, e o AutoKuma não
   mexe nele.
 
-## Atualizações: reboot pendente e apt
+### Atualizações dos hosts: reboot pendente e apt
 
 O role `reboot_watch` (dependência do `vps_host` e do `pi_host`) põe em cada
 host um timer de hora em hora que empurra um monitor push do grupo
@@ -175,18 +180,13 @@ depois de repetir 2 min depois (DNS ou espelho fora de sincronia passam
 nesse tempo); com o apt ocupado por outro processo, fica o resultado
 anterior.
 
-Para não esperar a hora cheia:
-
-```bash
-sudo systemctl start reboot-watch.service
-```
-
 O token sai da senha do Borg + `reboot-<host>`, como o do backup
 (`reboot_watch_push_token` em `group_vars/all`). Host novo: uma linha em
 `uptime_kuma_reboot_watch` (`group_vars/vps/monitors.yml`), com o
 `inventory_hostname` dele. LXC não entra: o kernel é o do Proxmox.
 
-Confira depois de aplicar, no host:
+Confira depois de aplicar, no host (o `start` também serve para não esperar a
+hora cheia):
 
 ```bash
 systemctl list-timers reboot-watch.timer   # próxima execução marcada
@@ -196,21 +196,21 @@ sudo systemctl start reboot-watch.service && systemctl status reboot-watch.servi
 O status tem que terminar em `Deactivated successfully` (o `curl` falha a
 unit se o Uptime Kuma recusar o push), e o monitor fica verde.
 
-## Status page pública
+### Status page pública
 
-`https://status.nextlevelcode.pro` mostra a status page de slug `infra` para a
-internet. O Caddy da VPS só deixa passar os caminhos da página (lista em
-`Caddyfile.vps.j2`); login, painel e `/socket.io` dão 404, e o painel completo
-continua só em `uptime.lab`, pela tailnet. O DNS já está coberto pelo curinga
-`*.nextlevelcode.pro`, que aponta para o IP público da VPS.
+`https://status.nextlevelcode.pro` mostra a status page de slug `infra` para
+a internet. O Caddy da VPS só deixa passar os caminhos da página (lista em
+`Caddyfile.vps.j2`); login, painel e `/socket.io` dão 404, e o painel
+completo continua só em `uptime.lab`, pela tailnet. O DNS já está coberto
+pelo curinga `*.nextlevelcode.pro`, que aponta para o IP público da VPS.
 
-1. **Criar a página** em `https://uptime.lab.nextlevelcode.pro` (*Status Pages
-   → New Status Page*), slug `infra`, e adicionar os monitores. É manual porque
-   o AutoKuma 2.0.0 só cria status page, não atualiza, e referencia os
-   monitores pelo id numérico. A página fica no `kuma.db`, que vai para o Borg.
-   Monitor novo no `monitors.yml` **não** entra na página sozinho: adicione-o
-   aqui também. Trocar o slug pede trocar `caddy_vps_status_page_slug` em
-   `inventory/group_vars/vps/vars.yml`.
+1. **Criar a página** em `https://uptime.lab.nextlevelcode.pro` (*Status
+   Pages → New Status Page*), slug `infra`, e adicionar os monitores. É
+   manual porque o AutoKuma 2.0.0 só cria status page, não atualiza, e
+   referencia os monitores pelo id numérico. A página fica no `kuma.db`, que
+   vai para o Borg. Monitor novo no `monitors.yml` **não** entra na página
+   sozinho: adicione-o aqui também. Trocar o slug pede trocar
+   `caddy_vps_status_page_slug` em `inventory/group_vars/vps/vars.yml`.
 
 2. **Aplicar o Caddy da VPS:**
 
@@ -229,8 +229,16 @@ continua só em `uptime.lab`, pela tailnet. O DNS já está coberto pelo curinga
 
    `/` dá `302`; os três da página, `200`; os quatro últimos, `404`.
 
+### Atualizar
+
+O Uptime Kuma usa a tag de major (`:2`): o `vps-atualizar.yml` traz a versão
+nova dentro da 2.x e registra o digest de antes e de depois
+(`docs/vps.md`, "Atualizar"). O AutoKuma tem versão exata: sobe trocando
+`uptime_kuma_autokuma_image` e reaplicando o `uptime-kuma.yml`, depois de ler
+as notas da versão (ele lê o banco do Uptime Kuma).
+
 ## Restore
 
-Não há role de restore. À mão, com o container parado: `borg extract` do
-archive `uptime-kuma-*` mais recente para `/opt/uptime-kuma/data` e subir de
-novo.
+Não há role de restore. À mão, com a stack parada: `borg extract` do archive
+`uptime-kuma-*` mais recente para `/opt/uptime-kuma/data` e subir de novo
+(`sudo docker compose -f /opt/uptime-kuma/compose.yml up -d --wait`).

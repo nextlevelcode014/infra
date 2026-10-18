@@ -7,14 +7,14 @@
   vars:
     docker_users: []
 
-- name: Criar o diretório do Anubis
-  ansible.builtin.file:
-    path: "{{ anubis_dir }}"
-    state: directory
-    owner: root
-    group: root
-    mode: "0755"
-  register: anubis_dir_result
+# 0755: o container roda como não-root e lê a política montada daqui.
+- name: Preparar o diretório da stack
+  ansible.builtin.include_role:
+    name: compose_stack
+    tasks_from: dir
+  vars:
+    compose_stack_dir: "{{ anubis_dir }}"
+    compose_stack_mode: "0755"
 
 # 0644: o container roda como não-root e precisa ler a política.
 - name: Renderizar a política de cada instância
@@ -29,21 +29,11 @@
     label: "{{ item.name }}"
   register: anubis_policy_results
 
-- name: Renderizar o compose.yml
-  ansible.builtin.template:
-    src: compose.yml.j2
-    dest: "{{ anubis_dir }}/compose.yml"
-    mode: "0644"
-
 - name: Subir o Anubis
-  community.docker.docker_compose_v2:
-    project_src: "{{ anubis_dir }}"
-    files: [compose.yml]
-    state: present
-    remove_orphans: true
-  # No --check de um host novo o diretório só "seria" criado, e o compose
-  # falha com "is not a directory". Pula só nesse caso.
-  when: not (ansible_check_mode and anubis_dir_result is changed)
+  ansible.builtin.include_role:
+    name: compose_stack
+  vars:
+    compose_stack_dir: "{{ anubis_dir }}"
 
 # A política é lida só na partida, e mudar o arquivo montado não recria o
 # container: reinicia quem teve a política alterada.

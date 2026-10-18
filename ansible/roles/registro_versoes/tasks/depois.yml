@@ -1,0 +1,16 @@
+---
+- name: Registrar as versões de depois
+  when: not ansible_check_mode
+  block:
+    - name: Gravar as versões de depois e comparar
+      ansible.builtin.script:
+        cmd: >-
+          versoes.sh depois
+          {{ registro_versoes_dir }}/{{ registro_versoes_execucao }}.antes
+          {{ registro_versoes_dir }}/{{ registro_versoes_execucao }}.log
+      register: registro_versoes_resumo
+      changed_when: false
+
+    - name: Mostrar o que mudou
+      ansible.builtin.debug:
+        msg: "{{ registro_versoes_resumo.stdout_lines + ['Log: ' ~ registro_versoes_dir ~ '/' ~ registro_versoes_execucao ~ '.log'] }}"
