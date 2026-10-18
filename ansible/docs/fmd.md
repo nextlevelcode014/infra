@@ -54,7 +54,7 @@ app de 2FA quase sempre sumiu junto. O que protege:
    ansible-playbook playbooks/fmd.yml --ask-vault-pass --limit pi_staging
    ```
 
-   Confira: `curl -s -o /dev/null -w '%{http_code}\n' http://192.168.50.203:8085`
+   Confira: `ssh root@10.50.0.203 "curl -s -o /dev/null -w '%{http_code}\n' http://10.50.0.203:8085"`
    devolve `200` (a página em si reclama da falta de HTTPS, e é esperado).
 
 2. **Dados.** Com backup a trazer, restaure antes de aplicar

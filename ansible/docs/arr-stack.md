@@ -45,9 +45,9 @@ Os symlinks vêm do role `secure_links` (`meta/main.yml`): o compose usa
    ansible-playbook playbooks/arr-stack.yml --ask-vault-pass --limit pi_staging
    ```
 
-   Confira: `ssh root@192.168.50.203 docker compose -f /opt/arr/compose.yml ps`
+   Confira: `ssh root@10.50.0.203 docker compose -f /opt/arr/compose.yml ps`
    lista todos `Up`, e
-   `ssh root@192.168.50.203 docker exec qbittorrent curl -s https://ipinfo.io/ip`
+   `ssh root@10.50.0.203 docker exec qbittorrent curl -s https://ipinfo.io/ip`
    mostra um IP da ProtonVPN.
 
 2. **Dados.** Com backup a trazer, restaure antes de aplicar

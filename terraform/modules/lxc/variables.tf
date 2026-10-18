@@ -26,6 +26,11 @@ variable "gateway" {
   default = null
 }
 
+variable "bridge" {
+  type        = string
+  description = "Bridge do Proxmox onde o eth0 do container é ligado."
+}
+
 variable "cores" {
   type    = number
   default = 1

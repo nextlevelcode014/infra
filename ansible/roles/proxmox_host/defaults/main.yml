@@ -7,3 +7,11 @@
 # aparece entre colchetes.
 proxmox_battery: BAT0
 proxmox_battery_charge_type: Long_Life
+
+# Rede dos LXCs (ADR 0009): bridge só do Proxmox, sem porta física, com NAT
+# para fora pela vmbr0. Faixa e gateway são os mesmos do
+# ../terraform/local.tf: mudar aqui é mudar lá.
+proxmox_lxc_bridge: vmbr1
+proxmox_lxc_address: 10.50.0.1/24
+proxmox_lxc_subnet: 10.50.0.0/24
+proxmox_lxc_uplink: vmbr0

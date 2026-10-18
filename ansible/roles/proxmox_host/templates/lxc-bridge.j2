@@ -1,0 +1,11 @@
+# Gerido pelo Ansible (role proxmox_host). Rede dos LXCs: ADR 0009.
+# A {{ proxmox_lxc_uplink }} fica no /etc/network/interfaces, fora daqui.
+auto {{ proxmox_lxc_bridge }}
+iface {{ proxmox_lxc_bridge }} inet static
+	address {{ proxmox_lxc_address }}
+	bridge-ports none
+	bridge-stp off
+	bridge-fd 0
+	# -C antes do -A: um ifup com a bridge já no ar não duplica a regra.
+	post-up iptables -t nat -C POSTROUTING -s {{ proxmox_lxc_subnet }} -o {{ proxmox_lxc_uplink }} -j MASQUERADE 2>/dev/null || iptables -t nat -A POSTROUTING -s {{ proxmox_lxc_subnet }} -o {{ proxmox_lxc_uplink }} -j MASQUERADE
+	post-down iptables -t nat -D POSTROUTING -s {{ proxmox_lxc_subnet }} -o {{ proxmox_lxc_uplink }} -j MASQUERADE || true

@@ -33,7 +33,7 @@ resource "proxmox_virtual_environment_container" "this" {
 
   network_interface {
     name   = "eth0"
-    bridge = "vmbr0"
+    bridge = var.bridge
   }
 
   initialization {

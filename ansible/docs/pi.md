@@ -197,15 +197,16 @@ porque derruba todas as stacks até o `secure-unlock`.
 
 ## pi-lab — staging do Pi
 
-O `pi-lab` (LXC x86, vmid 203, `192.168.50.203`) recebe os mesmos playbooks do
+O `pi-lab` (LXC x86, vmid 203, `10.50.0.203`) recebe os mesmos playbooks do
 Pi para testar antes. O Terraform o põe no grupo `pi_staging`, que o
 `inventory/pi.yml` coloca sob `pi_hosts`. O que muda está em
 `group_vars/pi_staging/vars.yml`:
 
 - **sem LUKS:** `/mnt/secure` é um volume do Proxmox. Sem `pi_luks_uuid`, o
   `pi_host` pula crypttab, fstab e `secure-unlock`, e o Docker sobe no boot;
-- **sem Tailscale:** `ts_ip` é o IP da LAN, e o `lxc.yml` aplica no pi-lab só
-  as flags do LXC (`keyctl`, `/dev/net/tun`), não a base dos outros LXCs;
+- **sem Tailscale:** `ts_ip` e `lan_ip` são o IP dele na bridge dos LXCs, e o
+  `lxc.yml` aplica no pi-lab só as flags do LXC (`keyctl`, `/dev/net/tun`),
+  não a base dos outros LXCs;
 - **sem backup:** `borg_backup_enabled: false` (timer do borgmatic parado e
   nenhum config). Um backup do pi-lab cairia no repositório de produção e
   viraria o archive mais recente para o restore. O acesso ao Borg continua
@@ -214,6 +215,17 @@ Pi para testar antes. O Terraform o põe no grupo `pi_staging`, que o
 
 Cobre "o playbook roda e o compose sobe". Não cobre ARM64, LUKS de verdade nem
 o disco do Pi.
+
+Da sua máquina não há rota até o pi-lab: ele mora na bridge dos LXCs, atrás do
+Proxmox (`docs/proxmox.md`, "Rede dos LXCs"). O SSH salta pelo Proxmox, e uma
+porta dele chega ao navegador por túnel:
+
+```bash
+ssh -N -L 3000:10.50.0.203:3000 root@10.50.0.203
+```
+
+Enquanto o comando estiver aberto, `http://localhost:3000` é a porta 3000 do
+pi-lab. Para outra porta, troque os dois `3000`; `Ctrl+C` fecha o túnel.
 
 ### Preparar o pi-lab
 
@@ -243,8 +255,8 @@ o disco do Pi.
    ansible-playbook playbooks/arr-stack.yml --ask-vault-pass --limit pi_staging
    ```
 
-   Confira: `ssh root@192.168.50.203 docker compose ls` lista `gluetun` e
-   `arr`, e `ssh root@192.168.50.203 docker exec gluetun wget -qO- https://ipinfo.io/ip`
+   Confira: `ssh root@10.50.0.203 docker compose ls` lista `gluetun` e
+   `arr`, e `ssh root@10.50.0.203 docker exec gluetun wget -qO- https://ipinfo.io/ip`
    mostra um IP da ProtonVPN, não o da sua casa.
 
 **Sempre com `--limit pi_staging`.** Sem ele, os playbooks do Pi rodam também

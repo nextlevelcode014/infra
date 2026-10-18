@@ -1,7 +1,7 @@
 # Vaultwarden no LXC do Proxmox
 
 `playbooks/vaultwarden.yml` sobe o Vaultwarden no LXC `vaultwarden` (vmid 202,
-`192.168.50.202`), com o backup no borgmatic do próprio LXC. Só existe na
+`10.50.0.202`), com o backup no borgmatic do próprio LXC. Só existe na
 tailnet: não há domínio público.
 
 | O quê | Onde |
@@ -56,7 +56,7 @@ some na próxima aplicação**. Mudança de config é no defaults e reaplicar.
    `tag:proxmox-lxc`. É manual porque as tags de nó ficam no console
    (`tailscale/README.md`, "Tags"). Sem ela, o Caddy não alcança a 8080.
 
-   Confira: `ssh root@192.168.50.202 tailscale status --self` mostra a tag.
+   Confira: `ssh root@10.50.0.202 tailscale status --self` mostra a tag.
 
 4. **Vaultwarden:**
 
@@ -64,7 +64,7 @@ some na próxima aplicação**. Mudança de config é no defaults e reaplicar.
    ansible-playbook playbooks/vaultwarden.yml --ask-vault-pass
    ```
 
-   Confira: `ssh root@192.168.50.202 curl -s localhost:8080/alive` devolve
+   Confira: `ssh root@10.50.0.202 curl -s localhost:8080/alive` devolve
    uma data, e `https://vault.lab.nextlevelcode.pro` abre o login (o Caddy do
    Proxmox já tem a rota, `roles/caddy/templates/Caddyfile.j2`).
 

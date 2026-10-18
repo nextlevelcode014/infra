@@ -73,10 +73,10 @@ false`): subir tudo faria o qBittorrent baixar de novo os torrents e os
 2. Subir só os apps a conferir, sem qBittorrent, Prowlarr e decluttarr:
 
    ```bash
-   ssh root@192.168.50.203 docker compose -f /opt/arr/compose.yml up -d sonarr radarr bazarr jellyfin jellyseerr
+   ssh root@10.50.0.203 docker compose -f /opt/arr/compose.yml up -d sonarr radarr bazarr jellyfin jellyseerr
    ```
 
-3. Conferir em `http://192.168.50.203:<porta>`: Sonarr (`8989`) e Radarr
+3. Conferir em `http://localhost:<porta>` (pelo túnel, `docs/pi.md`, "pi-lab"): Sonarr (`8989`) e Radarr
    (`7878`) com séries, filmes e perfis; Jellyfin (`8096`) com usuários e
    bibliotecas (sem mídia, os itens aparecem indisponíveis); Jellyseerr
    (`5055`) com os pedidos. Em *System → Status* dos *arr, nenhum erro de

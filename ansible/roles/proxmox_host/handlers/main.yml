@@ -3,3 +3,10 @@
   ansible.builtin.command:
     argv: [udevadm, control, --reload-rules]
   changed_when: true
+
+# Só a bridge dos LXCs: o ifreload -a passaria também pela vmbr0. ifdown não,
+# porque apagaria a bridge e soltaria os containers ligados nela.
+- name: Subir a bridge dos LXCs
+  ansible.builtin.command:
+    argv: [ifup, "{{ proxmox_lxc_bridge }}"]
+  changed_when: true

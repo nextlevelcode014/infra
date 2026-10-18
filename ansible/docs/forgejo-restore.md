@@ -84,7 +84,7 @@ ansible-playbook playbooks/forgejo-restore.yml --ask-vault-pass --limit pi_stagi
   -e restore_on_pi=true -e forgejo_restore_confirmation=RESTORE_FORGEJO
 ```
 
-Confira: `http://192.168.50.203:3000` lista os repositórios, com o `main` do
+Confira: `http://localhost:3000` (pelo túnel, `docs/pi.md`, "pi-lab") lista os repositórios, com o `main` do
 `ansible` igual ao da produção. O pi-lab não tem LUKS: os repositórios ficam
 num volume sem criptografia, então limpe no fim:
 

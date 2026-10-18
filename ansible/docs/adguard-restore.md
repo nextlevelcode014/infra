@@ -57,8 +57,15 @@ ansible-playbook playbooks/adguard-restore.yml --ask-vault-pass --limit pi_stagi
   -e adguard_restore_confirmation=RESTORE_ADGUARD
 ```
 
-Confira: `dig +short @192.168.50.203 doubleclick.net` devolve `0.0.0.0`, o
-que prova que a config voltou (sem ela, o AdGuard fica no assistente e não
+Confira, por um túnel até a 53/tcp (da sua máquina não há rota para o
+pi-lab):
+
+```bash
+ssh -f -o ExitOnForwardFailure=yes -L 5353:10.50.0.203:53 root@10.50.0.203 sleep 10
+dig +tcp +short -p 5353 @127.0.0.1 doubleclick.net
+```
+
+Devolve `0.0.0.0`, o que prova que a config voltou (sem ela, o AdGuard fica no assistente e não
 responde DNS). Limpe no fim: a config tem o hash da senha do admin.
 
 ```bash

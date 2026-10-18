@@ -1,0 +1,7 @@
+---
+# Os LXCs moram numa bridge só do Proxmox (ADR 0009): daqui não há rota até
+# eles, então o SSH salta pelo Proxmox, pela tailnet. O root do Proxmox pede
+# o "check" do Tailscale SSH: sem um ssh root@<proxmox_host> à mão antes, o
+# Ansible parece travado esperando a reautenticação (docs/proxmox.md, "Rede
+# dos LXCs").
+ansible_ssh_common_args: "-J root@{{ proxmox_host }}"

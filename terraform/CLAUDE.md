@@ -23,10 +23,10 @@ Todo container gerenciado aqui usa a **faixa 200-299**, e hostname, VMID e
 
 | Hostname | VMID | IP | Uso |
 |---|---|---|---|
-| caddy | 200 | 192.168.50.200 | reverse proxy |
-| forgejo | 201 | 192.168.50.201 | git + CI |
-| vaultwarden | 202 | 192.168.50.202 | senhas |
-| pi-lab | 203 | 192.168.50.203 | staging do Raspberry Pi: grupos `staging` + `pi_staging`, volume `/mnt/secure` no papel do LUKS |
+| caddy | 200 | 10.50.0.200 | reverse proxy |
+| forgejo | 201 | 10.50.0.201 | git + CI |
+| vaultwarden | 202 | 10.50.0.202 | senhas |
+| pi-lab | 203 | 10.50.0.203 | staging do Raspberry Pi: grupos `staging` + `pi_staging`, volume `/mnt/secure` no papel do LUKS |
 
 `pi_staging` fica sob `pi_hosts` no Ansible, o grupo que recebe os playbooks
 do Raspberry Pi.
@@ -34,8 +34,12 @@ do Raspberry Pi.
 O módulo `lxc` **valida** a faixa e falha o plano se você sair dela. Próximo
 container livre: `204`.
 
-Rede padrão: bridge `vmbr0`, gateway `192.168.50.1`, DNS `192.168.50.1`,
-datastore `local-lvm`, template Ubuntu 26.04.
+Rede padrão (`local.tf`): bridge `vmbr1`, só do Proxmox, gateway
+`10.50.0.1` (o próprio Proxmox, com NAT para fora), DNS do Quad9, datastore
+`local-lvm`, template Ubuntu 26.04. A bridge não é do Terraform: quem a cria é
+o Ansible (`playbooks/proxmox.yml`), e ela tem que existir antes do `apply`.
+Da sua máquina não há rota até `10.50.0.0/24`: o SSH salta pelo Proxmox
+(ADR 0009, `../ansible/docs/proxmox.md`, "Rede dos LXCs").
 
 `destroy` apaga o container **e os discos** (`purge_on_destroy`). Só há dados
  descartáveis aqui, mas confirme antes de destruir em produção.

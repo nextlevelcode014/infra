@@ -64,9 +64,9 @@ ansible-playbook playbooks/fmd-restore.yml --ask-vault-pass --limit pi_staging \
   -e fmd_restore_confirmation=RESTORE_FMD
 ```
 
-Confira: `ssh root@192.168.50.203 ls -l /mnt/secure/appdata/fmd/fmddata/db`
+Confira: `ssh root@10.50.0.203 ls -l /mnt/secure/appdata/fmd/fmddata/db`
 mostra o `fmd.sqlite` com o tamanho do de produção, e
-`curl -s -o /dev/null -w '%{http_code}\n' http://192.168.50.203:8085` devolve
+`ssh root@10.50.0.203 "curl -s -o /dev/null -w '%{http_code}\n' http://10.50.0.203:8085"` devolve
 `200`. Limpe no fim: o banco tem as contas e os metadados dos aparelhos.
 
 ```bash

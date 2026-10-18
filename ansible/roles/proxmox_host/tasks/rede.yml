@@ -1,0 +1,34 @@
+---
+# --- Rede dos LXCs ------------------------------------------------------------
+# Os LXCs ficam numa bridge só do Proxmox e saem por NAT (ADR 0009): trocar de
+# rede muda só o DHCP da vmbr0, e o IP deles continua o mesmo. A vmbr0 não é
+# tocada aqui: um erro nela corta o acesso ao host.
+
+- name: Ler o /etc/network/interfaces
+  ansible.builtin.slurp:
+    src: /etc/network/interfaces
+  register: proxmox_interfaces
+
+# Sem o source, o arquivo da bridge é gravado e nunca lido.
+- name: Exigir que o interfaces leia o interfaces.d
+  ansible.builtin.assert:
+    that: >-
+      (proxmox_interfaces.content | b64decode)
+      is search('^source /etc/network/interfaces\.d/\*', multiline=True)
+    fail_msg: >-
+      /etc/network/interfaces não tem a linha
+      "source /etc/network/interfaces.d/*" (docs/proxmox.md, "Rede dos LXCs").
+
+- name: Ligar o roteamento entre as interfaces
+  ansible.posix.sysctl:
+    name: net.ipv4.ip_forward
+    value: "1"
+    sysctl_file: /etc/sysctl.d/90-lxc-nat.conf
+    sysctl_set: true
+
+- name: Configurar a bridge dos LXCs
+  ansible.builtin.template:
+    src: lxc-bridge.j2
+    dest: "/etc/network/interfaces.d/{{ proxmox_lxc_bridge }}"
+    mode: "0644"
+  notify: Subir a bridge dos LXCs

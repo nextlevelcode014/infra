@@ -18,15 +18,18 @@
 # As flags acima ele recebe, porque sem elas o Docker não roda no LXC.
 - name: Configurar containers
   hosts: "lxc:!pi_hosts"
-  gather_facts: true
+  # Os fatos vêm depois da espera: o gather_facts rodaria antes dos
+  # pre_tasks e falharia num container que ainda está subindo.
+  gather_facts: false
   pre_tasks:
+    # Pela conexão do Ansible, com o salto pelo Proxmox (group_vars/lxc): da
+    # máquina local não há rota para a bridge dos LXCs.
     - name: Aguardar SSH disponível
-      ansible.builtin.wait_for:
-        host: "{{ ansible_host }}"
-        port: 22
+      ansible.builtin.wait_for_connection:
         timeout: 120
-      delegate_to: localhost
-      become: false
+
+    - name: Coletar os fatos
+      ansible.builtin.setup:
   roles:
     - common
     # Máquina de teste não entra na tailnet nem gasta a auth key real.

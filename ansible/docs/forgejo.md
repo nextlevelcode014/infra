@@ -1,7 +1,7 @@
 # Forgejo no LXC do Proxmox
 
 `playbooks/forgejo.yml` sobe o Forgejo e o Postgres dele no LXC `forgejo`
-(vmid 201, `192.168.50.201`), com o backup no borgmatic do próprio LXC.
+(vmid 201, `10.50.0.201`), com o backup no borgmatic do próprio LXC.
 
 | O quê | Onde |
 |---|---|
@@ -48,11 +48,11 @@ visíveis sem login. O web só existe pelo domínio público: não há rota no
 3. **Tags e IP Tailscale.** No console → Machines → `forgejo-lxc` → Edit ACL
    tags: `tag:proxmox-lxc` e `tag:forgejo`. É manual porque as tags de nó
    ficam no console (`tailscale/README.md`, "Tags"). Depois ponha o IP do nó
-   (`ssh root@192.168.50.201 tailscale ip -4`) em `forgejo_tailscale_ip`
+   (`ssh root@10.50.0.201 tailscale ip -4`) em `forgejo_tailscale_ip`
    (`inventory/group_vars/all/vars.yml`): a VPS não resolve nomes da
    tailnet, então o Anubis e o Uptime Kuma usam o IP.
 
-   Confira: `ssh root@192.168.50.201 tailscale status --self` mostra as duas
+   Confira: `ssh root@10.50.0.201 tailscale status --self` mostra as duas
    tags.
 
 4. **Forgejo:**
@@ -61,9 +61,9 @@ visíveis sem login. O web só existe pelo domínio público: não há rota no
    ansible-playbook playbooks/forgejo.yml --ask-vault-pass
    ```
 
-   Confira: `ssh root@192.168.50.201 docker compose -f /opt/forgejo/docker-compose.yml ps`
+   Confira: `ssh root@10.50.0.201 docker compose -f /opt/forgejo/docker-compose.yml ps`
    mostra `forgejo` e `forgejo-db` rodando, e
-   `ssh root@192.168.50.201 curl -s localhost:3000/api/healthz` traz
+   `ssh root@10.50.0.201 curl -s localhost:3000/api/healthz` traz
    `"status": "pass"`.
 
 5. **Dados.** Com backup a trazer, este é o momento do restore
@@ -75,7 +75,7 @@ visíveis sem login. O web só existe pelo domínio público: não há rota no
    a senha não deve passar pelo repo; a CLI gera uma e mostra uma vez.
 
    ```bash
-   ssh -t root@192.168.50.201 docker exec -it forgejo \
+   ssh -t root@10.50.0.201 docker exec -it forgejo \
      forgejo admin user create --admin --username <usuário> --email <email> --random-password
    ```
 

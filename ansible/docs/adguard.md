@@ -30,11 +30,11 @@ configurado na interface do AdGuard, não no repo.
 
    ```bash
    ansible-playbook playbooks/adguard.yml --ask-vault-pass --limit pi_staging
-   ssh root@192.168.50.203 'docker logs adguardhome 2>&1 | tail -3; ss -lun | grep ":53 "'
+   ssh root@10.50.0.203 'docker logs adguardhome 2>&1 | tail -3; ss -lun | grep ":53 "'
    ```
 
    Confira: os logs mostram o assistente (`starting the initial setup`) e a
-   53/udp escuta em `192.168.50.203`.
+   53/udp escuta em `10.50.0.203`.
 
 2. **Dados.** Com backup a trazer, restaure antes de aplicar
    (`docs/adguard-restore.md`): o AdGuard já sobe com a config, e o passo 4

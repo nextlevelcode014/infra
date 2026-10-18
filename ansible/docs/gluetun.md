@@ -44,7 +44,7 @@ tráfego P2P, deixando os dependentes sem rede. O `arr-stack.yml` e o
    ansible-playbook playbooks/gluetun.yml --ask-vault-pass --limit pi_staging
    ```
 
-   Confira: `ssh root@192.168.50.203 docker exec gluetun wget -qO- https://ipinfo.io/ip`
+   Confira: `ssh root@10.50.0.203 docker exec gluetun wget -qO- https://ipinfo.io/ip`
    mostra um IP da ProtonVPN, não o da sua casa.
 
 2. **Aplicar no Pi:**

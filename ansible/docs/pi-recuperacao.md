@@ -286,10 +286,10 @@ ansible-playbook playbooks/forgejo-restore.yml --ask-vault-pass --limit pi_stagi
 
 Confira:
 
-- Vaultwarden: `http://192.168.50.203:8083/alive` responde, e o login com a sua
-  conta mostra o cofre (o cliente precisa aceitar HTTP de teste; um
-  `curl -s http://192.168.50.203:8083/api/config` já mostra que o servidor está de pé);
-- Forgejo: `http://192.168.50.203:3000` lista os repositórios, com o `main` do
+- Vaultwarden: `ssh root@10.50.0.203 curl -s http://10.50.0.203:8083/alive`
+  devolve uma data, e `.../api/config` no lugar do `/alive` mostra que o
+  servidor está de pé;
+- Forgejo: `http://localhost:3000` (pelo túnel, `docs/pi.md`, "pi-lab") lista os repositórios, com o `main` do
   `ansible` igual ao da produção.
 
 Anote a duração de cada restore. Para limpar:

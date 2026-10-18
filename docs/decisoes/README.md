@@ -43,6 +43,7 @@ fonte (PR, commit ou comentário de onde o motivo foi tirado).
 | [0006](0006-role-compose-stack-compartilhado.md) | Um role compartilhado para o ciclo do compose | Aceita |
 | [0007](0007-immich-e-nextcloud-num-borg-offsite-proprio.md) | Immich e Nextcloud fazem backup num Borg offsite próprio | Substituída por 0008 |
 | [0008](0008-immich-e-nextcloud-no-borgbase-pago.md) | Immich e Nextcloud fazem backup no BorgBase, no plano pago | Aceita |
+| [0009](0009-lxcs-numa-bridge-propria-do-proxmox-com-nat.md) | LXCs numa bridge própria do Proxmox, com NAT | Aceita |
 
 ## Modelo
 
