@@ -146,7 +146,7 @@ e reaplicar `playbooks/uptime-kuma.yml`. Item que sai da lista tem o monitor
   sincronização desfaz a mudança. Monitor criado à mão fica, e o AutoKuma não
   mexe nele.
 
-## Atualizações: reboot pendente
+## Atualizações: reboot pendente e apt
 
 O role `reboot_watch` (dependência do `vps_host` e do `pi_host`) põe em cada
 host um timer de hora em hora que empurra um monitor push do grupo
@@ -157,11 +157,25 @@ host um timer de hora em hora que empurra um monitor push do grupo
 | tudo certo | up |
 | `/var/run/reboot-required` com mais de 3 dias (`reboot_watch_grace_days`) | down, com os pacotes que pediram o reboot |
 | `apt-daily-upgrade.service` (quem roda o unattended-upgrades) em `failed` | down, com o motivo |
+| um repositório do apt falhando no `apt-get update` | down, com a URL que falhou |
 | host fora ou timer parado | down quando passa 2 h sem push |
 
 Os 3 dias evitam e-mail a cada kernel novo: o aviso só sai quando o reboot já
 ficou esquecido. O reboot apaga o `/var/run/reboot-required` (tmpfs), e o
-próximo push já volta a up. Para não esperar a hora cheia:
+próximo push já volta a up.
+
+Repositório quebrado não derruba o `apt-daily`: ele termina com sucesso, os
+outros repositórios seguem atualizando e o pacote daquele fica sem correção,
+calado. Por isso o script roda o seu próprio `apt-get update --error-on=any`,
+que sai com erro se qualquer repositório falhar. Enquanto tudo responde, roda
+no máximo a cada 20 h (`reboot_watch_apt_interval_hours`; o resultado fica em
+`/var/lib/reboot-watch`). Depois de uma falha, roda de hora em hora, e o
+monitor volta a up na primeira hora depois do conserto. Uma falha só vale
+depois de repetir 2 min depois (DNS ou espelho fora de sincronia passam
+nesse tempo); com o apt ocupado por outro processo, fica o resultado
+anterior.
+
+Para não esperar a hora cheia:
 
 ```bash
 sudo systemctl start reboot-watch.service

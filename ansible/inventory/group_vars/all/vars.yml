@@ -126,7 +126,7 @@ borg_backup_time: "{{ borg_backup_times[inventory_hostname] | default('02:30') }
 # borg_backup_name vem de quem usa (tasks_from: backup, role uptime_kuma).
 borg_backup_push_token: "{{ ((vault_forgejo_borg_password ~ '-' ~ borg_backup_name) | hash('sha256'))[:32] }}"
 borg_backup_push_url: "https://uptime.lab.nextlevelcode.pro/api/push/{{ borg_backup_push_token }}"
-# Aviso de reboot pendente / apt-daily-upgrade falhando (role reboot_watch):
+# Aviso de reboot pendente / apt falhando (role reboot_watch):
 # um monitor push por host, com token derivado da mesma senha do Borg. Quem
 # usa é o host (reboot_watch) e a VPS (uptime_kuma, que passa o nome do host
 # em reboot_watch_name).

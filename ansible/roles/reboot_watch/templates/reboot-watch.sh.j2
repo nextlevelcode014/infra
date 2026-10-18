@@ -22,6 +22,49 @@ if systemctl is-failed --quiet apt-daily-upgrade.service; then
   problemas="${problemas:+$problemas; }apt-daily-upgrade falhou (journalctl -u apt-daily-upgrade)"
 fi
 
+# Repositório quebrado: o apt-daily termina com sucesso mesmo com um
+# repositório falhando, e os outros continuam atualizando. Só o
+# --error-on=any faz o apt-get update sair com erro por causa de um.
+# Imprime os repositórios que falharam (ou a primeira linha de erro);
+# sai 2 se o apt estava ocupado e não deu para saber.
+repos_quebrados() {
+  local saida
+  saida=$(apt-get update -qq --error-on=any 2>&1) && return 0
+  if grep -q 'Could not get lock' <<<"$saida"; then
+    return 2
+  fi
+  local urls
+  urls=$(grep -E '^(E|W):' <<<"$saida" | grep -oE "https?://[^ ']+" | sort -u | head -3 | paste -sd ' ' -)
+  if [ -n "$urls" ]; then
+    printf '%s' "$urls"
+  else
+    grep -m1 -E '^(E|W):' <<<"$saida" | cut -c1-150
+  fi
+  return 1
+}
+
+# O update roda no máximo a cada {{ reboot_watch_apt_interval_hours }} h enquanto tudo estiver certo;
+# depois de uma falha, de hora em hora, para o aviso sumir logo depois do
+# conserto. Com erro, tenta de novo daqui a 2 min: o --error-on=any também
+# falha em erro passageiro (DNS, espelho fora de sincronia).
+estado={{ reboot_watch_state_dir }}
+mkdir -p "$estado"
+if [ -e "$estado/apt-falha" ] || [ -z "$(find "$estado/apt-ok" -mmin -{{ reboot_watch_apt_interval_hours * 60 }} 2>/dev/null)" ]; then
+  repos=$(repos_quebrados); rc=$?
+  if [ "$rc" -eq 1 ]; then
+    sleep 120
+    repos=$(repos_quebrados); rc=$?
+  fi
+  case "$rc" in
+    0) rm -f "$estado/apt-falha"; touch "$estado/apt-ok" ;;
+    1) printf '%s\n' "$repos" > "$estado/apt-falha" ;;
+    *) ;;  # apt ocupado: fica o resultado anterior
+  esac
+fi
+if [ -e "$estado/apt-falha" ]; then
+  problemas="${problemas:+$problemas; }repositório do apt falhando: $(cat "$estado/apt-falha")"
+fi
+
 if [ -z "$problemas" ]; then
   status=up; msg=OK
 else

@@ -25,8 +25,8 @@ Dentro dela, todo playbook da VPS aplica antes o role `vps_host` (e o
   senha e sem root. É segunda camada: a administração é pelo Tailscale SSH.
 - **unattended-upgrades** ligado, só atualização de segurança e sem reboot
   automático. O `reboot-watch` avisa no Uptime Kuma quando o reboot fica
-  pendente há mais de 3 dias ou o unattended-upgrades falha
-  (`docs/uptime-kuma.md`).
+  pendente há mais de 3 dias, o unattended-upgrades falha ou um repositório
+  do apt para de responder (`docs/uptime-kuma.md`).
 - **fail2ban** no jail do sshd, ignorando a tailnet. Com a 22 fechada ele não
   vê nada: é fallback para o dia em que o UFW cair.
 - **Log do Docker com rotação** (10 MB × 3 por container,
