@@ -12,14 +12,14 @@
 # é o playbooks/forgejo.yml (LXC) ou o pi-recuperacao.yml (Pi, em standby).
 - name: Ver se o Forgejo está instalado aqui
   ansible.builtin.stat:
-    path: "{{ forgejo_dir }}/docker-compose.yml"
+    path: "{{ forgejo_dir }}/compose.yml"
   register: forgejo_restore_compose
 
 - name: Exigir o Forgejo instalado antes de restaurar
   ansible.builtin.assert:
     that: forgejo_restore_compose.stat.exists
     fail_msg: >-
-      {{ forgejo_dir }}/docker-compose.yml não existe. Instale antes: no Pi,
+      {{ forgejo_dir }}/compose.yml não existe. Instale antes: no Pi,
       playbooks/pi-recuperacao.yml (--limit rpi ou pi_staging); no LXC,
       playbooks/forgejo.yml.
 

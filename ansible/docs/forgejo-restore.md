@@ -19,7 +19,7 @@ ao mesmo tempo separam os dados: restaure só onde vai ficar a única.
    Confira: `docker ps --filter name=forgejo` no outro host não lista nada.
 
 2. **O Forgejo está instalado no destino** (o restore recusa sem o
-   `docker-compose.yml`): no LXC, `playbooks/forgejo.yml`
+   `compose.yml`): no LXC, `playbooks/forgejo.yml`
    (`docs/forgejo.md`, passos 1 a 4); no Pi, `playbooks/pi-recuperacao.yml`.
    O Borg (chave, senha, `known_hosts`) vem junto, pelo `borg_client`.
 
@@ -63,8 +63,8 @@ archive" que a data é a do backup esperado.
 No host restaurado:
 
 ```bash
-docker compose -f <forgejo_dir>/docker-compose.yml ps
-docker compose -f <forgejo_dir>/docker-compose.yml logs --tail=100 server db
+docker compose -f <forgejo_dir>/compose.yml ps
+docker compose -f <forgejo_dir>/compose.yml logs --tail=100 server db
 ```
 
 (`forgejo_dir`: `/opt/forgejo` no LXC, `/mnt/secure/appdata/forgejo` no Pi.)

@@ -1,8 +1,10 @@
 # O forgejo_restore lê o dump deste caminho dentro do archive.
 forgejo_backup_db_dump: /tmp/forgejo_db_dump.sql
 
-forgejo_image: "codeberg.org/forgejo/forgejo:15-rootless"
-forgejo_db_image: "postgres:16-alpine"
+# Versão exata (ADR 0005): o Forgejo migra o banco ao subir e não volta
+# atrás. Subir: notas da versão, trocar aqui e reaplicar (docs/forgejo.md).
+forgejo_image: "codeberg.org/forgejo/forgejo:15.0.10-rootless"
+forgejo_db_image: "postgres:16.15-alpine"
 forgejo_user: "1000"
 forgejo_group: "1000"
 

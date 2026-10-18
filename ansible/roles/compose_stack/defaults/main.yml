@@ -1,0 +1,20 @@
+---
+# Ciclo do compose de todo role de serviço (ADR 0006,
+# docs/padrao-de-role.md, "Compose"). Duas entradas, com include_role:
+#
+#   tasks_from: dir   no começo, antes da config que mora no diretório
+#   main              no fim: render do compose.yml, up ou standby
+#
+# O role que chama passa compose_stack_dir (sem padrão: é o <svc>_dir dele)
+# e, se tiver plano B no Pi, compose_stack_standby. Depois do main,
+# compose_stack_render diz se o compose mudou; se mudou, o up já recriou.
+
+compose_stack_owner: root
+compose_stack_group: root
+compose_stack_mode: "0750"
+
+compose_stack_standby: false
+
+# O compose.yml.j2 do role que chamou: aqui dentro, role_path seria o do
+# compose_stack.
+compose_stack_template: "{{ ansible_parent_role_paths[0] }}/templates/compose.yml.j2"

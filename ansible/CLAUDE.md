@@ -124,6 +124,7 @@ linha.
 | `proxmox_host` | base do notebook do Proxmox: bateria em `Long_Life` (conservation mode); `vmbr1` dos LXCs com `ip_forward` e NAT, sem tocar a `vmbr0` |
 | `lxc_flags` | exceção: aplica flags do container (ver abaixo) |
 | `caddy` | binário custom (DNS-01) + Caddyfile + systemd drop-in; `caddy_caddyfile_template` escolhe o Caddyfile do host (Proxmox, VPS ou Pi); binário amd64 ou arm64 pela arquitetura |
+| `compose_stack` | ciclo do compose de todo role de serviço: diretório (`tasks_from: dir`), render do `compose.yml.j2` de quem chamou, `up` com `pull: missing` ou standby (`docs/padrao-de-role.md`, "Compose") |
 | `forgejo` | compose do Forgejo + Postgres |
 | `vaultwarden` | compose do Vaultwarden |
 | `pi_host` | base do Pi: LUKS no crypttab/fstab, `secure-unlock`, Docker com data-root cifrado, redes, disk-guard |

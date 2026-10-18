@@ -1,11 +1,10 @@
 ---
-- name: Criar diretório do Vaultwarden
-  ansible.builtin.file:
-    path: "{{ vaultwarden_dir }}"
-    state: directory
-    owner: root
-    group: root
-    mode: "0750"
+- name: Preparar o diretório da stack
+  ansible.builtin.include_role:
+    name: compose_stack
+    tasks_from: dir
+  vars:
+    compose_stack_dir: "{{ vaultwarden_dir }}"
 
 # Standby nunca faz backup: um archive vaultwarden-* do Pi viraria o mais
 # recente e o restore pegaria os dados velhos dele.
@@ -23,11 +22,11 @@
       - before: action
         when: [create]
         run:
-          - docker compose -f {{ vaultwarden_dir }}/docker-compose.yml down
+          - docker compose -f {{ vaultwarden_dir }}/compose.yml down
       - after: action
         when: [create]
         run: &vaultwarden_backup_up
-          - docker compose -f {{ vaultwarden_dir }}/docker-compose.yml up -d
+          - docker compose -f {{ vaultwarden_dir }}/compose.yml up -d
       - after: error
         run: *vaultwarden_backup_up
 
@@ -44,38 +43,9 @@
     path: "{{ vaultwarden_dir }}/vw-data/config.json"
     state: absent
 
-- name: Renderizar docker-compose.yml
-  ansible.builtin.template:
-    src: docker-compose.yml.j2
-    dest: "{{ vaultwarden_dir }}/docker-compose.yml"
-    mode: "0640"
-  register: vaultwarden_compose_render
-  notify: Reiniciar Vaultwarden
-
-- name: Subir os serviços
-  community.docker.docker_compose_v2:
-    project_src: "{{ vaultwarden_dir }}"
-    state: present
-    pull: always
-  when: not vaultwarden_standby
-
-# Standby: imagens baixadas (o restore não depende de registry na hora do
-# desastre) e nenhum container rodando. remove_orphans tira também container
-# do projeto que já não está no compose.
-- name: Baixar as imagens (standby)
-  community.docker.docker_compose_v2_pull:
-    project_src: "{{ vaultwarden_dir }}"
-  # No --check o compose só "seria" renderizado e o módulo falha sem ele.
-  when:
-    - vaultwarden_standby
-    - not (ansible_check_mode and vaultwarden_compose_render is changed)
-
-- name: Manter os serviços parados (standby)
-  community.docker.docker_compose_v2:
-    project_src: "{{ vaultwarden_dir }}"
-    state: absent
-    remove_orphans: true
-  # No --check o compose só "seria" renderizado e o módulo falha sem ele.
-  when:
-    - vaultwarden_standby
-    - not (ansible_check_mode and vaultwarden_compose_render is changed)
+- name: Subir o Vaultwarden
+  ansible.builtin.include_role:
+    name: compose_stack
+  vars:
+    compose_stack_dir: "{{ vaultwarden_dir }}"
+    compose_stack_standby: "{{ vaultwarden_standby }}"

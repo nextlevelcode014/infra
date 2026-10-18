@@ -21,7 +21,7 @@ onde vai ficar a única.
    nada.
 
 2. **O Vaultwarden está instalado no destino** (o restore recusa sem o
-   `docker-compose.yml`): no LXC, `playbooks/vaultwarden.yml`
+   `compose.yml`): no LXC, `playbooks/vaultwarden.yml`
    (`docs/vaultwarden.md`, passos 1 a 4); no Pi,
    `playbooks/pi-recuperacao.yml`. O Borg (chave, senha, `known_hosts`) vem
    junto, pelo `borg_client`.
@@ -66,8 +66,8 @@ que a data é a do backup esperado.
 No host restaurado:
 
 ```bash
-docker compose -f <vaultwarden_dir>/docker-compose.yml ps
-docker compose -f <vaultwarden_dir>/docker-compose.yml logs --tail=100 vaultwarden
+docker compose -f <vaultwarden_dir>/compose.yml ps
+docker compose -f <vaultwarden_dir>/compose.yml logs --tail=100 vaultwarden
 ```
 
 (`vaultwarden_dir`: `/opt/vaultwarden` no LXC, `/mnt/secure/appdata/vaultwarden`

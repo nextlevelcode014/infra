@@ -1,0 +1,52 @@
+---
+- name: Renderizar o compose.yml
+  ansible.builtin.template:
+    src: "{{ compose_stack_template }}"
+    dest: "{{ compose_stack_dir }}/compose.yml"
+    mode: "0640"
+  register: compose_stack_render
+
+# Nome antigo do Forgejo e do Vaultwarden. Com os dois no diretório o compose
+# lê o compose.yml e só avisa, mas o -f dos hooks do borgmatic e dos docs
+# aponta para o compose.yml. Fica até os LXCs do Proxmox aplicarem o
+# compose.yml também.
+- name: Apagar o docker-compose.yml antigo
+  ansible.builtin.file:
+    path: "{{ compose_stack_dir }}/docker-compose.yml"
+    state: absent
+
+# missing baixa uma tag nova, mas não troca imagem que já existe: aplicar
+# config não atualiza o serviço (ADR 0003 e 0006). remove_orphans tira
+# container de serviço que saiu do compose.
+- name: Subir a stack
+  community.docker.docker_compose_v2:
+    project_src: "{{ compose_stack_dir }}"
+    files: [compose.yml]
+    state: present
+    pull: missing
+    remove_orphans: true
+  # No --check o compose só "seria" renderizado, e o módulo leria o antigo
+  # (ou nenhum). Pula só nesse caso.
+  when:
+    - not compose_stack_standby
+    - not (ansible_check_mode and compose_stack_render is changed)
+
+# Standby (ADR 0004): imagens baixadas, para o restore não depender de
+# registry no dia do desastre, e nenhum container rodando.
+- name: Baixar as imagens (standby)
+  community.docker.docker_compose_v2_pull:
+    project_src: "{{ compose_stack_dir }}"
+    files: [compose.yml]
+  when:
+    - compose_stack_standby
+    - not (ansible_check_mode and compose_stack_render is changed)
+
+- name: Manter a stack parada (standby)
+  community.docker.docker_compose_v2:
+    project_src: "{{ compose_stack_dir }}"
+    files: [compose.yml]
+    state: absent
+    remove_orphans: true
+  when:
+    - compose_stack_standby
+    - not (ansible_check_mode and compose_stack_render is changed)

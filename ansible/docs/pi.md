@@ -144,8 +144,10 @@ Ficam de fora:
 
 - **Nextcloud AIO**: o mastercontainer e os containers dele se atualizam pela
   interface do próprio AIO.
-- **Forgejo e Vaultwarden em standby**: não têm container rodando; o role
-  deles baixa as imagens a cada aplicação (`docs/decisoes/0004`, na raiz).
+- **Forgejo e Vaultwarden**: versão exata, que só sobe trocando a variável
+  (`docs/forgejo.md` e `docs/vaultwarden.md`, "Operação"). Em standby, o
+  `pi-recuperacao.yml` baixa a imagem da variável (`docs/decisoes/0004`, na
+  raiz).
 
 Várias stacks ainda estão em `:latest` (`docs/padrao-de-role.md`, "Fora do
 padrão"), então um pull pode trazer versão nova com mudança que quebra.

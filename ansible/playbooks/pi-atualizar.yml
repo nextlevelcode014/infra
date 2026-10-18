@@ -13,8 +13,8 @@
   vars:
     # Arquivo compose de cada stack. Fora daqui: o mastercontainer do
     # Nextcloud AIO (se atualiza pela própria interface, junto com os
-    # containers que ele cria) e Forgejo/Vaultwarden em standby (o role
-    # deles já faz pull: always).
+    # containers que ele cria) e Forgejo/Vaultwarden, com versão exata: só
+    # sobem trocando a variável (ADR 0005).
     pi_atualizar_composes:
       - /opt/gluetun/compose.yml
       - /opt/arr/compose.yml

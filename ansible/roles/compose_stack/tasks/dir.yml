@@ -1,0 +1,8 @@
+---
+- name: Criar o diretório da stack
+  ansible.builtin.file:
+    path: "{{ compose_stack_dir }}"
+    state: directory
+    owner: "{{ compose_stack_owner }}"
+    group: "{{ compose_stack_group }}"
+    mode: "{{ compose_stack_mode }}"

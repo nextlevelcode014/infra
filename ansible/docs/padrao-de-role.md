@@ -12,7 +12,7 @@ copiar de um que já divergiu. Os porquês estão nos ADRs de `docs/decisoes/`
 roles/<svc>/
 ├── defaults/main.yml       # toda variável do role, com prefixo <svc>_
 ├── meta/main.yml           # dependências (base do host, borg_client, ...)
-├── tasks/main.yml          # config do serviço + include do compose_stack + backup
+├── tasks/main.yml          # compose_stack (dir) + config + backup + compose_stack
 ├── templates/compose.yml.j2
 └── templates/<svc>.env.j2  # se o serviço lê env de arquivo
 ```
@@ -49,6 +49,33 @@ O ciclo do compose é do role `compose_stack` (ADR 0006): diretório, render do
 sem container. O role do serviço cuida do resto: arquivos de config, backup,
 restart depois de mudar um arquivo que o container só lê ao subir.
 
+São dois `include_role`, porque a config do serviço costuma morar dentro do
+diretório da stack e precisa dele antes do `up`:
+
+```yaml
+- name: Preparar o diretório da stack
+  ansible.builtin.include_role:
+    name: compose_stack
+    tasks_from: dir
+  vars:
+    compose_stack_dir: "{{ <svc>_dir }}"
+
+# ... config do serviço e backup ...
+
+- name: Subir o <Svc>
+  ansible.builtin.include_role:
+    name: compose_stack
+  vars:
+    compose_stack_dir: "{{ <svc>_dir }}"
+    compose_stack_standby: "{{ <svc>_standby }}"  # só se houver standby
+```
+
+O template vem sozinho (o `compose.yml.j2` do role que chamou). Dono e modo
+do diretório: `compose_stack_owner`, `_group`, `_mode` (padrão `root`,
+`0750`). Depois do segundo include, `compose_stack_render is changed` diz se
+o compose mudou; nesse caso o `up` já recriou o container, e um restart
+próprio do role pode pular (o Forgejo faz assim com a chave de assinatura).
+
 Porta publicada sempre num IP específico, nunca em `0.0.0.0`: no Pi em
 `{{ ts_ip }}` (ou `lan_ip`, se a LAN precisa), na VPS em `127.0.0.1` (o Docker
 passa por cima do UFW, ver `docs/vps.md`).
@@ -77,7 +104,8 @@ de `docs/README.md`, com a linha no índice dele.
 ## Role novo: checklist
 
 1. Estrutura e variáveis acima, imagem com tag fixa.
-2. `include_role: compose_stack` no `tasks/main.yml`.
+2. Os dois `include_role` do `compose_stack` no `tasks/main.yml` (seção
+   "Compose").
 3. Backup e restore, se o serviço guarda dado que importa.
 4. Playbook em `playbooks/<svc>.yml` e entrada no `site.yml`.
 5. Doc no modelo e linha nos índices (`docs/README.md`, tabela de playbooks e
@@ -86,20 +114,18 @@ de `docs/README.md`, com a linha no índice dele.
 
 ## Fora do padrão
 
-O que ainda falta migrar. Ao migrar um role, tire a linha daqui. Imagem e
-`pull: always` são a #17.
+O que ainda falta migrar. Ao migrar um role, tire a linha daqui. Imagem é a
+#17.
 
 | Role | O que diverge |
 |---|---|
-| todos | o `compose_stack` ainda não existe; cada role tem a própria cópia do ciclo do compose |
+| todos os outros | a própria cópia do ciclo do compose, sem o `compose_stack` (só o Forgejo e o Vaultwarden já usam) |
 | `adguard` | imagem `latest` |
 | `arr_stack` | todas as imagens `latest`, escritas no compose; compose estático em `files/` |
 | `exit_node` | imagens no compose (Tailscale `latest`); compose estático em `files/` |
 | `fmd` | Tailscale `latest`, escrito no compose |
-| `forgejo` | `docker-compose.yml.j2`; `pull: always`; standby próprio |
 | `gluetun` | imagem sem tag, escrita no compose; compose estático em `files/` |
 | `immich` | versão por `IMMICH_VERSION` no env, com `release` de reserva no compose |
 | `nextcloud` | AIO e socket proxy em `latest` (o AIO se atualiza pela própria interface: avaliar se é exceção); coturn no compose |
 | `searxng` | SearXNG `latest` e Valkey, escritos no compose |
-| `vaultwarden` | imagem `latest`; `docker-compose.yml.j2`; `pull: always`; standby próprio |
 | `uptime_kuma`, `anubis` | doc fora do modelo de `docs/README.md` |

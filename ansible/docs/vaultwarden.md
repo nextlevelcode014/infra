@@ -108,7 +108,10 @@ restore. Restore: `docs/vaultwarden-restore.md`.
 
 ## Operação
 
-- **Atualizar:** o `vaultwarden.yml` faz `pull` a cada execução, e a imagem é
-  `latest`: reaplicar o playbook também atualiza o Vaultwarden, para qualquer
-  versão. Isso vai mudar com a #70.
+- **Atualizar:** a imagem tem versão exata (`vaultwarden_image`, no
+  `defaults` do role), porque o Vaultwarden migra o banco ao subir e a
+  migração não volta atrás. Para subir: ler as notas da versão, conferir que
+  o monitor *Backup Vaultwarden* está verde, trocar a variável e reaplicar o
+  `vaultwarden.yml` (no Pi, o `pi-recuperacao.yml`). Reaplicar sem trocar a
+  variável não muda a versão.
 - **Proxmox fora:** o Pi assume, `docs/pi-recuperacao.md`.

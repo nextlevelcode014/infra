@@ -101,8 +101,8 @@ tudo e que nada escreva neles depois.
    velhos:
 
    ```bash
-   ansible forgejo --ask-vault-pass -m command -a 'docker compose -f /opt/forgejo/docker-compose.yml down'
-   ansible vaultwarden --ask-vault-pass -m command -a 'docker compose -f /opt/vaultwarden/docker-compose.yml down'
+   ansible forgejo --ask-vault-pass -m command -a 'docker compose -f /opt/forgejo/compose.yml down'
+   ansible vaultwarden --ask-vault-pass -m command -a 'docker compose -f /opt/vaultwarden/compose.yml down'
    ansible forgejo,vaultwarden --ask-vault-pass -m command -a 'systemctl disable --now borgmatic.timer'
    ```
 
@@ -220,8 +220,8 @@ eles recebem a do Pi (`ubuntu`) e o caminho que os dados têm no archive dele.
    ```bash
    ansible rpi --ask-vault-pass -m command -a 'borgmatic -c /etc/borgmatic/forgejo.yaml --verbosity 1 --stats'
    ansible rpi --ask-vault-pass -m command -a 'borgmatic -c /etc/borgmatic/vaultwarden.yaml --verbosity 1 --stats'
-   ansible rpi --ask-vault-pass -m command -a 'docker compose -f /mnt/secure/appdata/forgejo/docker-compose.yml down'
-   ansible rpi --ask-vault-pass -m command -a 'docker compose -f /mnt/secure/appdata/vaultwarden/docker-compose.yml down'
+   ansible rpi --ask-vault-pass -m command -a 'docker compose -f /mnt/secure/appdata/forgejo/compose.yml down'
+   ansible rpi --ask-vault-pass -m command -a 'docker compose -f /mnt/secure/appdata/vaultwarden/compose.yml down'
    ```
 
 3. **Restaurar nos LXCs** a partir do archive do Pi:

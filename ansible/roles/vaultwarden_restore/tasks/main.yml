@@ -13,14 +13,14 @@
 # é o playbooks/vaultwarden.yml (LXC) ou o pi-recuperacao.yml (Pi, em standby).
 - name: Ver se o Vaultwarden está instalado aqui
   ansible.builtin.stat:
-    path: "{{ vaultwarden_dir }}/docker-compose.yml"
+    path: "{{ vaultwarden_dir }}/compose.yml"
   register: vaultwarden_restore_compose
 
 - name: Exigir o Vaultwarden instalado antes de restaurar
   ansible.builtin.assert:
     that: vaultwarden_restore_compose.stat.exists
     fail_msg: >-
-      {{ vaultwarden_dir }}/docker-compose.yml não existe. Instale antes: no Pi,
+      {{ vaultwarden_dir }}/compose.yml não existe. Instale antes: no Pi,
       playbooks/pi-recuperacao.yml (--limit rpi ou pi_staging); no LXC,
       playbooks/vaultwarden.yml.
 

@@ -1,6 +1,8 @@
 ---
 vaultwarden_dir: /opt/vaultwarden
-vaultwarden_image: "vaultwarden/server:latest"
+# Versão exata (ADR 0005): o Vaultwarden migra o banco ao subir e não volta
+# atrás. Subir: notas da versão, trocar aqui e reaplicar (docs/vaultwarden.md).
+vaultwarden_image: "vaultwarden/server:1.37.4"
 vaultwarden_domain: "vault.lab.nextlevelcode.pro"
 vaultwarden_bind_port: 8080
 vaultwarden_admin_token: "{{ vault_vaultwarden_admin_token }}"

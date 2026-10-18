@@ -61,7 +61,7 @@ visíveis sem login. O web só existe pelo domínio público: não há rota no
    ansible-playbook playbooks/forgejo.yml --ask-vault-pass
    ```
 
-   Confira: `ssh root@10.50.0.201 docker compose -f /opt/forgejo/docker-compose.yml ps`
+   Confira: `ssh root@10.50.0.201 docker compose -f /opt/forgejo/compose.yml ps`
    mostra `forgejo` e `forgejo-db` rodando, e
    `ssh root@10.50.0.201 curl -s localhost:3000/api/healthz` traz
    `"status": "pass"`.
@@ -217,9 +217,12 @@ Restore: `docs/forgejo-restore.md`.
 
 ## Operação
 
-- **Atualizar:** o `forgejo.yml` faz `pull` a cada execução, e as tags são
-  flutuantes (`15-rootless`, `postgres:16-alpine`): reaplicar o playbook
-  também atualiza o Forgejo dentro da 15.x. Isso vai mudar com a #70.
+- **Atualizar:** as duas imagens têm versão exata (`forgejo_image` e
+  `forgejo_db_image`, no `defaults` do role), porque o Forgejo migra o banco
+  ao subir e a migração não volta atrás. Para subir: ler as notas da versão,
+  conferir que o monitor *Backup Forgejo* está verde, trocar a variável e
+  reaplicar o `forgejo.yml` (no Pi, o `pi-recuperacao.yml`). Reaplicar sem
+  trocar a variável não muda a versão.
 - **Monitores:** *Forgejo* (`/api/healthz` pelo domínio público, o único
   caminho que o Anubis libera sem desafio) e *Forgejo (SSH)* (porta 2222 em
   `forgejo_tailscale_ip`).

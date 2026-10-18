@@ -1,10 +1,11 @@
-- name: Criar diretório do Forgejo
-  ansible.builtin.file:
-    path: "{{ forgejo_dir }}"
-    state: directory
-    owner: "{{ forgejo_user }}"
-    group: "{{ forgejo_group }}"
-    mode: "0750"
+- name: Preparar o diretório da stack
+  ansible.builtin.include_role:
+    name: compose_stack
+    tasks_from: dir
+  vars:
+    compose_stack_dir: "{{ forgejo_dir }}"
+    compose_stack_owner: "{{ forgejo_user }}"
+    compose_stack_group: "{{ forgejo_group }}"
 
 # Standby nunca faz backup: um archive forgejo-* do Pi viraria o mais
 # recente e o restore pegaria os dados velhos dele. O dump sai com o banco
@@ -26,11 +27,11 @@
         when: [create]
         run:
           - docker exec forgejo-db pg_dump -U forgejo forgejo > {{ forgejo_backup_db_dump }}
-          - docker compose -f {{ forgejo_dir }}/docker-compose.yml down
+          - docker compose -f {{ forgejo_dir }}/compose.yml down
       - after: action
         when: [create]
         run: &forgejo_backup_up
-          - docker compose -f {{ forgejo_dir }}/docker-compose.yml up -d
+          - docker compose -f {{ forgejo_dir }}/compose.yml up -d
           - rm -f {{ forgejo_backup_db_dump }}
       - after: error
         run: *forgejo_backup_up
@@ -80,19 +81,12 @@
     group: root
     mode: "0700"
 
-- name: Renderizar docker-compose.yml
-  ansible.builtin.template:
-    src: docker-compose.yml.j2
-    dest: "{{ forgejo_dir }}/docker-compose.yml"
-    mode: "0640"
-  register: forgejo_compose_render
-
-- name: Subir os serviços
-  community.docker.docker_compose_v2:
-    project_src: "{{ forgejo_dir }}"
-    state: present
-    pull: always
-  when: not forgejo_standby
+- name: Subir o Forgejo
+  ansible.builtin.include_role:
+    name: compose_stack
+  vars:
+    compose_stack_dir: "{{ forgejo_dir }}"
+    compose_stack_standby: "{{ forgejo_standby }}"
 
 # O Forgejo lê a chave só ao subir. Se o compose mudou, o passo acima já
 # recriou o container; isto cobre a troca só da chave.
@@ -104,25 +98,4 @@
   when:
     - not forgejo_standby
     - forgejo_signing_key is changed
-    - forgejo_compose_render is not changed
-
-# Standby: imagens baixadas (o restore não depende de registry na hora do
-# desastre) e nenhum container rodando. remove_orphans tira também container
-# do projeto que já não está no compose.
-- name: Baixar as imagens (standby)
-  community.docker.docker_compose_v2_pull:
-    project_src: "{{ forgejo_dir }}"
-  # No --check o compose só "seria" renderizado e o módulo falha sem ele.
-  when:
-    - forgejo_standby
-    - not (ansible_check_mode and forgejo_compose_render is changed)
-
-- name: Manter os serviços parados (standby)
-  community.docker.docker_compose_v2:
-    project_src: "{{ forgejo_dir }}"
-    state: absent
-    remove_orphans: true
-  # No --check o compose só "seria" renderizado e o módulo falha sem ele.
-  when:
-    - forgejo_standby
-    - not (ansible_check_mode and forgejo_compose_render is changed)
+    - compose_stack_render is not changed
