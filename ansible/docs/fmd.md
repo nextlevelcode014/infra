@@ -54,8 +54,8 @@ app de 2FA quase sempre sumiu junto. O que protege:
    ansible-playbook playbooks/fmd.yml --ask-vault-pass --limit pi_staging
    ```
 
-   Confira: `ssh root@10.50.0.203 "curl -s -o /dev/null -w '%{http_code}\n' http://10.50.0.203:8085"`
-   devolve `200` (a página em si reclama da falta de HTTPS, e é esperado).
+   Confira: `ssh root@10.50.0.203 'wget -S -O /dev/null http://10.50.0.203:8085 2>&1 | grep HTTP/'`
+   mostra `HTTP/1.1 200 OK` (a página em si reclama da falta de HTTPS, e é esperado).
 
 2. **Dados.** Com backup a trazer, restaure antes de aplicar
    (`docs/fmd-restore.md`): o banco e o estado do sidecar voltam, e o Funnel

@@ -111,10 +111,16 @@ depois o `terraform apply`, depois o `lxc.yml`.
    Host 10.50.0.*
        User root
        ProxyJump root@<proxmox_host>
+       IdentityFile ~/.ssh/id_ed25519
+       IdentitiesOnly yes
    ```
 
+   A chave é a que o Terraform põe nos LXCs (`terraform/local.tf`). Sem o
+   `IdentitiesOnly`, o agente oferece todas as chaves dele antes, e o sshd
+   do LXC corta com `Too many authentication failures`.
+
    Confira, com os LXCs já criados: `ssh root@10.50.0.203 hostname` responde
-   `pi-lab`, e `ssh root@10.50.0.203 curl -sI https://deb.debian.org | head -1`
-   mostra `HTTP/... 200` (a saída pelo NAT funciona).
+   `pi-lab`, e `ssh root@10.50.0.203 'wget -S -O /dev/null https://deb.debian.org 2>&1 | grep HTTP/'`
+   mostra `HTTP/1.1 200 OK` (a saída pelo NAT funciona).
 
 Porta de um LXC no navegador: túnel pelo mesmo salto (`docs/pi.md`, "pi-lab").

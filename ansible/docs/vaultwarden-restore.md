@@ -88,7 +88,7 @@ ansible-playbook playbooks/vaultwarden-restore.yml --ask-vault-pass --limit pi_s
   -e restore_on_pi=true -e vaultwarden_restore_confirmation=RESTORE_VAULTWARDEN
 ```
 
-Confira: `ssh root@10.50.0.203 curl -s http://10.50.0.203:8083/alive` devolve
+Confira: `ssh root@10.50.0.203 wget -qO- http://10.50.0.203:8083/alive` devolve
 uma data, e o mesmo com `/api/config` no lugar do `/alive` mostra o servidor
 de pé. O
 login pelo navegador não funciona ali (sem HTTPS, o cliente web recusa). O

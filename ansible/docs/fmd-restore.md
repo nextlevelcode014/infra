@@ -66,8 +66,8 @@ ansible-playbook playbooks/fmd-restore.yml --ask-vault-pass --limit pi_staging \
 
 Confira: `ssh root@10.50.0.203 ls -l /mnt/secure/appdata/fmd/fmddata/db`
 mostra o `fmd.sqlite` com o tamanho do de produção, e
-`ssh root@10.50.0.203 "curl -s -o /dev/null -w '%{http_code}\n' http://10.50.0.203:8085"` devolve
-`200`. Limpe no fim: o banco tem as contas e os metadados dos aparelhos.
+`ssh root@10.50.0.203 'wget -S -O /dev/null http://10.50.0.203:8085 2>&1 | grep HTTP/'` mostra
+`HTTP/1.1 200 OK`. Limpe no fim: o banco tem as contas e os metadados dos aparelhos.
 
 ```bash
 ansible-playbook playbooks/pi-lab-limpar.yml --ask-vault-pass

@@ -33,7 +33,7 @@ no IP Tailscale.
    ansible-playbook playbooks/immich.yml --ask-vault-pass --limit pi_staging
    ```
 
-   Confira: `ssh root@10.50.0.203 curl -s http://10.50.0.203:2283/api/server/ping` devolve
+   Confira: `ssh root@10.50.0.203 wget -qO- http://10.50.0.203:2283/api/server/ping` devolve
    `{"res":"pong"}`.
 
 2. **Aplicar no Pi e no Caddy** (o do Proxmox e o reserva do Pi leem a mesma

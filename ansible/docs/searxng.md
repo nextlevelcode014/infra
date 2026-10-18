@@ -31,8 +31,8 @@ engine é editar o template e reaplicar.
    ansible-playbook playbooks/searxng.yml --ask-vault-pass --limit pi_staging
    ```
 
-   Confira: `ssh root@10.50.0.203 "curl -s -o /dev/null -w '%{http_code}\n' http://10.50.0.203:8082/"`
-   devolve `200`.
+   Confira: `ssh root@10.50.0.203 'wget -S -O /dev/null http://10.50.0.203:8082/ 2>&1 | grep HTTP/'`
+   mostra `HTTP/1.1 200 OK`.
 
 2. **Aplicar no Pi e no Caddy** (o do Proxmox e o reserva do Pi leem a mesma
    rota):
