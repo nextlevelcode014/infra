@@ -63,12 +63,46 @@ no IP Tailscale.
 
 Prefixo `immich-*` no borgmatic do Pi (`docs/backup.md`), no repositório
 compartilhado. Roda depois dos outros serviços do Pi: `pg_dump` para dentro
-do `upload/` e `borg create` dele, sem thumbs e vídeos re-encodados (o
-Immich gera de novo). **Não para os containers**: o banco sai consistente
+do `upload/` e `borg create` dele, com os thumbs e sem os vídeos
+re-encodados (`encoded-video/`, que pesa perto do original e o Immich gera
+de novo; ADR 0014). **Não para os containers**: o banco sai consistente
 pelo dump, e as fotos não mudam depois de gravadas. Monitor *Backup Immich*.
 
-Restore: ainda não automatizado (#10). À mão, com o `borg` do Pi e o
-prefixo `immich-*`.
+## Restore
+
+Ainda não automatizado (#10). À mão, com o `borg` do Pi e o prefixo
+`immich-*`.
+
+### Depois do restore
+
+O banco volta dizendo quais thumbnails e vídeos re-encodados existem, e o
+disco pode não ter os arquivos. Os jobs com *Missing* escolhem pelo banco,
+não pelo disco, então não veem essa falta: o que conserta é o *All*. Os
+jobs ficam na interface (*Administração → Jobs*); por API, pediriam uma
+chave de admin a mais no vault para um passo que só roda no restore.
+
+1. **Vídeos re-encodados:** *Transcode Videos → All*. Sempre: eles não
+   entram no backup.
+
+   Confira: a fila do job zera, e um vídeo gravado no celular toca na
+   interface.
+
+2. **Thumbnails, se faltarem:** *Generate Thumbnails → All*. Precisa quando
+   o restore cruza versão do Immich, ou vem de archive anterior ao
+   ADR 0014. Leva tempo de CPU proporcional à biblioteca.
+
+   Confira, antes e depois: o log não mostra arquivo de thumb faltando.
+
+   ```bash
+   ssh ubuntu@nextlevelcode.<tailnet>.ts.net 'sudo docker logs --since 10m immich_server 2>&1 | grep -c "ENOENT.*thumbs"'
+   ```
+
+   Com a timeline aberta na interface, `0` é o certo.
+
+3. **Vídeo que falha com `Missing video metadata`:** *Extract Metadata →
+   Missing* e depois *Generate Thumbnails → Missing* (esses não têm registro
+   de thumbnail no banco, então o *Missing* os pega). Se continuar, o
+   arquivo original está corrompido (`ffprobe` nele dentro de `library/`).
 
 ## Operação
 

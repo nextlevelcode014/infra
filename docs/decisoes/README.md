@@ -48,6 +48,7 @@ fonte (PR, commit ou comentário de onde o motivo foi tirado).
 | [0011](0011-gluetun-no-latest-pela-lista-de-servidores.md) | gluetun no `latest`, pela lista de servidores | Aceita |
 | [0012](0012-stack-arr-no-latest-com-o-backup-como-volta.md) | Stack Arr no `latest`, com o backup como volta | Aceita |
 | [0013](0013-nextcloud-aio-no-latest-ele-se-atualiza.md) | Nextcloud AIO no `latest`: ele se atualiza sozinho | Aceita |
+| [0014](0014-backup-do-immich-leva-os-thumbs.md) | O backup do Immich leva os thumbs, não os vídeos re-encodados | Aceita |
 
 ## Modelo
 
