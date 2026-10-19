@@ -14,6 +14,8 @@ O que ele faz:
 - cria o usuário admin (`ubuntu`, uid 1000) se não existir;
 - cria as redes `medianet` e `vpn_net`;
 - instala o `disk-guard` (script, service e timer);
+- faz o `borgmatic.service` pular o backup com o LUKS fechado
+  (`docs/backup.md`, "Como funciona");
 - instala o `reboot-watch` (ver "Atualizar");
 - grava `PSU_MAX_CURRENT` na EEPROM (só no Pi físico; ver "Fonte e boot
   sozinho").

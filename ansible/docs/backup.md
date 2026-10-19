@@ -37,10 +37,22 @@ Immich, confira se o do Pi termina antes das 03:10; se não terminar,
 afaste a VPS.
 
 O timer é `Persistent`: um host desligado na hora roda o backup assim que
-ligar. No Pi, isso acontece antes do `secure-unlock`. O config exige que os
-caminhos existam (`source_directories_must_exist`), então o backup falha e
-avisa em vez de gravar um archive vazio. Rode o backup à mão depois do
-unlock (abaixo).
+ligar. No Pi, isso acontece antes do `secure-unlock`: sem o LUKS não há
+Docker nem appdata, e todo config falharia, inclusive os hooks que sobem as
+stacks. Por isso o `pi_host` põe um drop-in no `borgmatic.service` com
+`ConditionPathIsMountPoint=/mnt/secure`, e a execução é pulada sem erro. O
+aviso de falha também não sairia: antes do unlock o Uptime Kuma não
+responde ao Pi. Quem avisa é o monitor, depois de 26 h sem push. Rode o
+backup à mão depois do unlock (abaixo).
+
+Confira, no Pi:
+
+```bash
+systemctl cat borgmatic.service | grep ConditionPathIsMountPoint
+```
+
+Deve mostrar `ConditionPathIsMountPoint=/mnt/secure`. Uma execução pulada
+aparece no `journalctl -u borgmatic` como `unmet condition check`.
 
 O `borgmatic.service` vem do role da borgbase com `ConditionACPower=true`:
 com o notebook do Proxmox na bateria (queda de luz), os LXCs pulam o backup

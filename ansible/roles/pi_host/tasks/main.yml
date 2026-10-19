@@ -201,6 +201,31 @@
     name: "{{ item }}"
   loop: "{{ pi_docker_networks }}"
 
+# --- Backup só com o LUKS aberto -------------------------------------------
+# O borgmatic.timer é Persistent: depois de um boot ele roda na hora, antes do
+# secure-unlock, e todo config falha sem Docker e sem appdata (os hooks de
+# up -d também). Com a condição, a execução é pulada sem erro; quem avisa é o
+# monitor, depois de 26 h sem push. ConditionPathIsMountPoint, e não
+# RequiresMountsFor: esse monta o volume e fica pedindo a passphrase.
+# Sem LUKS (pi-lab), /mnt/secure não é ponto de montagem e o backup nunca
+# rodaria.
+- name: Criar diretório de drop-in do borgmatic
+  ansible.builtin.file:
+    path: /etc/systemd/system/borgmatic.service.d
+    state: directory
+    mode: "0755"
+  when: pi_luks_uuid is defined
+
+- name: Pular o backup com o volume cifrado fechado
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/borgmatic.service.d/require-secure.conf
+    mode: "0644"
+    content: |
+      [Unit]
+      ConditionPathIsMountPoint={{ secure_mount_dir }}
+  when: pi_luks_uuid is defined
+  notify: Recarregar systemd
+
 # --- Guarda de espaço livre -------------------------------------------------
 # O /mnt/secure é de todos (data-root do Docker, Postgres). Se os downloads
 # o encherem, cai tudo; o qBittorrent só reage depois que a escrita falha.
