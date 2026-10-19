@@ -92,7 +92,11 @@ Nenhum: o gluetun não guarda dado. A config inteira vem do repo e do vault.
 
 - **Dependente novo** (outro serviço saindo pela VPN): o nome do container
   entra em `gluetun_dependents`, e a porta dele no `compose.yml` do gluetun
-  (`roles/gluetun/files/compose.yml`).
+  (`roles/gluetun/templates/compose.yml.j2`).
+- **Atualizar:** `gluetun_image` (em `group_vars/all`, a mesma do exit node)
+  é a tag de major (`v3`): o `pi-atualizar.yml` traz a versão nova e recria
+  os dependentes. O `latest` do gluetun não serve: é a branch de
+  desenvolvimento, não uma versão publicada.
 
 ## Limitações
 

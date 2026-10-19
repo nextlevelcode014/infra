@@ -1,12 +1,10 @@
 ---
-- name: Criar o diretório da stack
-  ansible.builtin.file:
-    path: "{{ adguard_dir }}"
-    state: directory
-    owner: root
-    group: root
-    mode: "0750"
-  register: adguard_stack_dir_result
+- name: Preparar o diretório da stack
+  ansible.builtin.include_role:
+    name: compose_stack
+    tasks_from: dir
+  vars:
+    compose_stack_dir: "{{ adguard_dir }}"
 
 # Sem dono nem modo: no Pi os diretórios já existem no LUKS e o AdGuard
 # grava como root dentro deles.
@@ -16,22 +14,11 @@
     state: directory
   loop: [conf, work]
 
-- name: Renderizar o compose.yml
-  ansible.builtin.template:
-    src: compose.yml.j2
-    dest: "{{ adguard_dir }}/compose.yml"
-    mode: "0644"
-
-# remove_orphans tira container de serviço que saiu do compose.
 - name: Subir o AdGuard
-  community.docker.docker_compose_v2:
-    project_src: "{{ adguard_dir }}"
-    files: [compose.yml]
-    state: present
-    remove_orphans: true
-  # No --check de um host novo o diretório só "seria" criado, e o compose
-  # falha com "is not a directory". Pula só nesse caso.
-  when: not (ansible_check_mode and adguard_stack_dir_result is changed)
+  ansible.builtin.include_role:
+    name: compose_stack
+  vars:
+    compose_stack_dir: "{{ adguard_dir }}"
 
 # Sem parar o AdGuard: parar o DNS derruba a rede da casa. A config é um
 # arquivo pequeno, e o stats.db, se sair inconsistente, só perde estatística.

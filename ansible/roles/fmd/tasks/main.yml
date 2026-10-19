@@ -1,12 +1,10 @@
 ---
-- name: Criar o diretório da stack
-  ansible.builtin.file:
-    path: "{{ fmd_dir }}"
-    state: directory
-    owner: root
-    group: root
-    mode: "0750"
-  register: fmd_stack_dir_result
+- name: Preparar o diretório da stack
+  ansible.builtin.include_role:
+    name: compose_stack
+    tasks_from: dir
+  vars:
+    compose_stack_dir: "{{ fmd_dir }}"
 
 # O container roda como uid 1000 e precisa escrever no banco; sem isso o
 # SQLite falha e o container reinicia em loop (era um chown manual).
@@ -48,12 +46,6 @@
     anubis_policy_dest: "{{ fmd_dir }}/anubis-policy.yaml"
   when: fmd_tailscale_sidecar and fmd_anubis
 
-- name: Renderizar o compose.yml
-  ansible.builtin.template:
-    src: compose.yml.j2
-    dest: "{{ fmd_dir }}/compose.yml"
-    mode: "0644"
-
 - name: Renderizar o .env
   ansible.builtin.template:
     src: fmd.env.j2
@@ -62,14 +54,10 @@
   no_log: true
 
 - name: Subir o FMD
-  community.docker.docker_compose_v2:
-    project_src: "{{ fmd_dir }}"
-    files: [compose.yml]
-    state: present
-    remove_orphans: true
-  # No --check de um host novo o diretório só "seria" criado, e o compose
-  # falha com "is not a directory". Pula só nesse caso.
-  when: not (ansible_check_mode and fmd_stack_dir_result is changed)
+  ansible.builtin.include_role:
+    name: compose_stack
+  vars:
+    compose_stack_dir: "{{ fmd_dir }}"
 
 # Recria a stack inteira, não só o sidecar: o fmd e o Anubis vivem na rede
 # dele, e reiniciar só o sidecar os deixaria presos a uma netns que sumiu.

@@ -1,6 +1,6 @@
 services:
   gluetun:
-    image: qmcgaw/gluetun
+    image: {{ gluetun_image }}
     container_name: gluetun
     cap_add:
       - NET_ADMIN

@@ -147,6 +147,11 @@ Monitor *Backup FMD*. Restore: `docs/fmd-restore.md`.
   Todas falhando: recrie a stack (acima), para o sidecar se registrar de
   novo. Só uma falhando com a config igual: é do lado do Tailscale; espere e,
   se persistir, chamado no suporte com os IPs e o horário.
+- **Atualizar:** o FMD tem versão exata (`fmd_image`, projeto `0.x`): sobe
+  trocando a variável, depois de ler as notas da versão. O Anubis usa a do
+  role `anubis` (`docs/anubis.md`, "Atualizar"). O sidecar usa
+  `tailscale_image` (em `group_vars/all`, a mesma do exit node), em `latest`
+  (ADR 0010), e anda com o `pi-atualizar.yml`.
 
 ## Limitações
 

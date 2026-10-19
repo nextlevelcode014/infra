@@ -7,7 +7,7 @@ services:
     # a data em que puxou — e um SERVER_HOSTNAMES válido aqui vira erro fatal
     # lá. Foi o que aconteceu: notebook com build de 06/08 e Pi com build de
     # 19/07 discordavam sobre a existência do node-br-08.
-    image: qmcgaw/gluetun:v3.41.3
+    image: {{ gluetun_image }}
     container_name: gluetun-exit
     cap_add:
       - NET_ADMIN
@@ -57,7 +57,7 @@ services:
     restart: unless-stopped
 
   tailscale-exit:
-    image: tailscale/tailscale:latest
+    image: {{ tailscale_image }}
     container_name: tailscale-exit
     network_mode: service:gluetun-exit
     # O tailscaled chama /usr/sbin/iptables, que na imagem é o binário LEGACY —

@@ -1,20 +1,12 @@
 ---
 # Gateway VPN compartilhado (ProtonVPN, WireGuard, killswitch). Redes
 # medianet e vpn_net vêm do pi_host.
-- name: Criar o diretório da stack
-  ansible.builtin.file:
-    path: "{{ gluetun_dir }}"
-    state: directory
-    owner: root
-    group: root
-    mode: "0750"
-  register: gluetun_stack_dir_result
-
-- name: Copiar o compose.yml
-  ansible.builtin.copy:
-    src: compose.yml
-    dest: "{{ gluetun_dir }}/compose.yml"
-    mode: "0644"
+- name: Preparar o diretório da stack
+  ansible.builtin.include_role:
+    name: compose_stack
+    tasks_from: dir
+  vars:
+    compose_stack_dir: "{{ gluetun_dir }}"
 
 - name: Renderizar o .env
   ansible.builtin.template:
@@ -24,14 +16,11 @@
   no_log: true
 
 - name: Subir o gluetun
-  community.docker.docker_compose_v2:
-    project_src: "{{ gluetun_dir }}"
-    files: [compose.yml]
-    state: present
-    wait: true
-  # No --check de um host novo o diretório só "seria" criado, e o compose
-  # falha com "is not a directory". Pula só nesse caso.
-  when: not (ansible_check_mode and gluetun_stack_dir_result is changed)
+  ansible.builtin.include_role:
+    name: compose_stack
+  vars:
+    compose_stack_dir: "{{ gluetun_dir }}"
+    compose_stack_wait: true
 
 # Separado para o pi-atualizar.yml chamar sem passar pelo role inteiro.
 - name: Recriar os dependentes do gluetun, se preciso

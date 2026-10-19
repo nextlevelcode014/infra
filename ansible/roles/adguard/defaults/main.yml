@@ -1,6 +1,8 @@
 ---
 adguard_dir: /opt/adguard
-adguard_image: adguard/adguardhome:latest
+# Versão exata (ADR 0005): projeto 0.x, e ele migra o AdGuardHome.yaml ao
+# subir de versão. Subir: notas da versão, trocar aqui e reaplicar.
+adguard_image: adguard/adguardhome:v0.107.79
 
 # Config e dados direto no LUKS.
 adguard_data_dir: "{{ appdata_dir }}/adguard"

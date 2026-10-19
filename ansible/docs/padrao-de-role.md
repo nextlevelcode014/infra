@@ -35,12 +35,14 @@ nunca tem valor no `defaults`, só a referência ao vault.
 
 ## Imagem
 
-Tag explícita na variável do role, nunca `latest` nem sem tag (ADR 0005):
-major por padrão; versão exata em banco que migra no boot, projeto `0.x` e o
-que fica exposto à internet. Imagem que o projeto publica com digest
-(`@sha256:`) pode ficar assim. Imagem repetida em várias stacks (o sidecar do
-Tailscale) é uma variável só. Subir versão exata: trocar a variável, ler as
-notas da versão e reaplicar o playbook do serviço.
+Tag explícita na variável do role, nunca sem tag (ADR 0005): major por
+padrão; versão exata em banco que migra no boot, projeto `0.x` e o que fica
+exposto à internet. Imagem que o projeto publica com digest (`@sha256:`) pode
+ficar assim. `latest` só para imagem sem tag de major publicada e com volta
+barata, listada no ADR 0010 (hoje SearXNG e Tailscale). Imagem repetida em
+várias stacks (`tailscale_image`, `gluetun_image`) é uma variável só, em
+`group_vars/all`. Subir versão exata: trocar a variável, ler as notas da
+versão e reaplicar o playbook do serviço.
 
 ## Compose
 
@@ -119,12 +121,6 @@ O que ainda falta migrar. Ao migrar um role, tire a linha daqui. Imagem é a
 
 | Role | O que diverge |
 |---|---|
-| todos os outros | a própria cópia do ciclo do compose, sem o `compose_stack` (já usam: Forgejo, Vaultwarden, Uptime Kuma, Anubis) |
-| `adguard` | imagem `latest` |
-| `arr_stack` | todas as imagens `latest`, escritas no compose; compose estático em `files/` |
-| `exit_node` | imagens no compose (Tailscale `latest`); compose estático em `files/` |
-| `fmd` | Tailscale `latest`, escrito no compose |
-| `gluetun` | imagem sem tag, escrita no compose; compose estático em `files/` |
-| `immich` | versão por `IMMICH_VERSION` no env, com `release` de reserva no compose |
-| `nextcloud` | AIO e socket proxy em `latest` (o AIO se atualiza pela própria interface: avaliar se é exceção); coturn no compose |
-| `searxng` | SearXNG `latest` e Valkey, escritos no compose |
+| `arr_stack` | ciclo do compose próprio, sem o `compose_stack`; todas as imagens `latest`, escritas no compose; compose estático em `files/` |
+| `immich` | ciclo do compose próprio; versão por `IMMICH_VERSION` no env, com `release` de reserva no compose |
+| `nextcloud` | ciclo do compose próprio; AIO e socket proxy em `latest` (o AIO se atualiza pela própria interface: avaliar se é exceção); coturn no compose |

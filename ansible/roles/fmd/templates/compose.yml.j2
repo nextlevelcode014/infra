@@ -6,7 +6,7 @@ services:
   # Sidecar Tailscale: é ele que tem identidade de rede. O fmd roda DENTRO
   # desta netns, então a porta para o Caddy é publicada aqui.
   fmd-tailscale:
-    image: tailscale/tailscale:latest
+    image: {{ tailscale_image }}
     container_name: fmd-tailscale
     hostname: fmd
     environment:

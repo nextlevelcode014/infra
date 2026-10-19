@@ -1,6 +1,6 @@
 # 0005. Imagem com tag fixa, em variável
 
-- **Status:** Aceita
+- **Status:** Aceita, com a exceção da 0010 (`latest`)
 - **Data:** 2026-10-17
 - **Fonte:** política proposta na #17 (que continua a self-hosted#72)
 

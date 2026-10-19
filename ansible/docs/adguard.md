@@ -150,6 +150,14 @@ estatística. Monitor *Backup AdGuard*. Restore: `docs/adguard-restore.md`.
 
 ## Operação
 
+### Atualizar
+
+Versão exata em `adguard_image` (projeto `0.x`, e ele migra o
+`AdGuardHome.yaml` ao subir): o `pi-atualizar.yml` não muda essa imagem.
+Para subir, leia as notas da versão, troque a variável e reaplique o
+`adguard.yml`. O DNS da casa cai por alguns segundos enquanto o container
+é recriado.
+
 ### Roteador novo ou faixa da LAN nova
 
 O AdGuard escuta no `lan_ip`, lido dos fatos. Se esse IP muda, o DNS da LAN

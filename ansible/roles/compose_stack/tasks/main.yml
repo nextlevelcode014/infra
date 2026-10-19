@@ -25,6 +25,7 @@
     state: present
     pull: missing
     remove_orphans: true
+    wait: "{{ compose_stack_wait }}"
   # No --check o compose só "seria" renderizado, e o módulo leria o antigo
   # (ou nenhum). Pula só nesse caso.
   when:

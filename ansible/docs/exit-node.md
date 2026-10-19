@@ -13,7 +13,7 @@ continuam acessíveis.
 | Saída | servidor Proton fixo: `exit_node_server_countries` e `exit_node_server_hostnames` |
 
 As regras de roteamento, a trava contra vazamento e o motivo do servidor fixo
-estão nos comentários do compose (`roles/exit_node/files/compose.yml`). O
+estão nos comentários do compose (`roles/exit_node/templates/compose.yml.j2`). O
 projeto Compose é fixo em `exit-node` (`name:` do compose), e é isso que
 mantém o volume, e o nó, entre aplicações.
 
@@ -68,6 +68,13 @@ Docker; perdido o volume, o nó volta novo com a auth key, e o passo 2 da
 instalação se repete.
 
 ## Operação
+
+### Atualizar
+
+As imagens são as mesmas do resto do Pi, em `group_vars/all`:
+`gluetun_image` (major, `v3`) e `tailscale_image` (`latest`, ADR 0010). O
+`pi-atualizar.yml` traz as duas, e o nó continua o mesmo na tailnet (a
+identidade fica no volume).
 
 ### Trocar de país
 

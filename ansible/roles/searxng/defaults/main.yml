@@ -1,6 +1,12 @@
 ---
 searxng_dir: /opt/searxng
 
+# latest (ADR 0010): o SearXNG só publica tag por data, várias por dia, e a
+# maioria corrige motor de busca que parou. Sem estado: voltar é trocar a
+# imagem pelo digest do log do pi-atualizar.yml.
+searxng_image: docker.io/searxng/searxng:latest
+searxng_valkey_image: docker.io/valkey/valkey:9-alpine
+
 # Config que o container lê (/etc/searxng), no LUKS.
 searxng_config_dir: "{{ appdata_dir }}/searxng/core-config"
 

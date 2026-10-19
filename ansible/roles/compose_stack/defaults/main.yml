@@ -15,6 +15,10 @@ compose_stack_mode: "0750"
 
 compose_stack_standby: false
 
+# Espera os containers ficarem healthy antes de seguir: para quem tem
+# dependente que precisa do serviço já de pé (o gluetun e a VPN).
+compose_stack_wait: false
+
 # O compose.yml.j2 do role que chamou: aqui dentro, role_path seria o do
 # compose_stack.
 compose_stack_template: "{{ ansible_parent_role_paths[0] }}/templates/compose.yml.j2"

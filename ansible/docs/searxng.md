@@ -75,8 +75,11 @@ preferências de cada pessoa ficam no cookie do navegador.
 - **Sem rede depois de recriar o gluetun:** o role do gluetun recria o
   `searxng-core` sozinho (`docs/gluetun.md`, "Operação").
 
-- **Atualizar:** a imagem é `latest` e o `pi-atualizar.yml` a puxa. Engine
-  que volta a funcionar depois de uma atualização pode ser religada.
+- **Atualizar:** a imagem é `latest` (ADR 0010: o SearXNG só publica tag
+  por data, várias por dia) e o `pi-atualizar.yml` a puxa; o Valkey fica na
+  major (`9-alpine`). Engine que volta a funcionar depois de uma atualização
+  pode ser religada. Para voltar, o digest de antes está no log do
+  `pi-atualizar.yml` (`docs/pi.md`, "Atualizar").
 
 ## Limitações
 
