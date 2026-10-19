@@ -44,3 +44,9 @@ vaultwarden_bind_port: "{{ ts_ip }}:8083"
 gluetun_dependents:
   - qbittorrent
   - searxng-core
+
+# Backup do Immich desligado até o plano Small do BorgBase (#39): as fotos
+# não cabem no grátis, e o config do borgmatic estouraria a cota do
+# repositório compartilhado, derrubando o backup de todos os serviços. Com
+# false, reaplicar o immich.yml tira o /etc/borgmatic/immich.yaml.
+immich_backup_enabled: false
