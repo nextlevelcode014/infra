@@ -3,7 +3,7 @@
 name: coturn-turn
 services:
   coturn:
-    image: coturn/coturn:4.6.3
+    image: {{ nextcloud_coturn_image }}
     network_mode: host
     restart: always
     env_file: .env
@@ -18,7 +18,6 @@ services:
       --static-auth-secret=${TURN_SECRET}
       --realm=${TS_TAILNET}
       --no-tls
-      --no-dtls
       --no-multicast-peers
       --fingerprint
       --denied-peer-ip=10.0.0.0-10.255.255.255

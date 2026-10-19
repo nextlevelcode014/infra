@@ -16,15 +16,14 @@
     state: absent
 
 # missing baixa uma tag nova, mas não troca imagem que já existe: aplicar
-# config não atualiza o serviço (ADR 0003 e 0006). remove_orphans tira
-# container de serviço que saiu do compose.
+# config não atualiza o serviço (ADR 0003 e 0006).
 - name: Subir a stack
   community.docker.docker_compose_v2:
     project_src: "{{ compose_stack_dir }}"
     files: [compose.yml]
     state: present
     pull: missing
-    remove_orphans: true
+    remove_orphans: "{{ compose_stack_remove_orphans }}"
     wait: "{{ compose_stack_wait }}"
   # No --check o compose só "seria" renderizado, e o módulo leria o antigo
   # (ou nenhum). Pula só nesse caso.

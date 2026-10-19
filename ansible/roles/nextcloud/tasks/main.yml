@@ -1,47 +1,35 @@
 ---
 # --- Mastercontainer do AIO -------------------------------------------------
-- name: Criar o diretório do AIO
-  ansible.builtin.file:
-    path: "{{ nextcloud_dir }}"
-    state: directory
-    owner: root
-    group: root
-    mode: "0750"
-  register: nextcloud_dir_result
-
-- name: Renderizar o compose.yml do AIO
-  ansible.builtin.template:
-    src: compose.yml.j2
-    dest: "{{ nextcloud_dir }}/compose.yml"
-    mode: "0644"
+- name: Preparar o diretório do AIO
+  ansible.builtin.include_role:
+    name: compose_stack
+    tasks_from: dir
+  vars:
+    compose_stack_dir: "{{ nextcloud_dir }}"
 
 # NUNCA remove_orphans aqui: os containers nextcloud-aio-* que o AIO cria
 # ficam neste mesmo projeto Compose e seriam apagados como "órfãos".
 - name: Subir o mastercontainer do AIO
-  community.docker.docker_compose_v2:
-    project_src: "{{ nextcloud_dir }}"
-    files: [compose.yml]
-    state: present
-    remove_orphans: false
-  # No --check de um host novo o diretório só "seria" criado, e o compose
-  # falha com "is not a directory". Pula só nesse caso.
-  when: not (ansible_check_mode and nextcloud_dir_result is changed)
+  ansible.builtin.include_role:
+    name: compose_stack
+  vars:
+    compose_stack_dir: "{{ nextcloud_dir }}"
+    compose_stack_remove_orphans: false
 
 # --- coturn -----------------------------------------------------------------
-- name: Criar o diretório do coturn
-  ansible.builtin.file:
-    path: "{{ nextcloud_coturn_dir }}"
-    state: directory
-    owner: root
-    group: root
-    mode: "0750"
-  register: nextcloud_coturn_dir_result
+- name: Preparar o diretório do coturn
+  ansible.builtin.include_role:
+    name: compose_stack
+    tasks_from: dir
+  vars:
+    compose_stack_dir: "{{ nextcloud_coturn_dir }}"
 
-- name: Copiar o compose do coturn
-  ansible.builtin.copy:
-    src: compose.coturn-turn.yml
-    dest: "{{ nextcloud_coturn_dir }}/compose.coturn-turn.yml"
-    mode: "0644"
+# Nome antigo do compose do coturn. O projeto vem do name: (coturn-turn), o
+# mesmo nos dois arquivos; tirar o antigo evita dois composes no diretório.
+- name: Apagar o compose.coturn-turn.yml antigo
+  ansible.builtin.file:
+    path: "{{ nextcloud_coturn_dir }}/compose.coturn-turn.yml"
+    state: absent
 
 - name: Renderizar o .env do coturn
   ansible.builtin.template:
@@ -51,11 +39,11 @@
   no_log: true
 
 - name: Subir o coturn
-  community.docker.docker_compose_v2:
-    project_src: "{{ nextcloud_coturn_dir }}"
-    files: [compose.coturn-turn.yml]
-    state: present
-  when: not (ansible_check_mode and nextcloud_coturn_dir_result is changed)
+  ansible.builtin.include_role:
+    name: compose_stack
+  vars:
+    compose_stack_dir: "{{ nextcloud_coturn_dir }}"
+    compose_stack_template_name: coturn.compose.yml.j2
 
 # --- tailscale serve do host ------------------------------------------------
 - name: Ler o tailscale serve do host

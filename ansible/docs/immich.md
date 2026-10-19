@@ -10,9 +10,9 @@ pelo Caddy.
 | Banco | `/mnt/secure/appdata/immich/postgres` (`immich_db_data_location`), no LUKS |
 | Stack | `/opt/immich`: `immich_server`, `immich_machine_learning`, `immich_redis`, `immich_postgres` |
 
-A versão fica fixa em `immich_version` (hoje `v3`): o dump do banco só
-restaura na mesma versão, então atualizar é trocar essa variável de
-propósito. O compose parte do oficial do Immich
+A versão fica fixa em `immich_version` (versão exata, `v3.3.3`; ADR 0005):
+o Immich migra o banco ao subir, e o dump do backup só restaura na mesma
+versão, então atualizar é trocar essa variável de propósito. O compose parte do oficial do Immich
 (`roles/immich/templates/compose.yml.j2`, link no cabeçalho), com a porta só
 no IP Tailscale.
 
@@ -72,9 +72,12 @@ prefixo `immich-*`.
 
 ## Operação
 
-- **Atualizar:** trocar `immich_version` e reaplicar, lendo antes as notas da
-  versão (o Immich muda o compose e migra o banco entre versões). O
-  `pi-atualizar.yml` só puxa a imagem da tag fixa.
+- **Atualizar:** ler as notas da versão (o Immich muda o compose e migra o
+  banco entre versões; as de quebra vêm marcadas), conferir que o último
+  backup `immich-*` terminou, trocar `immich_version` e reaplicar o
+  `immich.yml`. Se o compose oficial da versão nova mudar (Valkey, Postgres
+  e os digests deles), acompanhe em `compose.yml.j2` e nas variáveis
+  `immich_*_image`. O `pi-atualizar.yml` não muda a versão: a tag é exata.
 - **Backup grande** (muitas fotos novas de uma vez): rode à mão, de dia. Ele
   segura a trava do repositório compartilhado, e o backup da VPS (03:00)
   desiste depois de 10 min (`docs/backup.md`).

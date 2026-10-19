@@ -155,7 +155,13 @@ antes, para a interface existir.
 ## Operação
 
 - **Atualizar:** o mastercontainer e os containers do AIO se atualizam pela
-  interface do AIO, não pelo `pi-atualizar.yml`.
+  interface do AIO, não pelo `pi-atualizar.yml`; por isso a imagem fica em
+  `latest` (ADR 0013). O coturn fica na major (`nextcloud_coturn_image`,
+  `4`) e anda com o `pi-atualizar.yml`; depois de uma versão nova, uma
+  chamada no Talk de fora de casa confirma o relay. Se ele não subir
+  (`docker logs coturn-turn-coturn-1` com `unrecognized option`), uma opção
+  do `command` mudou de nome: veja as notas da versão, ou volte a variável
+  para a versão anterior.
 - **`tailscale serve` do host:** o role deixa só a 8080. Ele também apaga
   as portas antigas `8000` (um Funnel público) e `9080`, e a `443` quando o
   domínio do AIO já é o `nextcloud.lab`: num host limpo, nada disso

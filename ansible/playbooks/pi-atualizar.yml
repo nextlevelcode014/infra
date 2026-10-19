@@ -23,7 +23,7 @@
       - /opt/fmd/compose.yml
       - /opt/immich/compose.yml
       - /opt/exit-node/compose.yml
-      - /opt/coturn-turn/compose.coturn-turn.yml
+      - /opt/coturn-turn/compose.yml
   tasks:
     # O pull grava no data-root do Docker, que está no LUKS.
     - name: Confirmar que o volume cifrado está montado

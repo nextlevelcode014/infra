@@ -1,8 +1,17 @@
 ---
 immich_dir: /opt/immich
 
-# Fixada como em produção: o dump do banco só restaura na mesma versão.
-immich_version: v3
+# Versão exata (ADR 0005): o Immich migra o banco ao subir, e o dump do
+# backup só restaura na mesma versão. Server e machine learning andam
+# juntos. Subir: notas da versão (as de quebra vêm marcadas), trocar aqui e
+# reaplicar o immich.yml; o pi-atualizar.yml não muda esta versão.
+immich_version: v3.3.3
+immich_server_image: "ghcr.io/immich-app/immich-server:{{ immich_version }}"
+immich_machine_learning_image: "ghcr.io/immich-app/immich-machine-learning:{{ immich_version }}"
+# Por digest, como o compose oficial do Immich publica: troque junto com o
+# compose de uma versão nova, se ele mudar.
+immich_valkey_image: docker.io/valkey/valkey:9@sha256:3eeb09785cd61ec8e3be35f8804c8892080f3ca21934d628abc24ee4ed1698f6
+immich_postgres_image: ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0@sha256:bcf63357191b76a916ae5eb93464d65c07511da41e3bf7a8416db519b40b1c23
 
 # Fotos/vídeos e banco ficam direto no LUKS, sem symlink.
 immich_upload_location: "{{ appdata_dir }}/immich/upload"

@@ -1,23 +1,15 @@
 ---
-- name: Criar o diretório da stack
-  ansible.builtin.file:
-    path: "{{ immich_dir }}"
-    state: directory
-    owner: root
-    group: root
-    mode: "0750"
-  register: immich_stack_dir_result
+- name: Preparar o diretório da stack
+  ansible.builtin.include_role:
+    name: compose_stack
+    tasks_from: dir
+  vars:
+    compose_stack_dir: "{{ immich_dir }}"
 
 - name: Copiar o hwaccel.ml.yml
   ansible.builtin.copy:
     src: hwaccel.ml.yml
     dest: "{{ immich_dir }}/hwaccel.ml.yml"
-    mode: "0644"
-
-- name: Renderizar o compose.yml
-  ansible.builtin.template:
-    src: compose.yml.j2
-    dest: "{{ immich_dir }}/compose.yml"
     mode: "0644"
 
 - name: Renderizar o .env
@@ -28,14 +20,10 @@
   no_log: true
 
 - name: Subir o Immich
-  community.docker.docker_compose_v2:
-    project_src: "{{ immich_dir }}"
-    files: [compose.yml]
-    state: present
-    remove_orphans: true
-  # No --check de um host novo o diretório só "seria" criado, e o compose
-  # falha com "is not a directory". Pula só nesse caso.
-  when: not (ansible_check_mode and immich_stack_dir_result is changed)
+  ansible.builtin.include_role:
+    name: compose_stack
+  vars:
+    compose_stack_dir: "{{ immich_dir }}"
 
 # --- Backup -----------------------------------------------------------------
 # Repositório compartilhado; o borg_client já instalou Borg, chave e senha.

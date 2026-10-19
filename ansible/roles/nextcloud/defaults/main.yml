@@ -5,6 +5,11 @@
 # AIO, não pelo Ansible.
 nextcloud_dir: /opt/nextcloud-aio
 
+# latest (ADR 0013): o mastercontainer se atualiza pela própria interface,
+# puxando a imagem nova do canal (latest ou beta). Versão fixa brigaria com
+# isso.
+nextcloud_aio_image: ghcr.io/nextcloud-releases/all-in-one:latest
+
 # Onde o Apache do AIO escuta a porta 11000. O IP Tailscale do Pi, para o
 # Caddy do Proxmox (nextcloud.lab.nextlevelcode.pro) alcançar.
 nextcloud_apache_ip_binding: "{{ ts_ip }}"
@@ -12,6 +17,10 @@ nextcloud_apache_ip_binding: "{{ ts_ip }}"
 # coturn (TURN/STUN do Talk na tailnet), em compose próprio com network_mode
 # host. O projeto "coturn-turn" também vem do name: do compose.
 nextcloud_coturn_dir: /opt/coturn-turn
+# Major (ADR 0005). Sem estado: a config toda vem do command do compose.
+# Desde a 4.18 o DTLS só liga com --dtls e o --no-dtls deixou de existir
+# (com ele o coturn nem sobe); o --no-tls sozinho já desliga os dois.
+nextcloud_coturn_image: coturn/coturn:4
 nextcloud_turn_secret: "{{ vault_nextcloud_turn_secret }}"
 nextcloud_turn_relay_ip: "{{ ts_ip }}"
 nextcloud_ts_tailnet: "{{ tailnet }}"

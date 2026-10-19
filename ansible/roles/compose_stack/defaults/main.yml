@@ -19,6 +19,12 @@ compose_stack_standby: false
 # dependente que precisa do serviço já de pé (o gluetun e a VPN).
 compose_stack_wait: false
 
-# O compose.yml.j2 do role que chamou: aqui dentro, role_path seria o do
-# compose_stack.
-compose_stack_template: "{{ ansible_parent_role_paths[0] }}/templates/compose.yml.j2"
+# Tira container que saiu do compose. Desligue onde o projeto tem container
+# que não está no compose (o AIO do Nextcloud cria os dele no mesmo projeto).
+compose_stack_remove_orphans: true
+
+# O template do role que chamou: aqui dentro, role_path seria o do
+# compose_stack. Outro nome só para role com duas stacks (o nextcloud); no
+# host o arquivo é sempre compose.yml.
+compose_stack_template_name: compose.yml.j2
+compose_stack_template: "{{ ansible_parent_role_paths[0] }}/templates/{{ compose_stack_template_name }}"

@@ -8,7 +8,7 @@ name: immich
 services:
   immich-server:
     container_name: immich_server
-    image: ghcr.io/immich-app/immich-server:${IMMICH_VERSION:-release}
+    image: {{ immich_server_image }}
     # extends:
     #   file: hwaccel.transcoding.yml
     #   service: cpu # set to one of [nvenc, quicksync, rkmpp, vaapi, vaapi-wsl] for accelerated transcoding
@@ -34,7 +34,7 @@ services:
     # então usa a imagem CPU (sem sufixo) + o service no-op `cpu` do hwaccel.ml.yml.
     # A imagem -cuda nem tem manifest arm64 — o pull falharia. Para acelerar noutro
     # host, troque o sufixo (-cuda/-openvino/-armnn/-rknn) e o `service:` correspondente.
-    image: ghcr.io/immich-app/immich-machine-learning:${IMMICH_VERSION:-release}
+    image: {{ immich_machine_learning_image }}
     extends:
       file: hwaccel.ml.yml
       service: cpu
@@ -62,14 +62,14 @@ services:
 
   redis:
     container_name: immich_redis
-    image: docker.io/valkey/valkey:9@sha256:3eeb09785cd61ec8e3be35f8804c8892080f3ca21934d628abc24ee4ed1698f6
+    image: {{ immich_valkey_image }}
     healthcheck:
       test: redis-cli ping || exit 1
     restart: always
 
   database:
     container_name: immich_postgres
-    image: ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0@sha256:bcf63357191b76a916ae5eb93464d65c07511da41e3bf7a8416db519b40b1c23
+    image: {{ immich_postgres_image }}
     environment:
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_USER: ${DB_USERNAME}

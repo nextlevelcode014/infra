@@ -39,7 +39,7 @@ fonte (PR, commit ou comentário de onde o motivo foi tirado).
 | [0002](0002-terraform-cria-ansible-configura.md) | Terraform cria a máquina, Ansible configura | Aceita |
 | [0003](0003-atualizacao-do-pi-sob-demanda.md) | Atualização do Pi sob demanda, só imagem | Aceita |
 | [0004](0004-standby-com-imagens-ja-baixadas.md) | Standby com as imagens já baixadas | Aceita |
-| [0005](0005-imagem-com-tag-fixa-em-variavel.md) | Imagem com tag fixa, em variável | Aceita, com a exceção da 0010 |
+| [0005](0005-imagem-com-tag-fixa-em-variavel.md) | Imagem com tag fixa, em variável | Aceita, com as exceções da 0010 e da 0013 |
 | [0006](0006-role-compose-stack-compartilhado.md) | Um role compartilhado para o ciclo do compose | Aceita |
 | [0007](0007-immich-e-nextcloud-num-borg-offsite-proprio.md) | Immich e Nextcloud fazem backup num Borg offsite próprio | Substituída por 0008 |
 | [0008](0008-immich-e-nextcloud-no-borgbase-pago.md) | Immich e Nextcloud fazem backup no BorgBase, no plano pago | Aceita |
@@ -47,6 +47,7 @@ fonte (PR, commit ou comentário de onde o motivo foi tirado).
 | [0010](0010-latest-so-sem-tag-de-major-e-com-volta-barata.md) | `latest` só sem tag de major e com volta barata | Aceita, com as exceções da 0011 e da 0012 |
 | [0011](0011-gluetun-no-latest-pela-lista-de-servidores.md) | gluetun no `latest`, pela lista de servidores | Aceita |
 | [0012](0012-stack-arr-no-latest-com-o-backup-como-volta.md) | Stack Arr no `latest`, com o backup como volta | Aceita |
+| [0013](0013-nextcloud-aio-no-latest-ele-se-atualiza.md) | Nextcloud AIO no `latest`: ele se atualiza sozinho | Aceita |
 
 ## Modelo
 
