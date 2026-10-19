@@ -5,7 +5,7 @@ networks:
 
 services:
   qbittorrent:
-    image: lscr.io/linuxserver/qbittorrent:latest
+    image: {{ arr_qbittorrent_image }}
     container_name: qbittorrent
     network_mode: "container:gluetun"
     environment:
@@ -19,7 +19,7 @@ services:
     restart: unless-stopped
 
   jellyfin:
-    image: jellyfin/jellyfin:latest
+    image: {{ arr_jellyfin_image }}
     container_name: jellyfin
     user: 1000:1000
     environment:
@@ -35,7 +35,7 @@ services:
     restart: unless-stopped
 
   jellyseerr:
-    image: ghcr.io/seerr-team/seerr:latest
+    image: {{ arr_seerr_image }}
     container_name: jellyseerr
     init: true
     user: 1000:1000
@@ -52,7 +52,7 @@ services:
     restart: unless-stopped
 
   sonarr:
-    image: lscr.io/linuxserver/sonarr:latest
+    image: {{ arr_sonarr_image }}
     container_name: sonarr
     environment:
       - PUID=${PUID}
@@ -68,7 +68,7 @@ services:
     restart: unless-stopped
 
   radarr:
-    image: lscr.io/linuxserver/radarr:latest
+    image: {{ arr_radarr_image }}
     container_name: radarr
     environment:
       - PUID=${PUID}
@@ -84,7 +84,7 @@ services:
     restart: unless-stopped
 
   prowlarr:
-    image: lscr.io/linuxserver/prowlarr:latest
+    image: {{ arr_prowlarr_image }}
     container_name: prowlarr
     environment:
       - PUID=${PUID}
@@ -99,7 +99,7 @@ services:
     restart: unless-stopped
 
   flaresolverr:
-    image: ghcr.io/flaresolverr/flaresolverr:latest
+    image: {{ arr_flaresolverr_image }}
     container_name: flaresolverr
     environment:
       - LOG_LEVEL=info
@@ -109,7 +109,7 @@ services:
     restart: unless-stopped
 
   bazarr:
-    image: lscr.io/linuxserver/bazarr:latest
+    image: {{ arr_bazarr_image }}
     container_name: bazarr
     environment:
       - PUID=${PUID}
@@ -125,7 +125,7 @@ services:
     restart: unless-stopped
 
   profilarr:
-    image: santiagosayshey/profilarr:latest
+    image: {{ arr_profilarr_image }}
     container_name: profilarr
     depends_on:
       - sonarr
@@ -141,7 +141,7 @@ services:
     restart: unless-stopped
 
   decluttarr:
-    image: ghcr.io/manimatter/decluttarr:latest
+    image: {{ arr_decluttarr_image }}
     container_name: decluttarr
     environment:
       - TZ=America/Sao_Paulo
@@ -157,7 +157,7 @@ services:
     restart: always
 
   dozzle:
-    image: amir20/dozzle:latest
+    image: {{ arr_dozzle_image }}
     container_name: dozzle
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro

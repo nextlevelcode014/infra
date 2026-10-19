@@ -10,14 +10,12 @@
     mode: "0755"
   loop: "{{ arr_config_dirs }}"
 
-- name: Criar o diretório da stack
-  ansible.builtin.file:
-    path: "{{ arr_stack_dir }}"
-    state: directory
-    owner: root
-    group: root
-    mode: "0750"
-  register: arr_stack_dir_result
+- name: Preparar o diretório da stack
+  ansible.builtin.include_role:
+    name: compose_stack
+    tasks_from: dir
+  vars:
+    compose_stack_dir: "{{ arr_stack_dir }}"
 
 # Renderizada aqui porque o decluttarr só aceita segredo inline, não por env.
 - name: Renderizar a config do decluttarr
@@ -30,12 +28,6 @@
   no_log: true
   notify: Reiniciar decluttarr
 
-- name: Copiar o compose.yml
-  ansible.builtin.copy:
-    src: compose.yml
-    dest: "{{ arr_stack_dir }}/compose.yml"
-    mode: "0644"
-
 - name: Renderizar o .env
   ansible.builtin.template:
     src: media.env.j2
@@ -43,13 +35,10 @@
     mode: "0600"
 
 - name: Subir a stack
-  community.docker.docker_compose_v2:
-    project_src: "{{ arr_stack_dir }}"
-    files: [compose.yml]
-    state: present
-  # No --check de um host novo o diretório só "seria" criado, e o compose
-  # falha com "is not a directory". Pula só nesse caso.
-  when: not (ansible_check_mode and arr_stack_dir_result is changed)
+  ansible.builtin.include_role:
+    name: compose_stack
+  vars:
+    compose_stack_dir: "{{ arr_stack_dir }}"
 
 # Parada durante o create para os bancos SQLite dos *arr saírem consistentes.
 - name: Configurar o backup da stack Arr

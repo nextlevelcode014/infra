@@ -102,7 +102,13 @@ Restore: `docs/arr-stack-restore.md`.
   em todo app que a usa, no vault e reaplique (#23 quer tirar isso da mão).
 - **qBittorrent sem rede depois de recriar o gluetun:** o role do gluetun o
   recria sozinho (`docs/gluetun.md`, "Operação").
-- **Atualizar:** `pi-atualizar.yml` (`docs/pi.md`, "Atualizar").
+- **Atualizar:** `pi-atualizar.yml` (`docs/pi.md`, "Atualizar"), com o
+  monitor *Backup Stack Arr* verde antes. As imagens ficam no `defaults` do
+  role: o Jellyfin tem versão exata (`arr_jellyfin_image`; sobe trocando a
+  variável, depois de ler as notas, porque migra o banco sem volta); Seerr e
+  Dozzle, a major; o resto, `latest` (ADRs 0010 e 0012). Se um *arr quebrar
+  depois de atualizar: a imagem volta pelo digest do log, e o banco pelo
+  archive `arr-*` (`docs/arr-stack-restore.md`).
 
 ## Limitações
 

@@ -44,8 +44,9 @@ fonte (PR, commit ou comentário de onde o motivo foi tirado).
 | [0007](0007-immich-e-nextcloud-num-borg-offsite-proprio.md) | Immich e Nextcloud fazem backup num Borg offsite próprio | Substituída por 0008 |
 | [0008](0008-immich-e-nextcloud-no-borgbase-pago.md) | Immich e Nextcloud fazem backup no BorgBase, no plano pago | Aceita |
 | [0009](0009-lxcs-numa-bridge-propria-do-proxmox-com-nat.md) | LXCs numa bridge própria do Proxmox, com NAT | Aceita |
-| [0010](0010-latest-so-sem-tag-de-major-e-com-volta-barata.md) | `latest` só sem tag de major e com volta barata | Aceita, com a exceção da 0011 |
+| [0010](0010-latest-so-sem-tag-de-major-e-com-volta-barata.md) | `latest` só sem tag de major e com volta barata | Aceita, com as exceções da 0011 e da 0012 |
 | [0011](0011-gluetun-no-latest-pela-lista-de-servidores.md) | gluetun no `latest`, pela lista de servidores | Aceita |
+| [0012](0012-stack-arr-no-latest-com-o-backup-como-volta.md) | Stack Arr no `latest`, com o backup como volta | Aceita |
 
 ## Modelo
 

@@ -39,8 +39,9 @@ Tag explícita na variável do role, nunca sem tag (ADR 0005): major por
 padrão; versão exata em banco que migra no boot, projeto `0.x` e o que fica
 exposto à internet. Imagem que o projeto publica com digest (`@sha256:`) pode
 ficar assim. `latest` só para imagem sem tag de major publicada e com volta
-barata, listada no ADR 0010 (hoje SearXNG e Tailscale), e o gluetun, pela
-lista de servidores (ADR 0011). Imagem repetida em
+barata, listada no ADR 0010 (hoje SearXNG, Tailscale, FlareSolverr e
+decluttarr); e as exceções com ADR próprio: o gluetun, pela lista de
+servidores (0011), e os *arr, com o backup como volta (0012). Imagem repetida em
 várias stacks (`tailscale_image`, `gluetun_image`) é uma variável só, em
 `group_vars/all`. Subir versão exata: trocar a variável, ler as notas da
 versão e reaplicar o playbook do serviço.
@@ -122,6 +123,5 @@ O que ainda falta migrar. Ao migrar um role, tire a linha daqui. Imagem é a
 
 | Role | O que diverge |
 |---|---|
-| `arr_stack` | ciclo do compose próprio, sem o `compose_stack`; todas as imagens `latest`, escritas no compose; compose estático em `files/` |
 | `immich` | ciclo do compose próprio; versão por `IMMICH_VERSION` no env, com `release` de reserva no compose |
 | `nextcloud` | ciclo do compose próprio; AIO e socket proxy em `latest` (o AIO se atualiza pela própria interface: avaliar se é exceção); coturn no compose |

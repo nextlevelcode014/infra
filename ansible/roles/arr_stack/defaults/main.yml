@@ -2,6 +2,24 @@
 arr_stack_dir: /opt/arr
 app_domain: "{{ caddy_domain }}"
 
+# Imagens. Só o Jellyfin tem versão exata: ele migra o banco (usuários,
+# histórico) sem volta, ADR 0005. Subir: notas da versão, trocar e reaplicar.
+arr_jellyfin_image: jellyfin/jellyfin:12.2
+# Major publicada (ADR 0005).
+arr_seerr_image: ghcr.io/seerr-team/seerr:v3
+arr_dozzle_image: amir20/dozzle:v11
+# latest, sem major publicada e sem estado (ADR 0010).
+arr_flaresolverr_image: ghcr.io/flaresolverr/flaresolverr:latest
+arr_decluttarr_image: ghcr.io/manimatter/decluttarr:latest
+# latest, sem major publicada; o banco deles volta pelo backup diário arr-*
+# (ADR 0012). O linuxserver.io reconstrói toda semana.
+arr_qbittorrent_image: lscr.io/linuxserver/qbittorrent:latest
+arr_sonarr_image: lscr.io/linuxserver/sonarr:latest
+arr_radarr_image: lscr.io/linuxserver/radarr:latest
+arr_prowlarr_image: lscr.io/linuxserver/prowlarr:latest
+arr_bazarr_image: lscr.io/linuxserver/bazarr:latest
+arr_profilarr_image: santiagosayshey/profilarr:latest
+
 # Usados só pelo decluttarr para falar com os outros apps. As API keys são
 # geradas por cada app; a senha é a da WebUI do qBittorrent.
 arr_radarr_api_key: "{{ vault_arr_radarr_api_key }}"

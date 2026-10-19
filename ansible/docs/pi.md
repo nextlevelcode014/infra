@@ -161,9 +161,10 @@ Ficam de fora:
   `pi-recuperacao.yml` baixa a imagem da variável (`docs/decisoes/0004`, na
   raiz).
 
-Várias stacks ainda estão em `:latest` (`docs/padrao-de-role.md`, "Fora do
-padrão"), então um pull pode trazer versão nova com mudança que quebra.
-Confira depois:
+Algumas imagens ficam em `latest` de propósito (SearXNG, Tailscale, gluetun
+e a maior parte da stack Arr, ADRs 0010 a 0012), então um pull pode trazer
+versão nova com mudança que quebra. Antes, confira que os monitores de
+backup estão verdes; depois:
 
 ```bash
 ssh ubuntu@nextlevelcode 'docker ps --format "{{.Names}} {{.Status}}" | grep -v "Up"'
