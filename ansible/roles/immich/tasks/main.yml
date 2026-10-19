@@ -34,10 +34,9 @@
 # UPLOAD_LOCATION, então vai no mesmo archive que as fotos. O test -d vem
 # antes do mkdir para não criar o diretório na raiz com o LUKS fechado.
 # Sem -t no docker exec: com TTY o dump sai com \r\n e o \r pode cair dentro
-# dos dados do COPY. Os thumbs vão junto (ADR 0014): o banco aponta para
-# eles, e sem eles a timeline volta vazia até um "Generate Thumbnails → All".
-# Os vídeos re-encodados ficam de fora: pesam perto do original, e o Immich
-# gera de novo.
+# dos dados do COPY. Thumbs e vídeos re-encodados vão junto (ADR 0015): o
+# banco aponta para eles, e sem eles o restore volta com a timeline vazia e
+# os vídeos sem tocar até regerar tudo no Pi.
 - name: Configurar o backup do Immich
   ansible.builtin.include_role:
     name: borg_client
@@ -47,8 +46,6 @@
     borg_backup_active: "{{ immich_backup_enabled }}"
     borg_backup_sources:
       - "{{ immich_upload_location }}"
-    borg_backup_excludes:
-      - "{{ immich_upload_location }}/encoded-video/"
     # Fotos e vídeos já vêm comprimidos: lz4 é o padrão do borg, o mais barato.
     borg_backup_compression: lz4
     borg_backup_commands:

@@ -63,10 +63,10 @@ no IP Tailscale.
 
 Prefixo `immich-*` no borgmatic do Pi (`docs/backup.md`), no repositório
 compartilhado. Roda depois dos outros serviços do Pi: `pg_dump` para dentro
-do `upload/` e `borg create` dele, com os thumbs e sem os vídeos
-re-encodados (`encoded-video/`, que pesa perto do original e o Immich gera
-de novo; ADR 0014). **Não para os containers**: o banco sai consistente
-pelo dump, e as fotos não mudam depois de gravadas. Monitor *Backup Immich*.
+do `upload/` e `borg create` dele inteiro, com os thumbs e os vídeos
+re-encodados (ADR 0015): o restore volta pronto, sem regerar nada no Pi.
+**Não para os containers**: o banco sai consistente pelo dump, e as fotos
+não mudam depois de gravadas. Monitor *Backup Immich*.
 
 ## Restore
 
@@ -75,34 +75,46 @@ Ainda não automatizado (#10). À mão, com o `borg` do Pi e o prefixo
 
 ### Depois do restore
 
-O banco volta dizendo quais thumbnails e vídeos re-encodados existem, e o
-disco pode não ter os arquivos. Os jobs com *Missing* escolhem pelo banco,
-não pelo disco, então não veem essa falta: o que conserta é o *All*. Os
-jobs ficam na interface (*Administração → Jobs*); por API, pediriam uma
-chave de admin a mais no vault para um passo que só roda no restore.
+Restore da mesma versão do Immich, de archive com os thumbs e os vídeos
+re-encodados, não pede nada daqui. Os passos abaixo são para quando a
+timeline mostra *error loading image* ou um vídeo não toca: restore que
+cruza versão, ou de archive anterior ao ADR 0015.
 
-1. **Vídeos re-encodados:** *Transcode Videos → All*. Sempre: eles não
-   entram no backup.
+O banco diz quais thumbnails, vídeos re-encodados e metadados existem, e o
+disco pode não bater. Os jobs com *Missing* escolhem pelo banco, não pelo
+disco, então não veem essa falta: o que conserta é o *All*, ou a ação na
+seleção. Os jobs ficam na interface (*Administração → Jobs*); por API,
+pediriam uma chave de admin a mais no vault para um passo que só roda no
+restore.
 
-   Confira: a fila do job zera, e um vídeo gravado no celular toca na
-   interface.
+1. **Thumbnails:** *Generate Thumbnails → All*. Leva tempo de CPU
+   proporcional à biblioteca.
 
-2. **Thumbnails, se faltarem:** *Generate Thumbnails → All*. Precisa quando
-   o restore cruza versão do Immich, ou vem de archive anterior ao
-   ADR 0014. Leva tempo de CPU proporcional à biblioteca.
-
-   Confira, antes e depois: o log não mostra arquivo de thumb faltando.
+   Confira, com a timeline aberta: o log não mostra thumb faltando.
 
    ```bash
    ssh ubuntu@nextlevelcode.<tailnet>.ts.net 'sudo docker logs --since 10m immich_server 2>&1 | grep -c "ENOENT.*thumbs"'
    ```
 
-   Com a timeline aberta na interface, `0` é o certo.
+   `0` é o certo.
 
-3. **Vídeo que falha com `Missing video metadata`:** *Extract Metadata →
-   Missing* e depois *Generate Thumbnails → Missing* (esses não têm registro
-   de thumbnail no banco, então o *Missing* os pega). Se continuar, o
-   arquivo original está corrompido (`ffprobe` nele dentro de `library/`).
+2. **Vídeos com `Missing video metadata` no log:** falta a linha deles em
+   `asset_video`, que o Immich lê do banco para gerar thumbnail e
+   transcode. Na busca, filtre por *Vídeos*, selecione todos e, no menu
+   **⋮** da seleção, rode em ordem, esperando a fila de cada um zerar:
+   *Refresh metadata*, *Regenerate thumbnails*, *Refresh encoded videos*.
+   Sem essas ações no menu: *Extract Metadata → All*, *Generate Thumbnails
+   → All* e *Transcode Videos → All*, que releem a biblioteca inteira.
+
+   Confira: o log não mostra mais o erro, e um vídeo gravado no celular
+   toca na interface.
+
+   ```bash
+   ssh ubuntu@nextlevelcode.<tailnet>.ts.net 'sudo docker logs --since 10m immich_server 2>&1 | grep -c "Missing video metadata"'
+   ```
+
+   Vídeo que continua com o erro tem o original corrompido (`ffprobe` nele
+   dentro de `library/`).
 
 ## Operação
 

@@ -1,6 +1,6 @@
 # 0014. O backup do Immich leva os thumbs, não os vídeos re-encodados
 
-- **Status:** Aceita
+- **Status:** Substituída por 0015
 - **Data:** 2026-10-19
 
 ## Contexto
