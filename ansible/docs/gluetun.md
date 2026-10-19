@@ -94,9 +94,14 @@ Nenhum: o gluetun não guarda dado. A config inteira vem do repo e do vault.
   entra em `gluetun_dependents`, e a porta dele no `compose.yml` do gluetun
   (`roles/gluetun/templates/compose.yml.j2`).
 - **Atualizar:** `gluetun_image` (em `group_vars/all`, a mesma do exit node)
-  é a tag de major (`v3`): o `pi-atualizar.yml` traz a versão nova e recria
-  os dependentes. O `latest` do gluetun não serve: é a branch de
-  desenvolvimento, não uma versão publicada.
+  é o `latest`, a branch principal (ADR 0011): a lista de servidores da
+  ProtonVPN vem dentro da imagem, e a da última versão publicada já não
+  conecta. O `pi-atualizar.yml` traz a imagem nova e recria os dependentes.
+- **Gluetun tentando servidor atrás de servidor** (`restarting VPN because it
+  failed to pass the healthcheck`, um `Connecting to` novo a cada poucos
+  segundos): a lista de servidores da imagem envelheceu. Atualize a imagem
+  (`pi-atualizar.yml`); ver o ADR 0011 para o que fazer se nem o `latest`
+  conectar.
 
 ## Limitações
 

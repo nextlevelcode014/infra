@@ -72,7 +72,7 @@ instalação se repete.
 ### Atualizar
 
 As imagens são as mesmas do resto do Pi, em `group_vars/all`:
-`gluetun_image` (major, `v3`) e `tailscale_image` (`latest`, ADR 0010). O
+`gluetun_image` (`latest`, ADR 0011) e `tailscale_image` (`latest`, ADR 0010). O
 `pi-atualizar.yml` traz as duas, e o nó continua o mesmo na tailnet (a
 identidade fica no volume).
 

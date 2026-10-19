@@ -1,6 +1,6 @@
 # 0010. `latest` só sem tag de major e com volta barata
 
-- **Status:** Aceita
+- **Status:** Aceita, com a exceção da 0011 (gluetun)
 - **Data:** 2026-10-19
 
 ## Contexto

@@ -142,6 +142,7 @@ borg_backup_enabled: true
 # Tailscale (sidecar do FMD e o exit node) em latest, sem tag de major
 # publicada e com estado que sobrevive à troca de versão (ADR 0010).
 tailscale_image: tailscale/tailscale:latest
-# gluetun (o do Pi e o do exit node): major. O latest dele é a branch de
-# desenvolvimento, não uma versão publicada.
-gluetun_image: qmcgaw/gluetun:v3
+# gluetun (o do Pi e o do exit node) em latest, a branch principal (ADR
+# 0011): a lista de servidores da ProtonVPN vem dentro da imagem, e a da
+# última versão publicada já não conecta.
+gluetun_image: qmcgaw/gluetun:latest
