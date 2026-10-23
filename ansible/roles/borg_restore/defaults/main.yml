@@ -8,8 +8,11 @@
 #   borg_restore_paths           caminhos absolutos a extrair
 #   borg_restore_required_files  caminhos absolutos que precisam vir no archive
 #   borg_restore_work_dir        área temporária (no Pi, dentro do LUKS)
+#   borg_restore_repo            repositório próprio do serviço (opcional; o
+#                                do Immich é o borg_immich_repo, ADR 0016)
 #
 # Depois, a extração fica em {{ borg_restore_work_dir }}/extracted, com os
 # caminhos sem a barra inicial, e o archive escolhido em borg_restore_archive.
+borg_restore_repo: "{{ borg_repo }}"
 borg_restore_paths: []
 borg_restore_required_files: []

@@ -28,12 +28,16 @@
     mode: "0600"
   no_log: true
 
-- name: Adicionar servidor Borg ao known_hosts
+# Um host por repositório: no BorgBase cada um tem o seu (<id>.repo.borgbase.com).
+- name: Adicionar os servidores Borg ao known_hosts
   ansible.builtin.known_hosts:
-    name: "{{ borg_host }}"
-    key: "{{ borg_host }} {{ vault_forgejo_borg_known_host_key }}"
+    name: "{{ item.host }}"
+    key: "{{ item.host }} {{ item.key }}"
     path: "{{ borg_ssh_key | dirname }}/known_hosts"
     state: present
+  loop: "{{ borg_known_hosts }}"
+  loop_control:
+    label: "{{ item.host }}"
 
 # --- borgmatic ----------------------------------------------------------------
 # Um timer por host, que roda todos os configs de borg_backup_config_dir em

@@ -94,6 +94,14 @@ vaultwarden_admin_token: "{{ vault_vaultwarden_admin_token }}"
 # (vault_forgejo_borg_*), da época em que só o Forgejo usava. docs/backup.md.
 borg_repo: "{{ vault_forgejo_borg_repo }}"
 borg_host: "{{ borg_repo | urlsplit('hostname') }}"
+# O Immich tem repositório próprio, com a mesma chave e senha (ADR 0016):
+# as fotos não disputam a cota nem a trava com os outros serviços. Só o Pi
+# o usa, e é lá que o host dele entra em borg_known_hosts.
+borg_immich_repo: "{{ vault_borg_immich_repo }}"
+# Servidores que o borg_client põe no known_hosts, um por repositório.
+borg_known_hosts:
+  - host: "{{ borg_host }}"
+    key: "{{ vault_forgejo_borg_known_host_key }}"
 borg_password_file: /root/.borg-pass
 borg_passcommand: "cat {{ borg_password_file }}"
 borg_ssh_key: /root/.ssh/id_ed25519

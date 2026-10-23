@@ -15,7 +15,7 @@ O que é só do Pi:
 | O quê | Onde deve estar |
 |---|---|
 | Clone deste repo (`infra`) | no seu computador. Se o Forgejo estiver fora, é o único |
-| Backups Borg (`arr-*`, `adguard-*`, `fmd-*`, `immich-*`) | BorgBase (senha e chave estão no vault) |
+| Backups Borg (`arr-*`, `adguard-*`, `fmd-*`; `immich-*` no repositório `immich`) | BorgBase (senha e chave estão no vault) |
 | Senha de criptografia do backup do Nextcloud AIO | no KeePass, como em `docs/fora-da-infra.md`. O AIO pede para restaurar |
 | Backup do Nextcloud | BorgBase, repositório `nextcloud-aio` (`docs/nextcloud.md`, "Backup") |
 
@@ -80,7 +80,7 @@ sobem vazios.
   (`nextcloud.lab.nextlevelcode.pro`) volta com o backup.
   Depois, ajuste o Talk como em `docs/nextcloud.md` ("Instalação", passo 3).
 - **Immich:** sem restore automatizado ainda (#10). Os archives `immich-*`
-  estão no repositório compartilhado.
+  estão no repositório `immich` (`borg_immich_repo`), não no compartilhado.
 - **exit node:** a identidade do nó não está no backup. Ele entra como um nó
   novo: remova o `vpn-exit` antigo no console antes, para o nome ficar livre.
 - **Nós antigos no console:** remova o que sobrou do Pi anterior.

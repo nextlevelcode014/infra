@@ -45,8 +45,10 @@ gluetun_dependents:
   - qbittorrent
   - searxng-core
 
-# Backup do Immich desligado até o plano Small do BorgBase (#39): as fotos
-# não cabem no grátis, e o config do borgmatic estouraria a cota do
-# repositório compartilhado, derrubando o backup de todos os serviços. Com
-# false, reaplicar o immich.yml tira o /etc/borgmatic/immich.yaml.
-immich_backup_enabled: false
+# O repositório próprio do Immich (borg_immich_repo, ADR 0016) além do
+# compartilhado.
+borg_known_hosts:
+  - host: "{{ borg_host }}"
+    key: "{{ vault_forgejo_borg_known_host_key }}"
+  - host: "{{ borg_immich_repo | urlsplit('hostname') }}"
+    key: "{{ vault_borg_immich_known_host_key }}"

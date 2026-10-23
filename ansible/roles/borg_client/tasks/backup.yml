@@ -10,6 +10,9 @@
 #   borg_backup_commands  "commands" do borgmatic, ex. parar e subir a stack
 #                         em volta do create (opcional)
 #   borg_backup_active    false tira o config (standby, serviço desligado)
+#   borg_backup_repo      repositório próprio em vez do compartilhado
+#                         (opcional; o Immich, ADR 0016). O host dele entra
+#                         em borg_known_hosts
 
 - name: Configurar o backup de {{ borg_backup_name }}
   when: borg_backup_enabled and borg_backup_active
@@ -34,8 +37,8 @@
         borgbackup_config:
           name: "{{ borg_backup_name }}.yaml"
           repositories:
-            - path: "{{ borg_repo }}"
-              label: compartilhado
+            - path: "{{ borg_backup_repo }}"
+              label: "{{ 'compartilhado' if borg_backup_repo == borg_repo else borg_backup_name }}"
           source_directories: "{{ borg_backup_sources }}"
           exclude_patterns: "{{ borg_backup_excludes }}"
           # Os três abaixo repetem o que os scripts antigos faziam (os
@@ -50,8 +53,8 @@
           archive_name_format: "{{ borg_backup_name }}-{now:%Y-%m-%d_%H-%M-%S}"
           # O default do role traz keep_hourly: 3, e o merge é por chave.
           retention: "{{ {'keep_hourly': 0} | combine(borg_backup_retention) }}"
-          # O repositório é um só: um check por serviço leria tudo várias
-          # vezes por mês. Quem pula o check é o skip_actions (em extra); a
+          # No compartilhado, um check por serviço leria tudo várias vezes
+          # por mês. Quem pula o check é o skip_actions (em extra); a
           # lista vazia só substitui a do role, que agendaria checks.
           checks: []
           hooks:

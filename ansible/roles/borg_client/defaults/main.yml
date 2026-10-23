@@ -6,3 +6,4 @@ borg_backup_config_dir: /etc/borgmatic
 borg_backup_excludes: []
 borg_backup_commands: []
 borg_backup_active: true
+borg_backup_repo: "{{ borg_repo }}"

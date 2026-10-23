@@ -23,6 +23,10 @@ no IP Tailscale.
   senha, sem erro.
 - **ACL** (`tailscale/policy.hujson`), já na política: `tag:caddy` →
   `tag:pi:2283`.
+- **Repositório do backup**, só com o backup ligado: o `immich` no
+  BorgBase, como em "Backup → Configurar". Sem `vault_borg_immich_repo` e
+  `vault_borg_immich_known_host_key` no vault, todo playbook do Pi falha:
+  o `borg_client` põe o host desse repositório no `known_hosts`.
 
 ## Instalação
 
@@ -61,17 +65,71 @@ no IP Tailscale.
 
 ## Backup
 
-Prefixo `immich-*` no borgmatic do Pi (`docs/backup.md`), no repositório
-compartilhado. Roda depois dos outros serviços do Pi: `pg_dump` para dentro
+Prefixo `immich-*` no borgmatic do Pi (`docs/backup.md`), num repositório
+só dele (`borg_immich_repo`, ADR 0016), com a mesma chave SSH e a mesma
+senha do compartilhado: as fotos não disputam a cota nem a trava com os
+outros serviços. Roda depois dos outros serviços do Pi: `pg_dump` para dentro
 do `upload/` e `borg create` dele inteiro, com os thumbs e os vídeos
 re-encodados (ADR 0015): o restore volta pronto, sem regerar nada no Pi.
 **Não para os containers**: o banco sai consistente pelo dump, e as fotos
 não mudam depois de gravadas. Monitor *Backup Immich*.
 
+### Configurar
+
+Manual: o repositório nasce no console do BorgBase, e o Borg o inicializa
+de dentro do Pi, onde a senha já está. Até o passo 4, o backup das 02:30
+falha só no Immich (monitor vermelho); os outros serviços seguem.
+
+1. **Repositório no BorgBase.** No console, *New Repo*: nome `immich`, a
+   mesma região do compartilhado, e a chave SSH do compartilhado com
+   **acesso total** (o prune do borgmatic apaga archives). Uma cota no
+   repositório segura um Immich que cresça demais sem tocar o resto da
+   conta.
+
+   Confira: o repositório aparece na lista, com a URL
+   `ssh://<id>@<id>.repo.borgbase.com/./repo`.
+
+2. **Vault.** A URL em `vault_borg_immich_repo` e a chave pública do
+   servidor em `vault_borg_immich_known_host_key` (sem o hostname no
+   início):
+
+   ```bash
+   ssh-keyscan -t ed25519 <id>.repo.borgbase.com
+   ansible-vault edit inventory/group_vars/all/vault.yml
+   ```
+
+   Confira a impressão digital do `ssh-keyscan` com a que o BorgBase
+   mostra no console antes de gravar.
+
+3. **Aplicar** o `immich.yml` no Pi (Instalação, passo 2).
+
+   Confira: o diff mostra o `/etc/borgmatic/immich.yaml` com o repositório
+   novo, e a linha nova no `/root/.ssh/known_hosts`.
+
+4. **Criar o repositório Borg**, com a senha que o Pi já tem
+   (`/root/.borg-pass`):
+
+   ```bash
+   ssh -t ubuntu@nextlevelcode.<tailnet>.ts.net sudo borgmatic -c /etc/borgmatic/immich.yaml repo-create --encryption repokey-blake2
+   ```
+
+   Confira: `sudo borgmatic -c /etc/borgmatic/immich.yaml repo-info` mostra
+   o repositório, sem archive.
+
+5. **Primeiro backup**, à mão: ele leva horas, e assim dá para acompanhar.
+
+   ```bash
+   ssh -t ubuntu@nextlevelcode.<tailnet>.ts.net sudo borgmatic -c /etc/borgmatic/immich.yaml --verbosity 1 --stats
+   ```
+
+   Confira: um archive `immich-*` no fim do `--stats`, o espaço usado no
+   `immich` no BorgBase, e o monitor *Backup Immich* verde.
+
 ## Restore
 
-Ainda não automatizado (#10). À mão, com o `borg` do Pi e o prefixo
-`immich-*`.
+Ainda não automatizado (#10). À mão, com o `borg` do Pi, o prefixo
+`immich-*` e o repositório `borg_immich_repo` (o `borg_restore` aceita ele
+em `borg_restore_repo`).
 
 ### Depois do restore
 
@@ -124,14 +182,12 @@ restore.
   `immich.yml`. Se o compose oficial da versão nova mudar (Valkey, Postgres
   e os digests deles), acompanhe em `compose.yml.j2` e nas variáveis
   `immich_*_image`. O `pi-atualizar.yml` não muda a versão: a tag é exata.
-- **Backup grande** (muitas fotos novas de uma vez): rode à mão, de dia. Ele
-  segura a trava do repositório compartilhado, e o backup da VPS (03:00)
-  desiste depois de 10 min (`docs/backup.md`).
-
-  ```bash
-  ssh -t ubuntu@nextlevelcode.<tailnet>.ts.net sudo borgmatic -c /etc/borgmatic/immich.yaml --verbosity 1 --stats
-  ```
+- **Backup grande** (muitas fotos novas de uma vez): pode esperar o timer,
+  porque a trava é só do repositório do Immich. À mão, como no passo 5 de
+  "Backup → Configurar", para acompanhar.
 
 ## Limitações
 
 - Uma cópia só fora de casa, no BorgBase, dentro da cota do plano.
+- A chave SSH e a senha são as do compartilhado: quem tem uma abre os dois
+  repositórios. Separar foi pela cota e pela trava, não por isolamento.

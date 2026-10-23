@@ -1,6 +1,6 @@
 # 0008. Immich e Nextcloud fazem backup no BorgBase, no plano pago
 
-- **Status:** Aceita
+- **Status:** Aceita, com a exceção da 0016
 - **Data:** 2026-10-17
 
 ## Contexto

@@ -143,7 +143,7 @@ linha.
 | `registro_versoes` | nome, imagem, digest e versão de cada container antes (`tasks_from: antes`) e depois (`tasks_from: depois`) de uma atualização; log em `/var/log/atualizar` |
 | `reboot_watch` | timer de hora em hora que avisa um monitor push quando o reboot está pendente há 3+ dias, o `apt-daily-upgrade` falhou ou um repositório do apt não responde; dependência do `vps_host` e do `pi_host`, pula LXC |
 | `uptime_kuma` | Uptime Kuma + AutoKuma + Docker na VPS, sem o usuário no grupo `docker`; monitores em `group_vars/vps/monitors.yml` |
-| `immich` | Immich do Pi, acesso só pelo Caddy; backup no repositório compartilhado |
+| `immich` | Immich do Pi, acesso só pelo Caddy; backup num repositório próprio (ADR 0016) |
 | `borg_restore` | miolo de todos os restores: escolhe o archive (prefixo + máquina de origem), extrai (no Pi, dentro do LUKS) e valida |
 | `*_restore` | restore Borg do serviço, exige `-e <svc>_restore_confirmation`; `-e restore_on_pi=true` restaura no Pi de recuperação |
 | `geerlingguy.docker` | vendido, instala o engine |
@@ -242,13 +242,15 @@ grant lá — sem ele o serviço sobe e fica inacessível sem erro.
 ## Segredos
 
 Os backups vão para um repositório Borg só (BorgBase, plano pago), com
-prefixo por serviço; a exceção é o Nextcloud AIO, que usa o Borg dele num
-repositório separado na mesma conta (`docs/nextcloud.md`). Quem faz backup é o
+prefixo por serviço. As exceções são as fotos, na mesma conta: o Immich num
+repositório próprio com a mesma chave e senha (`borg_immich_repo`, ADR
+0016), e o Nextcloud AIO com o Borg dele (`docs/nextcloud.md`). Quem faz backup é o
 borgmatic, e cada backup avisa um monitor push no Uptime Kuma, com token
 derivado da senha do Borg (`docs/backup.md`). O que não é segredo
 (caminho da chave, passcommand, opções de SSH, retenção, compressão, horário
 de cada host) fica em `borg_*` no `group_vars/all/vars.yml`; o vault guarda
-só repo, senha, chave e known_host (ainda com o nome histórico `vault_forgejo_borg_*`).
+só repo, senha, chave e known_host (ainda com o nome histórico `vault_forgejo_borg_*`;
+o repositório do Immich já usa `vault_borg_immich_*`).
 
 Em `inventory/group_vars/all/vault.yml` (cifrado, fora do git): token do
 Proxmox, auth key do Tailscale e senha do Postgres do Forgejo. O template do

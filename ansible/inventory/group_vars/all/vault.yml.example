@@ -53,6 +53,10 @@ vault_forgejo_borg_ssh_private_key: |
   -----END OPENSSH PRIVATE KEY-----
 # Chave pública do servidor Borg, sem o hostname no início.
 vault_forgejo_borg_known_host_key: "ssh-ed25519 AAAA..."
+# Repositório próprio do Immich (ADR 0016), com a mesma chave e senha do
+# compartilhado. O host é outro, então a chave pública do servidor também.
+vault_borg_immich_repo: "ssh://host.repo.borgbase.com/./repo"
+vault_borg_immich_known_host_key: "ssh-ed25519 AAAA..."
 
 # Token do Cloudflare para DNS-01 (https://dash.cloudflare.com/profile/api-tokens).
 # Scope: Zone:DNS:Edit em todas as zonas que os caddies (VPS + homelab)

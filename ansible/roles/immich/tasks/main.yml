@@ -26,8 +26,8 @@
     compose_stack_dir: "{{ immich_dir }}"
 
 # --- Backup -----------------------------------------------------------------
-# Repositório compartilhado; o borg_client já instalou Borg, chave e senha.
-# O config do borgmatic só entra com immich_backup_enabled.
+# Repositório próprio (ADR 0016), com a chave e a senha que o borg_client já
+# instalou. O config do borgmatic só entra com immich_backup_enabled.
 
 # Não para os containers: o banco sai consistente pelo pg_dump, e as fotos são
 # arquivos que não mudam depois de gravados. O dump fica dentro do
@@ -43,6 +43,7 @@
     tasks_from: backup
   vars:
     borg_backup_name: immich
+    borg_backup_repo: "{{ borg_immich_repo }}"
     borg_backup_active: "{{ immich_backup_enabled }}"
     borg_backup_sources:
       - "{{ immich_upload_location }}"

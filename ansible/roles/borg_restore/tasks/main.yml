@@ -18,7 +18,7 @@
       - "{{ borg_restore_prefix }}-"
       - --format
       - "{hostname} {archive}{NL}"
-      - "{{ borg_repo }}"
+      - "{{ borg_restore_repo }}"
   environment:
     BORG_PASSCOMMAND: "{{ borg_passcommand }}"
     BORG_RSH: "{{ borg_rsh }}"
@@ -61,7 +61,7 @@
 - name: Extrair o archive {{ borg_restore_archive }}
   ansible.builtin.command:
     argv: "{{ ['borg', 'extract', '--lock-wait', borg_lock_wait | string,
-               borg_repo ~ '::' ~ borg_restore_archive]
+               borg_restore_repo ~ '::' ~ borg_restore_archive]
               + (borg_restore_paths | map('regex_replace', '^/', '') | list) }}"
     chdir: "{{ borg_restore_work_dir }}/extracted"
   environment:

@@ -1,9 +1,13 @@
 # Backup (borgmatic)
 
 Todo serviço com dado faz backup no mesmo repositório Borg (BorgBase), cada um
-com o seu prefixo: `forgejo-*`, `vaultwarden-*`, `arr-*`, `adguard-*`, `fmd-*`,
-`immich-*` e `uptime-kuma-*`. O Nextcloud AIO usa o Borg dele, num
-repositório separado na mesma conta (`docs/nextcloud.md`). Quem roda é o
+com o seu prefixo: `forgejo-*`, `vaultwarden-*`, `arr-*`, `adguard-*`, `fmd-*`
+e `uptime-kuma-*`. As fotos ficam fora dele, na mesma conta: o Immich
+(`immich-*`) num repositório só dele, com a mesma chave e senha (ADR 0016,
+`docs/immich.md`), e o Nextcloud AIO com o Borg dele, num repositório
+próprio (`docs/nextcloud.md`). Serviço com repositório próprio passa
+`borg_backup_repo` ao `tasks_from: backup`, e o host dele entra em
+`borg_known_hosts`. Quem roda é o
 [borgmatic](https://torsion.org/borgmatic/); os restores continuam chamando o
 `borg` direto (`roles/borg_restore`, `docs/*-restore.md`).
 
@@ -21,7 +25,7 @@ repositório separado na mesma conta (`docs/nextcloud.md`). Quem roda é o
 - Ao fim de cada serviço, o borgmatic avisa um **monitor push** no Uptime
   Kuma (grupo *Backups*). O monitor cai com o aviso de falha, na hora, ou
   quando passa 26 h sem aviso nenhum. As duas coisas viram e-mail.
-- Não há `check` do repositório: com um repositório só, cada serviço leria
+- Não há `check` do repositório: no compartilhado, cada serviço leria
   tudo de novo. Os scripts antigos também não faziam.
 
 | Host | Horário | Serviços, em ordem |
@@ -32,9 +36,8 @@ repositório separado na mesma conta (`docs/nextcloud.md`). Quem roda é o
 | `hetzner` (VPS) | 03:00 | uptime-kuma |
 
 Os horários ficam em `borg_backup_times` (`group_vars/all/vars.yml`). Entre
-hosts a trava do Borg ainda é disputada (`borg_lock_wait`: 10 min). Com o
-Immich, confira se o do Pi termina antes das 03:10; se não terminar,
-afaste a VPS.
+hosts a trava do Borg ainda é disputada (`borg_lock_wait`: 10 min). O
+Immich não entra nessa conta: o repositório dele é outro.
 
 O timer é `Persistent`: um host desligado na hora roda o backup assim que
 ligar. No Pi, isso acontece antes do `secure-unlock`: sem o LUKS não há

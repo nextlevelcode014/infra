@@ -42,7 +42,7 @@ fonte (PR, commit ou comentário de onde o motivo foi tirado).
 | [0005](0005-imagem-com-tag-fixa-em-variavel.md) | Imagem com tag fixa, em variável | Aceita, com as exceções da 0010 e da 0013 |
 | [0006](0006-role-compose-stack-compartilhado.md) | Um role compartilhado para o ciclo do compose | Aceita |
 | [0007](0007-immich-e-nextcloud-num-borg-offsite-proprio.md) | Immich e Nextcloud fazem backup num Borg offsite próprio | Substituída por 0008 |
-| [0008](0008-immich-e-nextcloud-no-borgbase-pago.md) | Immich e Nextcloud fazem backup no BorgBase, no plano pago | Aceita |
+| [0008](0008-immich-e-nextcloud-no-borgbase-pago.md) | Immich e Nextcloud fazem backup no BorgBase, no plano pago | Aceita, com a exceção da 0016 |
 | [0009](0009-lxcs-numa-bridge-propria-do-proxmox-com-nat.md) | LXCs numa bridge própria do Proxmox, com NAT | Aceita |
 | [0010](0010-latest-so-sem-tag-de-major-e-com-volta-barata.md) | `latest` só sem tag de major e com volta barata | Aceita, com as exceções da 0011 e da 0012 |
 | [0011](0011-gluetun-no-latest-pela-lista-de-servidores.md) | gluetun no `latest`, pela lista de servidores | Aceita |
@@ -50,6 +50,7 @@ fonte (PR, commit ou comentário de onde o motivo foi tirado).
 | [0013](0013-nextcloud-aio-no-latest-ele-se-atualiza.md) | Nextcloud AIO no `latest`: ele se atualiza sozinho | Aceita |
 | [0014](0014-backup-do-immich-leva-os-thumbs.md) | O backup do Immich leva os thumbs, não os vídeos re-encodados | Substituída por 0015 |
 | [0015](0015-backup-do-immich-leva-os-videos-re-encodados.md) | O backup do Immich leva também os vídeos re-encodados | Aceita |
+| [0016](0016-immich-num-repositorio-borg-proprio.md) | O Immich faz backup num repositório Borg próprio | Aceita |
 
 ## Modelo
 

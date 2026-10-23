@@ -21,5 +21,5 @@ immich_db_database_name: immich
 # Só letras e números: o .env é env_file e o Compose interpola '$' nele.
 immich_db_password: "{{ vault_immich_db_password }}"
 
-# Backup Borg no repositório compartilhado (borg_repo), prefixo immich-*.
+# Backup Borg no repositório próprio (borg_immich_repo, ADR 0016), prefixo immich-*.
 immich_backup_enabled: true
