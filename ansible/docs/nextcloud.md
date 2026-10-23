@@ -139,6 +139,29 @@ só se configura na interface do AIO.
    Confira: o backup aparece na lista da interface, e o `nextcloud-aio`
    no BorgBase mostra o espaço usado.
 
+   **Se o primeiro backup cair no meio** (`broken pipe` no log, ou a cota
+   do repositório no BorgBase): o AIO apaga o `borg.config` do
+   mastercontainer, que marca o repositório como já inicializado, mas o
+   repositório no BorgBase continua inicializado. O *Create backup*
+   seguinte para com `Did not find borg.config file in the mastercontainer
+   volume`. Com repositório remoto o arquivo é só um marcador vazio (o
+   script do AIO não lê o conteúdo): confira a cota do `nextcloud-aio` no
+   BorgBase, recrie o marcador e rode *Create backup* de novo. A senha de
+   criptografia não muda.
+
+   ```bash
+   ssh -t ubuntu@nextlevelcode.<tailnet>.ts.net sudo docker exec --user www-data nextcloud-aio-mastercontainer touch /mnt/docker-aio-config/data/borg.config
+   ```
+
+   Confira: o log termina em `Backup finished successfully`. O que já
+   tinha subido não sobe de novo (o checkpoint do Borg guarda os
+   chunks, e o prune do fim do backup o tira), mas o Pi relê tudo: o AIO
+   apaga o cache local do Borg junto com o marcador.
+
+   ```bash
+   ssh ubuntu@nextlevelcode.<tailnet>.ts.net sudo docker logs nextcloud-aio-borgbackup 2>&1 | tail -20
+   ```
+
 5. **Backup diário**, na mesma seção, às 04:00: depois do borgmatic do Pi,
    para os dois não disputarem o upload. Confira o fuso que a interface
    indica.
@@ -166,6 +189,49 @@ antes, para a interface existir.
   as portas antigas `8000` (um Funnel público) e `9080`, e a `443` quando o
   domínio do AIO já é o `nextcloud.lab`: num host limpo, nada disso
   existe e as tasks não fazem nada.
+- **Liberar espaço** no `ncdata` (e no backup): lixeira, versões antigas e
+  previews. O `occ` roda no container do Nextcloud, como `www-data`; nos
+  comandos abaixo, `occ` é:
+
+  ```bash
+  ssh -t ubuntu@nextlevelcode.<tailnet>.ts.net sudo docker exec --user www-data -it nextcloud-aio-nextcloud php occ <comando>
+  ```
+
+  Onde está o espaço (o `sh -c` é porque o `ubuntu` não lista o `ncdata`,
+  e o curinga precisa expandir já como root):
+
+  ```bash
+  ssh ubuntu@nextlevelcode.<tailnet>.ts.net "sudo sh -c 'du -sh /mnt/secure/appdata/nextcloud/ncdata/* /mnt/secure/appdata/nextcloud/ncdata/*/files_trashbin /mnt/secure/appdata/nextcloud/ncdata/*/files_versions /mnt/secure/appdata/nextcloud/ncdata/appdata_*/preview | sort -h'"
+  ```
+
+  | O quê | Onde | Só o que passou da retenção | Tudo |
+  |---|---|---|---|
+  | Lixeira | `<usuário>/files_trashbin` | `trashbin:expire` | `trashbin:cleanup --all-users` |
+  | Versões antigas | `<usuário>/files_versions` | `versions:expire` | `versions:cleanup` (sem usuário, apaga as de todos) |
+  | Previews | `appdata_*/preview` | — | `preview:cleanup` (o Nextcloud gera de novo ao abrir, com CPU do Pi) |
+  | Entradas órfãs no banco | — | — | `files:cleanup` (não libera disco) |
+
+  Tudo apaga de vez: o que sai da lixeira e das versões só volta pelo
+  backup do AIO. Não apague à mão dentro do `ncdata`: o banco continua
+  apontando para o arquivo, e o Nextcloud mostra erro. A retenção que o
+  `expire` usa:
+
+  ```bash
+  ssh -t ubuntu@nextlevelcode.<tailnet>.ts.net 'sudo docker exec --user www-data -it nextcloud-aio-nextcloud php occ config:system:set trashbin_retention_obligation --value="auto, 30"'
+  ssh -t ubuntu@nextlevelcode.<tailnet>.ts.net 'sudo docker exec --user www-data -it nextcloud-aio-nextcloud php occ config:system:set versions_retention_obligation --value="auto, 90"'
+  ```
+
+  As aspas simples levam o `"auto, 30"` inteiro ao Pi; sem elas, o shell
+  de lá parte o valor no espaço. `auto, 30` é apagar depois de 30 dias, ou
+  antes se a cota do usuário precisar; os números são escolha, não regra do
+  Nextcloud. Confira com `occ config:system:get trashbin_retention_obligation`.
+
+  Confira: o `du` acima mostra menos, e o próximo backup do AIO mostra o
+  `This archive` menor no log. Duplicados e arquivos esquecidos o `occ`
+  não acha: o grosso do `ncdata` costuma ser arquivo de verdade.
+- **Previews fora do backup:** um `.noaiobackup` vazio em
+  `appdata_*/preview/` faz o AIO pular o diretório (o script dele procura
+  esse arquivo). O restore volta sem previews, e o Nextcloud gera de novo.
 
 ## Limitações
 
