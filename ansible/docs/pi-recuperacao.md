@@ -210,12 +210,57 @@ O caminho inverso: o último backup do Pi vira os dados dos LXCs. Os restores
 dos LXCs filtram por máquina de origem (`forgejo`, `vaultwarden`), então aqui
 eles recebem a do Pi (`ubuntu`) e o caminho que os dados têm no archive dele.
 
+Do passo 4 ao 9 o remote do Git não responde: o Forgejo do Pi está parado e
+o `~/.ssh/config` ainda manda para ele. A branch do passo 6 pode ir para o
+Forgejo do Pi antes do passo 4 (ela volta com o restore); feita depois, o
+push espera o passo 9. O merge dela fica para o fim, no passo 10: com
+`proxmox_fora: false` no `main`, o `pi-recuperacao.yml` derruba o Forgejo e o
+Vaultwarden do Pi enquanto ele ainda é a produção.
+
 1. **Proxmox ligado**, com os LXCs sem serviço (parados no passo 3 da parada
    planejada). Confira: `ansible forgejo,vaultwarden --ask-vault-pass -m command -a 'docker ps -q'`
-   não lista nada. Depois de um desastre eles sobem com os dados velhos:
-   pare a stack deles como no passo 3 antes de seguir.
+   não lista nada, e `tailscale status` mostra `caddy-lxc`, `forgejo-lxc` e
+   `vaultwarden-lxc` online. Depois de um desastre eles sobem com os dados
+   velhos: pare a stack deles como no passo 3 antes de seguir.
 
-2. **Último backup do Pi** e parar os dois, para nada escrever depois dele:
+2. **Caddy do Proxmox em dia.** Enquanto o `*.lab` apontou para o Pi, o
+   Caddy do Proxmox ficou sem receber o que mudou no repo (token da
+   Cloudflare, rotas novas do Pi) e pode estar com o certificado vencido.
+   Ele volta a atender no passo 8:
+
+   ```bash
+   ansible-playbook playbooks/caddy.yml --ask-vault-pass --limit caddy --check --diff
+   ansible-playbook playbooks/caddy.yml --ask-vault-pass --limit caddy
+   ```
+
+   Confira, sem mexer no DNS (força o nome para o IP do Caddy do Proxmox):
+
+   ```bash
+   curl -sI --resolve jellyfin.lab.nextlevelcode.pro:443:$(tailscale ip -4 caddy-lxc) \
+     https://jellyfin.lab.nextlevelcode.pro | head -1
+   ```
+
+   Tem que responder com certificado válido (sem `-k`).
+
+3. **Standby nos LXCs:** compose atual e imagens baixadas, containers parados
+   e sem backup. O restore sobe a stack pelo `compose.yml` que já está no LXC,
+   e o dele é de antes da contingência: com uma imagem mais velha que a do
+   Pi, o Forgejo ou o Vaultwarden abre um banco que já passou por migrations
+   que ele não conhece. Com o Pi ainda no ar, o pull não conta como parada:
+
+   ```bash
+   ansible-playbook playbooks/forgejo.yml --ask-vault-pass -e forgejo_standby=true --check --diff
+   ansible-playbook playbooks/forgejo.yml --ask-vault-pass -e forgejo_standby=true
+   ansible-playbook playbooks/vaultwarden.yml --ask-vault-pass -e vaultwarden_standby=true --check --diff
+   ansible-playbook playbooks/vaultwarden.yml --ask-vault-pass -e vaultwarden_standby=true
+   ```
+
+   Confira: `ansible forgejo,vaultwarden --ask-vault-pass -m command -a 'docker ps -q'`
+   continua sem nada, e
+   `ansible forgejo,vaultwarden --ask-vault-pass -m command -a 'ls /etc/borgmatic'`
+   não lista `forgejo.yaml` nem `vaultwarden.yaml`.
+
+4. **Último backup do Pi** e parar os dois, para nada escrever depois dele:
 
    ```bash
    ansible rpi --ask-vault-pass -m command -a 'borgmatic -c /etc/borgmatic/forgejo.yaml --verbosity 1 --stats'
@@ -224,7 +269,7 @@ eles recebem a do Pi (`ubuntu`) e o caminho que os dados têm no archive dele.
    ansible rpi --ask-vault-pass -m command -a 'docker compose -f /mnt/secure/appdata/vaultwarden/compose.yml down'
    ```
 
-3. **Restaurar nos LXCs** a partir do archive do Pi:
+5. **Restaurar nos LXCs** a partir do archive do Pi:
 
    ```bash
    ansible-playbook playbooks/vaultwarden-restore.yml --ask-vault-pass \
@@ -237,13 +282,16 @@ eles recebem a do Pi (`ubuntu`) e o caminho que os dados têm no archive dele.
      -e forgejo_restore_data_archive_path=mnt/secure/appdata/forgejo/forgejo
    ```
 
-   Confira na task "Extrair o archive ..." que a data é a do passo 2.
+   Confira na task "Extrair o archive ..." que a data é a do passo 4.
 
-4. **Desligar a contingência no repo:** `proxmox_fora: false` e os blocos
-   `CONTINGÊNCIA` do `policy.hujson` comentados de novo, com o `deny` do
-   teste de volta. Cole a ACL no console.
+6. **Desligar a contingência no repo**, numa branch: `proxmox_fora: false` e
+   os blocos `CONTINGÊNCIA` do `policy.hujson` comentados de novo, com
+   `tag:pi:3000` de volta no `deny` do teste de `tag:caddy-vps`. Cole **o
+   arquivo inteiro do repo** por cima do console (`tailscale/README.md`).
+   Confira: o save passa nos testes (um `want: Drop, got: Accept` é o `deny`
+   que faltou voltar).
 
-5. **Reaplicar**, nesta ordem:
+7. **Reaplicar**, nesta ordem:
 
    ```bash
    ansible-playbook playbooks/forgejo.yml --ask-vault-pass
@@ -253,22 +301,29 @@ eles recebem a do Pi (`ubuntu`) e o caminho que os dados têm no archive dele.
    ansible-playbook playbooks/uptime-kuma.yml --ask-vault-pass
    ```
 
-   Os dois primeiros religam o timer do backup dos LXCs; o
+   Os dois primeiros tiram os LXCs do standby e religam o backup deles; o
    `pi-recuperacao.yml` devolve o Pi ao standby e tira o backup dele.
    Confira: `ansible forgejo,vaultwarden --ask-vault-pass -m command -a 'systemctl is-active borgmatic.timer'`
-   responde `active`, e `ls /etc/borgmatic` no Pi não tem mais `forgejo.yaml`
-   nem `vaultwarden.yaml`.
+   responde `active`, `ls /etc/borgmatic` no Pi não tem mais `forgejo.yaml`
+   nem `vaultwarden.yaml`, e `curl -s https://forge.nextlevelcode.pro/api/healthz`
+   devolve `"status": "pass"`.
 
-6. **Cloudflare:** `*.lab` de volta para o IP anotado no passo 8 da ida.
-   Confira: `dig +short vault.lab.nextlevelcode.pro` devolve esse IP.
+8. **Cloudflare:** `*.lab` de volta para o IP anotado no passo 8 da ida (o
+   de `tailscale ip -4 caddy-lxc`).
+   Confira, depois de uns minutos (TTL): `dig +short vault.lab.nextlevelcode.pro`
+   devolve esse IP e `curl -s https://vault.lab.nextlevelcode.pro/alive`
+   responde.
 
-7. **Remote do Git:** `HostName forgejo-lxc` de volta no `~/.ssh/config`, e
+9. **Remote do Git:** `HostName forgejo-lxc` de volta no `~/.ssh/config`, e
    a linha `HostKeyAlias` sai.
-   Confira: `git ls-remote origin`.
+   Confira: `git ls-remote origin` lista as branches, com a do passo 6 se
+   ela foi antes do passo 4. Se não foi, o push e o PR dela vão agora, e são
+   o teste do Forgejo do LXC.
 
-8. Confira o conjunto: `vault.lab` mostra o que foi salvo durante a
-   contingência, o `forge` tem os commits feitos no Pi (o PR do passo 4 da
-   ida), e o Uptime Kuma fica todo verde.
+10. Confira o conjunto: `vault.lab` mostra o que foi salvo durante a
+    contingência, o `forge` tem os commits feitos no Pi (o PR do passo 4 da
+    ida), e o Uptime Kuma fica todo verde. Depois disso, o merge do PR do
+    passo 6.
 
 ## Ensaio no pi-lab
 

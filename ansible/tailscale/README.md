@@ -59,12 +59,13 @@ reautenticação). As duas precisam permitir.
 
 Os grants comentados no fim de `grants` ficam **fora** da política no uso
 normal. Durante um DR ([`docs/pi-recuperacao.md`](../docs/pi-recuperacao.md)),
-descomente os dois no console, tire `tag:pi:3000` do `deny` do teste de
-`tag:caddy-vps` (senão o save falha) e salve: o Caddy da VPS passa a alcançar
-o Forgejo do Pi (`3000`, o `forge` público), e a tailnet o SSH do Git
-(`2222`). O `*.lab` não passa pela VPS: quem assume é o Caddy reserva do Pi,
-pelo grant de `tcp:443` em `tag:pi`, que fica sempre ativo. Depois do failback, cole de novo o `policy.hujson` do repo: ele volta com os
-grants comentados e os denies no lugar.
+descomente os dois no repo, tire `tag:pi:3000` do `deny` do teste de
+`tag:caddy-vps` (senão o save falha) e cole o arquivo inteiro no console: o
+Caddy da VPS passa a alcançar o Forgejo do Pi (`3000`, o `forge` público), e
+a tailnet o SSH do Git (`2222`). O `*.lab` não passa pela VPS: quem assume é
+o Caddy reserva do Pi, pelo grant de `tcp:443` em `tag:pi`, que fica sempre
+ativo. Depois do failback, cole de novo o `policy.hujson` do repo: ele volta
+com os grants comentados e os denies no lugar.
 
 ## Checklist ao mexer em serviços
 

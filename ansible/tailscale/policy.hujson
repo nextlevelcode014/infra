@@ -162,22 +162,23 @@
             "ip":  ["tcp:443"],
         },
 
-        // CONTINGÊNCIA — ATIVO enquanto proxmox_fora for true
-        // (docs/pi-recuperacao.md). Na volta, comentar de novo e devolver
-        // tag:pi:3000 ao deny de tag:caddy-vps nos tests. O forge público
-        // (Anubis na VPS) passa a apontar para o Forgejo do Pi. O *.lab não
-        // passa mais pela VPS: quem assume é o Caddy reserva do Pi.
-        {
-          "src": ["tag:caddy-vps"],
-          "dst": ["tag:pi"],
-          "ip":  ["tcp:3000"],
-        },
+        // CONTINGÊNCIA — INATIVO. Com o Proxmox fora e Forgejo/Vaultwarden
+        // restaurados no Pi (docs/pi-recuperacao.md, proxmox_fora: true),
+        // descomentar os dois e tirar tag:pi:3000 do deny de tag:caddy-vps
+        // nos tests. O forge público (Anubis na VPS) passa a apontar para o
+        // Forgejo do Pi. O *.lab não passa pela VPS: quem assume é o Caddy
+        // reserva do Pi.
+        // {
+        //   "src": ["tag:caddy-vps"],
+        //   "dst": ["tag:pi"],
+        //   "ip":  ["tcp:3000"],
+        // },
         // SSH do Git no Pi, para você e para o monitor do Uptime Kuma.
-        {
-          "src": ["autogroup:member", "tag:vps"],
-          "dst": ["tag:pi"],
-          "ip":  ["tcp:2222"],
-        },
+        // {
+        //   "src": ["autogroup:member", "tag:vps"],
+        //   "dst": ["tag:pi"],
+        //   "ip":  ["tcp:2222"],
+        // },
     ],
 
     "ssh": [
@@ -284,7 +285,7 @@
         {
             "src":    "tag:caddy-vps",
             "accept": ["tag:forgejo:3000"],
-            "deny":   ["tag:proxmox-lxc:8080", "tag:pi:8083", "tag:pi:8096"],
+            "deny":   ["tag:proxmox-lxc:8080", "tag:pi:3000", "tag:pi:8083", "tag:pi:8096"],
         },
         // O monitor alcança o que monitora, e não administra nada.
         {

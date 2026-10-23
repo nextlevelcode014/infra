@@ -24,7 +24,7 @@ caddy_vps_status_page_upstream: 127.0.0.1:3001
 # Sites só da tailnet, servidos pela VPS em <host>.lab.nextlevelcode.pro. Cada
 # um precisa de um registro A específico na Cloudflare apontando para o IP
 # Tailscale da VPS (o curinga *.lab aponta para o Caddy do Proxmox; na
-# contingência, para a VPS, que serve o *.lab inteiro: ver proxmox_fora).
+# contingência, para o Caddy reserva do Pi: docs/pi-recuperacao.md).
 caddy_vps_private_sites:
   - host: uptime
     upstream: 127.0.0.1:3001
