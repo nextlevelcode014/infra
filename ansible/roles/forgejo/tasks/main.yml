@@ -17,7 +17,7 @@
     tasks_from: backup
   vars:
     borg_backup_name: forgejo
-    borg_backup_active: "{{ not forgejo_standby }}"
+    borg_backup_active: "{{ not (forgejo_standby | bool) }}"
     borg_backup_sources:
       - "{{ forgejo_dir }}/forgejo"
       - "{{ forgejo_backup_db_dump }}"
@@ -96,6 +96,6 @@
     services: [server]
     state: restarted
   when:
-    - not forgejo_standby
+    - not (forgejo_standby | bool)
     - forgejo_signing_key is changed
     - compose_stack_render is not changed

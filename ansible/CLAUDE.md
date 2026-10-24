@@ -158,6 +158,11 @@ configura. Existe porque o Proxmox reserva `keyctl` e o device passthrough ao
 
 Vale não repetir:
 
+- **`-e chave=true` chega como string, não booleano.** Desde o ansible-core
+  2.19 o `when` recusa: `Conditional result (True) was derived from value of
+  type 'str'`. Pior é o `not` num template, que não falha: `not "false"` dá
+  `false`. Variável que se passa por `-e` (os `<svc>_standby`, o
+  `restore_on_pi`) passa por `| bool` onde é lida.
 - **`community.general.timezone` usa `name`**, não `timezone`. Passando errado o
   erro sai genérico: `one of the following is required: hwclock, name`.
 - **NTP dentro de LXC não existe.** O template Ubuntu 26.04 não traz

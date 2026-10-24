@@ -28,7 +28,7 @@
   # No --check o compose só "seria" renderizado, e o módulo leria o antigo
   # (ou nenhum). Pula só nesse caso.
   when:
-    - not compose_stack_standby
+    - not (compose_stack_standby | bool)
     - not (ansible_check_mode and compose_stack_render is changed)
 
 # Standby (ADR 0004): imagens baixadas, para o restore não depender de
@@ -38,7 +38,7 @@
     project_src: "{{ compose_stack_dir }}"
     files: [compose.yml]
   when:
-    - compose_stack_standby
+    - compose_stack_standby | bool
     - not (ansible_check_mode and compose_stack_render is changed)
 
 - name: Manter a stack parada (standby)
@@ -48,5 +48,5 @@
     state: absent
     remove_orphans: true
   when:
-    - compose_stack_standby
+    - compose_stack_standby | bool
     - not (ansible_check_mode and compose_stack_render is changed)

@@ -14,7 +14,7 @@
     tasks_from: backup
   vars:
     borg_backup_name: vaultwarden
-    borg_backup_active: "{{ not vaultwarden_standby }}"
+    borg_backup_active: "{{ not (vaultwarden_standby | bool) }}"
     borg_backup_sources:
       - "{{ vaultwarden_dir }}/vw-data"
     borg_backup_excludes: ["*.tmp", "*.log", "cache/*"]
