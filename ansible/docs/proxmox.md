@@ -124,3 +124,40 @@ depois o `terraform apply`, depois o `lxc.yml`.
    mostra `HTTP/1.1 200 OK` (a saída pelo NAT funciona).
 
 Porta de um LXC no navegador: túnel pelo mesmo salto (`docs/pi.md`, "pi-lab").
+
+## ACL do lab
+
+O repo `lab` cria VMs com o usuário `lab@pve`, que só tem permissão nos VMIDs
+900–999, por uma ACL em cada `/vms/<id>` (o `docs/proxmox.md` do lab). O
+Proxmox apaga as ACLs de `/vms/<id>` **sempre** que a VM é destruída, com ou
+sem purge: sem o timer, cada `terraform destroy` no lab deixa aquele VMID
+recusando o próximo create com `403 Permission check failed (/vms/<id>,
+VM.Config.Options)`, até alguém repor a ACL como root (ADR 0017).
+
+O role `proxmox_host` instala o `lab-acl.timer`, que a cada minuto repõe o
+`PVEVMAdmin` do `lab@pve` no VMID da faixa que estiver sem ele. A faixa e o
+papel estão no `defaults` do role e no `docs/proxmox.md` do lab; mudar num é
+mudar no outro.
+
+1. **Aplicar** (é o mesmo playbook do host):
+
+   ```bash
+   ansible-playbook playbooks/proxmox.yml --ask-vault-pass
+   ```
+
+2. **Conferir que o timer roda e que nada falta:**
+
+   ```bash
+   ssh root@<proxmox_host> 'systemctl list-timers lab-acl.timer; journalctl -u lab-acl.service -n 20 --no-pager'
+   ssh root@<proxmox_host> "pveum acl list | grep -c 'lab@pve'"
+   ```
+
+   O timer aparece com a próxima execução em menos de um minuto; o journal
+   mostra `ACL reposta: /vms/<id>` só na primeira execução para os VMIDs que
+   estavam sem ACL, e nada nas seguintes (se toda execução repuser a faixa
+   inteira, o script não está lendo a saída do `pveum acl list`). A contagem
+   é `104` (100 VMIDs + pool + 2 storages + bridge).
+
+Um destroy seguido de create **no mesmo VMID** em menos de um minuto (um
+`-/+` que não troca o VMID) ainda pode levar o 403: espere o timer e rode o
+`apply` de novo.

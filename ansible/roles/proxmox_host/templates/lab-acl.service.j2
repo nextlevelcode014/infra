@@ -1,0 +1,10 @@
+# Gerido pelo Ansible (roles/proxmox_host) — não editar à mão.
+[Unit]
+Description=Repõe a ACL do {{ proxmox_lab_acl_user }} nos VMIDs {{ proxmox_lab_vmid_first }}-{{ proxmox_lab_vmid_last }}
+# O pveum lê e grava no /etc/pve, que é o pmxcfs.
+After=pve-cluster.service
+Requires=pve-cluster.service
+
+[Service]
+Type=oneshot
+ExecStart={{ proxmox_lab_acl_script }}

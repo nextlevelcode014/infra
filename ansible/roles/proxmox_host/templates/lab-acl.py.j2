@@ -1,0 +1,35 @@
+#!/usr/bin/env python3
+# Gerido pelo Ansible (roles/proxmox_host) — não editar à mão.
+# Repõe a ACL do {{ proxmox_lab_acl_user }} nos VMIDs do lab. O Proxmox apaga
+# as ACLs de /vms/<id> sempre que a VM é destruída, e sem ela o próximo create
+# no mesmo VMID falha com 403 (ADR 0017).
+import json
+import subprocess
+
+USUARIO = "{{ proxmox_lab_acl_user }}"
+PAPEL = "{{ proxmox_lab_acl_role }}"
+VMIDS = range({{ proxmox_lab_vmid_first }}, {{ proxmox_lab_vmid_last }} + 1)
+
+saida = subprocess.run(
+    ["pveum", "acl", "list", "--output-format", "json"],
+    check=True,
+    capture_output=True,
+    text=True,
+).stdout
+tem = {
+    acl["path"]
+    for acl in json.loads(saida)
+    if acl.get("type") == "user"
+    and acl.get("ugid") == USUARIO
+    and acl.get("roleid") == PAPEL
+}
+
+# Só grava o que falta: cada modify reescreve o user.cfg do pmxcfs.
+for vmid in VMIDS:
+    caminho = f"/vms/{vmid}"
+    if caminho not in tem:
+        subprocess.run(
+            ["pveum", "acl", "modify", caminho, "--users", USUARIO, "--roles", PAPEL],
+            check=True,
+        )
+        print(f"ACL reposta: {caminho} {USUARIO} {PAPEL}")

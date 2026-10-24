@@ -41,3 +41,6 @@
 
 - name: Rede dos LXCs
   ansible.builtin.import_tasks: rede.yml
+
+- name: ACL do lab
+  ansible.builtin.import_tasks: lab.yml

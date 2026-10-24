@@ -15,3 +15,12 @@ proxmox_lxc_bridge: vmbr1
 proxmox_lxc_address: 10.50.0.1/24
 proxmox_lxc_subnet: 10.50.0.0/24
 proxmox_lxc_uplink: vmbr0
+
+# ACL do lab (ADR 0017): o Proxmox apaga a ACL de /vms/<id> quando a VM é
+# destruída, e o lab@pve só cria VM num VMID que tem a dele. Um timer repõe
+# a faixa inteira. Mesmos valores do docs/proxmox.md do repo lab.
+proxmox_lab_acl_user: lab@pve
+proxmox_lab_acl_role: PVEVMAdmin
+proxmox_lab_vmid_first: 900
+proxmox_lab_vmid_last: 999
+proxmox_lab_acl_script: /usr/local/sbin/lab-acl

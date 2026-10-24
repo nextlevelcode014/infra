@@ -51,6 +51,7 @@ fonte (PR, commit ou comentário de onde o motivo foi tirado).
 | [0014](0014-backup-do-immich-leva-os-thumbs.md) | O backup do Immich leva os thumbs, não os vídeos re-encodados | Substituída por 0015 |
 | [0015](0015-backup-do-immich-leva-os-videos-re-encodados.md) | O backup do Immich leva também os vídeos re-encodados | Aceita |
 | [0016](0016-immich-num-repositorio-borg-proprio.md) | O Immich faz backup num repositório Borg próprio | Aceita |
+| [0017](0017-timer-no-proxmox-repoe-a-acl-do-lab.md) | Um timer no Proxmox repõe a ACL do lab depois de cada destroy | Aceita |
 
 ## Modelo
 

@@ -1,0 +1,13 @@
+# Gerido pelo Ansible (roles/proxmox_host) — não editar à mão.
+# A cada minuto: um destroy no lab libera o VMID de novo em até ~1 min. Sem
+# nada faltando, o script só lê a lista de ACLs.
+[Unit]
+Description=ACL do lab, a cada minuto
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=1min
+AccuracySec=10s
+
+[Install]
+WantedBy=timers.target
