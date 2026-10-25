@@ -263,6 +263,39 @@ pelo gerenciador dela.
 
     Confira: `tea issues list --repo nextlevelcode/infra` lista as issues.
 
+11. **Claude Code e o `claude-config`.** O clone voltou com o `~/Work`, mas o
+    `~/.claude` não: o `CLAUDE.md` global, os comandos (`/comecar`,
+    `/entregar`) e as skills só valem depois de ligados de novo. Passo
+    manual: o login do Claude Code abre no navegador.
+
+    1. Instale o app (repositório `omarchy`) e o CLI (pelo mise, como neste
+       notebook), e faça login:
+
+       ```bash
+       sudo pacman -S --needed claude-desktop
+       mise use -g claude@latest
+       ```
+
+    2. Abra o Claude Code **dentro** de `~/Work/dev/claude-config` e rode
+       `/instalar`. O comando é do próprio repo (só existe dentro do clone)
+       e conduz o resto: roda o `instalar.sh`, explica cada aviso dele e
+       confere o Tailscale e o `tea`, que a esta altura já estão de pé. Sem
+       o Nextcloud, clone antes
+       (`git clone ssh://git@forgejo-lxc:2222/nextlevelcode/claude-config.git ~/Work/dev/claude-config`).
+       Sem o Claude Code à mão, o mesmo link sai direto:
+
+       ```bash
+       bash ~/Work/dev/claude-config/instalar.sh
+       ```
+
+    A memória automática (`~/.claude/projects/*/memory/`) é de cada máquina e
+    começa vazia: o que vale para sempre mora no `claude/CLAUDE.md` do repo.
+
+    Confira: `~/Work/dev/claude-config/instalar.sh status` lista tudo com
+    `✓`, e numa sessão **nova** do Claude Code o `/comecar` aparece (a
+    sessão em que o `/instalar` rodou já tinha carregado o `~/.claude` de
+    antes).
+
 ## Sem o Nextcloud
 
 Com o Pi fora, o `~/Work` e o `~/.ssh` vêm do KeePass e do Forgejo. Com o
