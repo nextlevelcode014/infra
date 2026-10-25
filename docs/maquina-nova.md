@@ -178,10 +178,24 @@ pelo gerenciador dela.
       Pasta nova da casa segue a mesma regra: a remota é o caminho local com
       `~` trocado por `/Laptop`, e a lista de ignorados dela é um
       `.sync-exclude.lst` na raiz.
+   5. **Pastas pessoais**, depois que a pasta geral terminar de sincronizar
+      (ADR 0020). O `~/Documents` mora em `~/Nextcloud/Documents`, e o
+      script troca a pasta da casa por um link para lá:
+
+      ```bash
+      bash ~/Work/dev/workflow/bin/pastas simular
+      bash ~/Work/dev/workflow/bin/pastas
+      ```
+
+      O `bash` na frente é porque o script voltou sem `+x`. Ele move o que
+      a pasta local já tiver sem sobrescrever nada (nome repetido fica onde
+      está, com aviso, e o link não é feito), e aponta o `user-dirs.dirs`
+      para o caminho real: app em flatpak nem sempre segue um link.
 
    Confira: as duas pastas aparecem como sincronizadas,
-   `~/Work/.sync-exclude.lst` existe, e `ssh -T forgejo` responde com o
-   usuário do Forgejo (o `~/.ssh/config` voltou e o agente tem a chave).
+   `~/Work/.sync-exclude.lst` existe, `xdg-user-dir DOCUMENTS` mostra
+   `~/Nextcloud/Documents`, e `ssh -T forgejo` responde com o usuário do
+   Forgejo (o `~/.ssh/config` voltou e o agente tem a chave).
 
 5. **Repos de volta.** Cada pasta de `~/Work/repos.txt` volta a ser repo:
    `git init`, `fetch` do remote e `reset` para a branch e o commit em que
