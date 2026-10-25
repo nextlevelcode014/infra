@@ -179,7 +179,9 @@ pelo gerenciador dela.
       abaixo. Senão o `/Laptop` desce duas vezes, uma em cada pasta, e uma
       edição numa cópia sobe por cima da outra. Desmarcado depois, o
       cliente para de sincronizar mas deixa a pasta local se ela tiver
-      arquivo ignorado dentro: apague `~/Nextcloud/Laptop` à mão.
+      arquivo ignorado dentro: apague `~/Nextcloud/Laptop` à mão. O
+      `Backups` fica marcado: é onde mora o backup do Zen (passo 12), e o
+      `zen-backup` se recusa a rodar com ele desmarcado.
    4. **Adicionar pasta para sincronizar**, com a pasta local **ainda
       inexistente**, para o cliente só baixar (pasta local com arquivos e um
       journal novo pode gerar cópias de conflito):
@@ -328,10 +330,16 @@ pelo gerenciador dela.
     profile, e restaure por cima o backup mais recente:
 
     ```bash
-    bash ~/Work/dev/workflow/bin/zen-backup --restore "$(ls -t ~/Nextcloud/Backups/zen/zen-profile-* | head -1)"
+    bash ~/Work/dev/workflow/bin/zen-backup --restore "$(command ls -t ~/Nextcloud/Backups/zen/zen-profile-* | head -1)"
     ```
 
-    O script acha o Zen do pacman (`~/.zen`), pede confirmação e a
+    O `command` é porque o Omarchy troca o `ls` pelo `eza`, e no `eza` o
+    `-t` espera um campo (`--time`): o caminho do backup vira o valor dele.
+    Sem o Zen aberto antes, o script para em "Zen não instalado", porque
+    ainda não há `profiles.ini`.
+
+    O script acha o Zen do pacman (`~/.config/zen` nas versões novas, que
+    seguem o XDG; `~/.zen` nas antigas), pede confirmação e a
     passphrase do KeePass, e só troca o profile ativo se a decifragem der
     certo: com a passphrase errada, o profile fica como estava. Se ele disser que o Zen está aberto com o
     navegador fechado, o nome do processo mudou: veja com `pgrep -l zen`.
