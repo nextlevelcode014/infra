@@ -34,8 +34,10 @@ inventário — é assim mesmo. Para automatizar, existe a linha
 | `terraform.yml` | plugin `cloud.terraform`, lendo o state do terraform | `lxc` |
 
 Os containers **não** estão em arquivo nenhum: aparecem como recursos
-`ansible_host` dentro do `terraform.tfstate`. Sem `terraform apply` o grupo
-`lxc` fica vazio e os playbooks não acham ninguém.
+`ansible_host` dentro do state do Terraform, que mora no HCP Terraform
+(ADR 0019). O plugin roda `terraform show -json` em `../terraform`: sem
+`terraform apply`, ou sem `terraform init` e `terraform login` nesta
+máquina, o grupo `lxc` fica vazio e os playbooks não acham ninguém.
 
 Cada host do grupo `lxc` chega com `ansible_host` (IP fixo na `vmbr1`, a bridge
 só do Proxmox; o SSH salta por ele, `group_vars/lxc/vars.yml`),

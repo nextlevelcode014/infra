@@ -2,5 +2,7 @@ plugin: cloud.terraform.terraform_provider
 # Resolvido a partir do cwd do ansible-playbook, não do diretório deste
 # arquivo. Rode do root do repo (`ansible-playbook site.yml`) e o caminho
 # cai em `../terraform`, o diretório irmão no repo infra.
+# O state é remoto (HCP Terraform): o plugin roda `terraform show -json`
+# lá, e isso só lê o state com a pasta inicializada e `terraform login`.
 project_path: ../terraform
 

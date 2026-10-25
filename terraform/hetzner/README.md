@@ -2,8 +2,9 @@
 
 A VPS (`ubuntu-4gb-fsn1-1`, CX23 em Falkenstein) e o firewall da Hetzner
 Cloud na frente dela. Stack separada da do Proxmox, com **state próprio**
-(`hetzner/terraform.tfstate`): um erro aqui não toca os containers, e vice-
-versa. O que roda dentro da VPS é do `ansible/` (`ansible/docs/vps.md`).
+(workspace `infra-hetzner` no HCP Terraform, ADR 0019): um erro aqui não
+toca os containers, e vice-versa. O que roda dentro da VPS é do
+`ansible/` (`ansible/docs/vps.md`).
 
 ## Firewall
 
@@ -28,7 +29,9 @@ Não dá para gerar pela CLI: o console da Hetzner exige login.
 1. Console → projeto → **Security → API tokens** → *Generate API token*,
    leitura e escrita. Guarde no Vaultwarden.
 2. `cp terraform.tfvars.example terraform.tfvars` e cole o token.
-3. ```bash
+3. `terraform login`, se esta máquina ainda não tem
+   (`../CLAUDE.md`, "Configurar o HCP Terraform").
+4. ```bash
    terraform init
    terraform plan      # nunca aplicar com "destroy" ou "must be replaced"
    terraform apply

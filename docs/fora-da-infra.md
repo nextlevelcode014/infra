@@ -36,15 +36,18 @@ A senha mestra protege tudo junto e é o único item sem cópia: ela é longa,
 | `terraform.tfvars` | `terraform/` | anexo `terraform.tfvars` |
 | `terraform.tfvars` da Hetzner | `terraform/hetzner/` | anexo `hetzner.tfvars` |
 | Passphrase do LUKS do Pi | na sua cabeça | campo extra |
-| `terraform.tfstate` | `terraform/` | anexo `terraform.tfstate` |
-| `terraform.tfstate` da Hetzner | `terraform/hetzner/` | anexo `hetzner.tfstate` |
+| Login do HCP Terraform | token em `~/.terraform.d/credentials.tfrc.json`, gerado pelo `terraform login` | campos extras: usuário, senha e códigos de recuperação do 2FA |
 | Chave SSH dos LXCs | privada só no agente do Bitwarden, `.pub` em `~/.ssh/id_ed25519.pub` | anexo `id_ed25519` (a privada) |
 
-O state muda a cada `apply`: a cópia no KeePass é provisória, até ele ir
-para um state remoto (#8). A `id_ed25519` precisa de cópia porque o
-`terraform/local.tf` lê a `.pub` e grava nos containers: com uma chave nova,
-o plan quer mudar os quatro LXCs. O cofre do Bitwarden é o Vaultwarden, que
-roda num LXC: ele é infra, e a cópia que conta é a do KeePass.
+O state do Terraform não está na tabela: ele mora no HCP Terraform
+(ADR 0019), fora da infra e com histórico de versões. O que precisa de
+cópia é o acesso à conta, porque sem ela o state só volta por
+`terraform import`. O token não se copia: o `terraform login` gera outro.
+
+A `id_ed25519` precisa de cópia porque o `terraform/local.tf` lê a `.pub` e
+grava nos containers: com uma chave nova, o plan quer mudar os quatro LXCs.
+O cofre do Bitwarden é o Vaultwarden, que roda num LXC: ele é infra, e a
+cópia que conta é a do KeePass.
 
 O notebook também sincroniza o `~/Work` (com estes arquivos dentro do clone)
 e o `~/.ssh` com o Nextcloud do Pi (ADR 0018). Pela mesma regra, essa cópia
@@ -61,9 +64,9 @@ Os itens só do Pi (archives do Borg, backup do Nextcloud) estão em
 
 Passo manual: o KeePass pede a senha mestra de forma interativa.
 
-1. Crie a entrada `infra`, preencha a senha do Ansible Vault e a passphrase
-   do LUKS, e anexe os arquivos da tabela (aba *Avançado* → *Anexos* no
-   KeePassXC). Salve o `.kdbx`.
+1. Crie a entrada `infra`, preencha a senha do Ansible Vault, a passphrase
+   do LUKS e o login do HCP Terraform, e anexe os arquivos da tabela (aba
+   *Avançado* → *Anexos* no KeePassXC). Salve o `.kdbx`.
 2. Copie o `.kdbx` para os outros aparelhos, como você já faz.
 
 Confira que o anexo abre: salve o `vault.yml` do KeePass num arquivo
@@ -75,9 +78,9 @@ ansible-vault view /tmp/vault.yml >/dev/null && echo ok && rm /tmp/vault.yml
 
 ## Quando refazer
 
-Toda vez que um dos arquivos mudar (`ansible-vault edit`, token novo no
-`tfvars`, qualquer `terraform apply`): troque o anexo e copie o `.kdbx` de
-novo para os aparelhos.
+Toda vez que um dos itens mudar (`ansible-vault edit`, token novo no
+`tfvars`, senha nova no HCP Terraform): troque o anexo ou o campo e copie o
+`.kdbx` de novo para os aparelhos.
 Para saber se a cópia ficou para trás, salve o anexo e compare:
 
 ```bash

@@ -1,10 +1,10 @@
 # Máquina nova
 
 O desktop de onde se roda a infra não é só um clone do repo: ele guarda
-o state do Terraform, os segredos fora do git, e é o IP dele que a ACL da
-tailnet deixa administrar as máquinas. Este doc é a ida e a volta de uma
-formatação: o que conferir antes, e como deixar a máquina nova rodando
-`terraform plan` e `ansible-playbook` de novo.
+os segredos fora do git e o login do HCP Terraform (onde mora o state, ADR
+0019), e é o IP dele que a ACL da tailnet deixa administrar as máquinas.
+Este doc é a ida e a volta de uma formatação: o que conferir antes, e como
+deixar a máquina nova rodando `terraform plan` e `ansible-playbook` de novo.
 
 A casa do notebook mora no Nextcloud do Pi (ADR 0018): `~/.ssh` em
 `/Laptop/.ssh` e `~/Work` em `/Laptop/Work`, sincronizados o tempo todo, sem
@@ -49,23 +49,21 @@ Os comandos rodam da raiz do clone, salvo quando o passo diz outro lugar.
    Confira: só `fim`.
 
 3. **Entrada `infra` do KeePass em dia.** Salve os anexos `vault.yml`,
-   `terraform.tfvars`, `hetzner.tfvars`, `terraform.tfstate`,
-   `hetzner.tfstate` e `id_ed25519` em `/tmp` e compare:
+   `terraform.tfvars`, `hetzner.tfvars` e `id_ed25519` em `/tmp` e compare:
 
    ```bash
    cmp ansible/inventory/group_vars/all/vault.yml /tmp/vault.yml && echo igual
    cmp terraform/terraform.tfvars /tmp/terraform.tfvars && echo igual
    cmp terraform/hetzner/terraform.tfvars /tmp/hetzner.tfvars && echo igual
-   cmp terraform/terraform.tfstate /tmp/terraform.tfstate && echo igual
-   cmp terraform/hetzner/terraform.tfstate /tmp/hetzner.tfstate && echo igual
    ssh-keygen -y -f /tmp/id_ed25519 | cmp - <(cut -d' ' -f1,2 ~/.ssh/id_ed25519.pub) && echo par
-   rm /tmp/vault.yml /tmp/*.tfvars /tmp/*.tfstate /tmp/id_ed25519
+   rm /tmp/vault.yml /tmp/*.tfvars /tmp/id_ed25519
    ```
 
-   Confira: cinco `igual` e um `par`. Anexo diferente se troca antes de
-   seguir. A `id_ed25519` é a chave de root nos LXCs, e o `terraform/local.tf`
-   lê a `.pub` para gravar nos containers: com uma chave nova, o plan quer
-   mudar os quatro.
+   Confira: três `igual` e um `par`, e o login do HCP Terraform da entrada
+   abre `app.terraform.io` no navegador. Anexo diferente se troca antes de
+   seguir. O state não precisa de cópia: ele mora no HCP. A `id_ed25519` é
+   a chave de root nos LXCs, e o `terraform/local.tf` lê a `.pub` para
+   gravar nos containers: com uma chave nova, o plan quer mudar os quatro.
 
 4. **Anexe o `~/.config/git/config`** na mesma entrada, como `gitconfig`.
    Ele não está no `~/.ssh` nem no `~/Work`, e sem ele os commits saem sem
@@ -218,18 +216,29 @@ pelo gerenciador dela.
 
    Os roles vendidos já estão no git; isto baixa as collections.
 
-8. **Terraform**, nas duas stacks (o `.terraform/` não sincroniza, então o
-   `init` baixa os providers de novo):
+8. **Terraform.** Passo manual: o `terraform login` gera o token pelo
+   navegador, com o login do HCP Terraform da entrada `infra`.
 
-   ```bash
-   (cd terraform && terraform init && terraform plan)
-   (cd terraform/hetzner && terraform init && terraform plan)
-   ```
+   1. ```bash
+      terraform login
+      ```
+
+      Confirme com `yes`, gere o token na página que abrir e cole no
+      terminal. Ele fica em `~/.terraform.d/credentials.tfrc.json`, fora
+      do `~/Work`.
+   2. Nas duas stacks (o `.terraform/` não sincroniza, então o `init` baixa
+      os providers de novo e liga a pasta ao workspace dela):
+
+      ```bash
+      (cd terraform && terraform init && terraform plan)
+      (cd terraform/hetzner && terraform init && terraform plan)
+      ```
 
    Confira: os dois terminam em `No changes.` Qualquer diff aqui é arquivo
-   restaurado errado (state velho, outra `id_ed25519.pub`), não mudança a
-   aplicar: **não rode `apply`**, confira o `/Laptop/Work` ou use o caminho
-   sem o Nextcloud.
+   restaurado errado (outra `id_ed25519.pub`, `tfvars` velho), não mudança
+   a aplicar: **não rode `apply`**, confira o `/Laptop/Work` ou use o
+   caminho sem o Nextcloud. Se o `init` perguntar se migra um state local,
+   responda `no`: o state que vale é o do HCP.
 
 9. **Ansible**, de dentro de `ansible/`:
 
@@ -285,9 +294,9 @@ comum. Troque os passos 3 a 6 acima por:
    | `vault.yml` | `ansible/inventory/group_vars/all/vault.yml` |
    | `terraform.tfvars` | `terraform/terraform.tfvars` |
    | `hetzner.tfvars` | `terraform/hetzner/terraform.tfvars` |
-   | `terraform.tfstate` | `terraform/terraform.tfstate` |
-   | `hetzner.tfstate` | `terraform/hetzner/terraform.tfstate` |
    | `gitconfig` | `~/.config/git/config` |
+
+   O state não é anexo: ele volta do HCP Terraform no passo 8.
 
    Confira: `ansible-vault view ansible/inventory/group_vars/all/vault.yml`
    abre com a senha do campo da entrada.

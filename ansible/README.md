@@ -22,8 +22,10 @@ comandos abaixo rodam de dentro de `ansible/`.
 3. **Tailscale** na máquina de onde se roda: Pi, VPS e Proxmox são
    alcançados pela tailnet.
 
-4. **`terraform apply` feito em `../terraform`:** os LXCs não estão em
-   arquivo de inventário nenhum, vêm do state.
+4. **`terraform apply` feito em `../terraform`, e a pasta com `init` e
+   `terraform login`:** os LXCs não estão em arquivo de inventário nenhum,
+   vêm do state, que mora no HCP Terraform (`../terraform/CLAUDE.md`,
+   "Estado").
 
    ```bash
    ansible-inventory --graph

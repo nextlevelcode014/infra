@@ -8,13 +8,14 @@ Proxmox só é alcançável pela Tailscale — sem ela nada aqui funciona.
 ## Comandos
 
 ```bash
+terraform login     # uma vez por máquina; ver "Estado"
 terraform init
 terraform plan      # sempre olhar o diff antes de aplicar
 terraform apply
 ```
 
 Valores locais ficam em `terraform.tfvars` (fora do git; ver
-`terraform.tfvars.example`).
+`terraform.tfvars.example`). O state é remoto, no HCP Terraform.
 
 ## Convenção — VMID 200-299
 
@@ -84,16 +85,55 @@ ao custo de por a senha de admin no estado) ou manter o token e aplicar fora —
 ## Hetzner (`hetzner/`)
 
 A VPS e o firewall da Hetzner Cloud vivem numa **stack separada**, com state
-próprio, em `hetzner/` (`hetzner/README.md`). Os comandos rodam de dentro da
-pasta. A VPS foi importada (criada à mão antes), tem `prevent_destroy` e as
-proteções da Hetzner ligadas: plano com `destroy` ou `must be replaced` nela
-é erro, não se aplica.
+próprio (workspace `infra-hetzner`), em `hetzner/` (`hetzner/README.md`).
+Os comandos rodam de dentro da pasta. A VPS foi importada (criada à mão
+antes), tem `prevent_destroy` e as proteções da Hetzner ligadas: plano com
+`destroy` ou `must be replaced` nela é erro, não se aplica.
 
 ## Estado
 
-`terraform.tfstate` é local e ignorado pelo git. Ele não é só o estado do
-Terraform: é a **fonte do inventário do Ansible** (recursos `ansible_host`).
-Se ele sumir, o Ansible perde o mapa de hosts mesmo com os dois repos intactos.
-Vale backup, ou migrar para state remoto.
+O state mora no **HCP Terraform** (ADR 0019): org `NextLevelCode`, um
+workspace por stack (`infra-proxmox` aqui, `infra-hetzner` em `hetzner/`),
+declarados no bloco `cloud` do `versions.tf`. Ele não é só o estado do
+Terraform: é a **fonte do inventário do Ansible** (recursos `ansible_host`),
+e o plugin `cloud.terraform` lê o state remoto com `terraform show -json`
+nesta pasta. Sem `init` e `terraform login`, o grupo `lxc` fica vazio.
+
+A execução é **local**: o HCP só guarda o state, o histórico de versões e o
+lock. O runner da HashiCorp não alcança o Proxmox (só pela Tailscale) e não
+tem os `terraform.tfvars`.
+
+**Nenhum recurso que gera segredo entra aqui** (`random_password`,
+`tls_private_key`, senha em `user_account`): o state fica com a HashiCorp
+em texto puro para eles. Segredo vai no vault do Ansible. Se isso tiver que
+mudar, revise o ADR 0019 (a alternativa é o OpenTofu com state cifrado).
+
+### Configurar o HCP Terraform
+
+Passo manual: a conta, o login e as configurações da org são pela
+interface web. Feito uma vez; numa máquina nova, só o passo 2.
+
+1. **Execução local na org.** `app.terraform.io` → org `NextLevelCode` →
+   **Settings → General → Default Execution Mode** → *Local* → *Update
+   organization*. Os workspaces herdam da org (não mude no workspace).
+2. **Login nesta máquina:**
+
+   ```bash
+   terraform login
+   ```
+
+   Ele abre o navegador para gerar um token de usuário e grava em
+   `~/.terraform.d/credentials.tfrc.json`, fora do `~/Work` (não
+   sincroniza).
+3. **Workspaces:** o primeiro `terraform init` de cada stack cria o seu.
+   Com um `terraform.tfstate` local na pasta, o `init` pergunta se migra:
+   `yes` sobe o state (o `-migrate-state` não vale para o HCP).
+
+Confira, nas duas stacks: `terraform plan` começa direto no `Refreshing
+state...` e termina em `No changes.` Se a primeira linha for `Running plan
+in HCP Terraform`, a execução ficou remota: volte ao passo 1.
+
+Se a conta do HCP se perder, o state volta por `terraform import` de cada
+recurso. O login da conta tem cópia fora da infra (`../docs/fora-da-infra.md`).
 
 `.terraform.lock.hcl` **é** versionado: é ele que fixa as versões dos providers.

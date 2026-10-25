@@ -53,6 +53,7 @@ fonte (PR, commit ou comentário de onde o motivo foi tirado).
 | [0016](0016-immich-num-repositorio-borg-proprio.md) | O Immich faz backup num repositório Borg próprio | Aceita |
 | [0017](0017-timer-no-proxmox-repoe-a-acl-do-lab.md) | Um timer no Proxmox repõe a ACL do lab depois de cada destroy | Aceita |
 | [0018](0018-notebook-volta-pelo-nextcloud-sem-chave-privada-em-disco.md) | O notebook volta pelo Nextcloud, sem chave privada em disco | Aceita |
+| [0019](0019-state-do-terraform-no-hcp-terraform.md) | O state do Terraform mora no HCP Terraform, com execução local | Aceita |
 
 ## Modelo
 
