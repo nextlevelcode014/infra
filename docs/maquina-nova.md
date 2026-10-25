@@ -83,6 +83,20 @@ Os comandos rodam da raiz do clone, salvo quando o passo diz outro lugar.
    dos passos 3 e 4 aparecem na cópia, não só na máquina que vai ser
    formatada.
 
+7. **Backup do Zen**, com o navegador fechado: histórico, senhas, cookies e
+   extensões não estão em sync nenhum, e o profile não é sincronizado ao
+   vivo (o Zen grava nele o tempo todo).
+
+   ```bash
+   ~/Work/dev/workflow/bin/zen-backup
+   ```
+
+   O backup sai cifrado (`gpg --symmetric`): o gpg pede uma passphrase, que
+   mora no KeePass. É ela que o restore pede, e sem ela o backup não volta.
+
+   Confira: a saída mostra o `.tar.gz.gpg` novo em `~/Nextcloud/Backups/zen/`,
+   e o ícone do Nextcloud mostra tudo sincronizado.
+
 ## Na máquina nova
 
 Os comandos supõem Arch Linux (Omarchy). Em outra distro, os mesmos pacotes
@@ -309,6 +323,21 @@ pelo gerenciador dela.
     `✓`, e numa sessão **nova** do Claude Code o `/comecar` aparece (a
     sessão em que o `/instalar` rodou já tinha carregado o `~/.claude` de
     antes).
+
+12. **Profile do Zen.** Abra o Zen uma vez e feche, para ele criar o
+    profile, e restaure por cima o backup mais recente:
+
+    ```bash
+    bash ~/Work/dev/workflow/bin/zen-backup --restore "$(ls -t ~/Nextcloud/Backups/zen/zen-profile-* | head -1)"
+    ```
+
+    O script acha o Zen do pacman (`~/.zen`), pede confirmação e a
+    passphrase do KeePass, e só troca o profile ativo se a decifragem der
+    certo: com a passphrase errada, o profile fica como estava. Se ele disser que o Zen está aberto com o
+    navegador fechado, o nome do processo mudou: veja com `pgrep -l zen`.
+
+    Confira: o Zen abre com o histórico e as extensões de antes, e pede a
+    senha das contas só onde já pedia.
 
 ## Sem o Nextcloud
 
