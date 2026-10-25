@@ -38,12 +38,18 @@ A senha mestra protege tudo junto e é o único item sem cópia: ela é longa,
 | Passphrase do LUKS do Pi | na sua cabeça | campo extra |
 | `terraform.tfstate` | `terraform/` | anexo `terraform.tfstate` |
 | `terraform.tfstate` da Hetzner | `terraform/hetzner/` | anexo `hetzner.tfstate` |
-| Chave SSH dos LXCs | `~/.ssh/id_ed25519` e `.pub` | anexos com os mesmos nomes |
+| Chave SSH dos LXCs | privada só no agente do Bitwarden, `.pub` em `~/.ssh/id_ed25519.pub` | anexo `id_ed25519` (a privada) |
 
 O state muda a cada `apply`: a cópia no KeePass é provisória, até ele ir
 para um state remoto (#8). A `id_ed25519` precisa de cópia porque o
 `terraform/local.tf` lê a `.pub` e grava nos containers: com uma chave nova,
-o plan quer mudar os quatro LXCs.
+o plan quer mudar os quatro LXCs. O cofre do Bitwarden é o Vaultwarden, que
+roda num LXC: ele é infra, e a cópia que conta é a do KeePass.
+
+O notebook também sincroniza o `~/Work` (com estes arquivos dentro do clone)
+e o `~/.ssh` com o Nextcloud do Pi (ADR 0018). Pela mesma regra, essa cópia
+não conta: ela serve para a máquina nova voltar rápido, não para reconstruir
+a infra.
 
 Não precisam de cópia: o clone do repo (está no Forgejo, e qualquer clone
 serve) e os `*.example` (estão no git). Formatar o desktop tem passo a passo
@@ -81,5 +87,6 @@ cmp ansible/inventory/group_vars/all/vault.yml /tmp/vault.yml && echo igual
 ## Restaurar
 
 Num computador novo, salve os anexos da entrada `infra` nos lugares da
-tabela. A ordem completa (Tailscale, chaves, clone, conferências) está em
+tabela; a `id_ed25519` vai para um agente SSH, não para o `~/.ssh`. A ordem
+completa (Tailscale, chaves, clone, conferências) está em
 [`maquina-nova.md`](maquina-nova.md), seção *Na máquina nova*.

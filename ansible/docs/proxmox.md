@@ -111,11 +111,13 @@ depois o `terraform apply`, depois o `lxc.yml`.
    Host 10.50.0.*
        User root
        ProxyJump root@<proxmox_host>
-       IdentityFile ~/.ssh/id_ed25519
+       IdentityFile ~/.ssh/id_ed25519.pub
        IdentitiesOnly yes
    ```
 
-   A chave é a que o Terraform põe nos LXCs (`terraform/local.tf`). Sem o
+   A chave é a que o Terraform põe nos LXCs (`terraform/local.tf`). A
+   privada fica no agente do Bitwarden, não em disco: com a `.pub` no
+   `IdentityFile`, o ssh pede ao agente a privada que forma par com ela. Sem o
    `IdentitiesOnly`, o agente oferece todas as chaves dele antes, e o sshd
    do LXC corta com `Too many authentication failures`.
 

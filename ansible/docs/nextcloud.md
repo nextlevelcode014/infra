@@ -92,7 +92,9 @@ domínio, e no pi-lab o ensaio não diria muito.
    **fora do Pi**: sem ela, o backup não restaura.
 
 5. **Clientes** (desktop, celular): conta com
-   `https://nextcloud.lab.nextlevelcode.pro`, com o aparelho na tailnet.
+   `https://nextcloud.lab.nextlevelcode.pro`, com o aparelho na tailnet. O
+   cliente do notebook (pastas `/Laptop`, lista de ignorados) está em
+   `docs/maquina-nova.md`, "Na máquina nova", passo 4.
 
 ## Backup
 
