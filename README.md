@@ -53,6 +53,9 @@ fora da infra, e como fazê-las, estão em
 Formatar o desktop de onde se roda a infra, ou começar numa máquina nova:
 [`docs/maquina-nova.md`](docs/maquina-nova.md).
 
+Upgrades planejados e ainda não feitos ficam em `docs/planos/`: hoje, o
+[full node Bitcoin e o upgrade do Pi](docs/planos/full-node-e-upgrade-do-pi.md).
+
 ## Fluxo de mudança
 
 Nada vai direto para o `main`: branch, PR no Forgejo, squash merge. Passo
