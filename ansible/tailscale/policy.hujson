@@ -12,7 +12,8 @@
     // O IP real não fica no repo: troque o placeholder ao colar no console
     // (tailscale/README.md).
     "hosts": {
-        "infra-admin-1": "<ip-tailscale-do-desktop>",
+        "infra-admin-1": "<ip-tailscale-do-desktop-1>",
+        "infra-admin-2": "<ip-tailscale-do-desktop-2>",
     },
 
     "grants": [
@@ -59,25 +60,25 @@
 
         // --- Administração: só pelos desktops listados em "hosts" ------------
         {
-            "src": ["infra-admin-1"],
+            "src": ["infra-admin-1", "infra-admin-2"],
             "dst": ["tag:proxmox-lxc", "tag:caddy", "tag:pi", "tag:vps"],
             "ip":  ["tcp:22"],
         },
         {
-            "src": ["infra-admin-1"],
+            "src": ["infra-admin-1", "infra-admin-2"],
             "dst": ["tag:proxmox"],
             "ip":  ["tcp:22", "tcp:443", "tcp:8006"],
         },
         // Interface do Nextcloud AIO (tailscale serve do host do Pi).
         {
-            "src": ["infra-admin-1"],
+            "src": ["infra-admin-1", "infra-admin-2"],
             "dst": ["tag:pi"],
             "ip":  ["tcp:8080"],
         },
         // Laboratório (repo lab): descartável, qualquer porta. O caminho
         // inverso não existe: nenhum grant tem tag:lab como origem.
         {
-            "src": ["infra-admin-1"],
+            "src": ["infra-admin-1", "infra-admin-2"],
             "dst": ["tag:lab"],
             "ip":  ["*"],
         },

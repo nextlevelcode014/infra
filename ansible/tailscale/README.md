@@ -15,8 +15,9 @@ Depois do merge do PR:
 
 1. Abrir <https://login.tailscale.com/admin/acls/file>.
 2. Colar o conteúdo inteiro de `policy.hujson`, trocar
-   `<ip-tailscale-do-desktop>` pelo IP real (o que já está no console, ou
-   `tailscale ip -4` no desktop) e salvar. O IP fica fora do repo porque o
+   `<ip-tailscale-do-desktop-1>` e `<ip-tailscale-do-desktop-2>` pelos IPs
+   reais (os que já estão no console, ou `tailscale ip -4` em cada desktop) e
+   salvar. O IP fica fora do repo porque o
    repo é público; esquecida a troca, o console recusa o save por IP inválido.
 3. Conferir: o save só completa se a seção `tests` passar. Erro de teste = a
    mudança reabriu algo que devia estar fechado; corrija no repo, não no console.
@@ -44,12 +45,13 @@ nome do nó antes: o nome MagicDNS pode diferir do hostname.
 | Nós Tailscale em container (sidecar do FMD, exit node) | `tag:containers`; o FMD também `tag:public` (Funnel) |
 | Máquinas do repo `lab` | `tag:lab`, pela auth key efêmera (não se aplica à mão) |
 | Runner do GitHub Actions dos testes do `lab` | `tag:lab-ci`, pelo OAuth client (não se aplica à mão) |
-| Desktop de administração | sem tag — fica em `hosts.infra-admin-1` |
+| Desktops de administração | sem tag — ficam em `hosts.infra-admin-1` e `hosts.infra-admin-2` |
 
 Desktop não leva tag: com tag o nó deixa de ser dispositivo pessoal e sai de
 `autogroup:self` e `autogroup:member`. O IP dele é o de `tailscale ip -4` no
-próprio desktop. Para um segundo desktop, crie `infra-admin-2` em `hosts` e
-inclua o alias nos três grants de administração.
+próprio desktop. Para um desktop a mais, crie `infra-admin-N` em `hosts` e
+inclua o alias em todos os grants de administração (os que têm
+`infra-admin-1` como origem).
 
 SSH passa por duas camadas: o grant de rede (só os IPs de `hosts` chegam na
 porta 22) e a regra `ssh` (identidade humana com `action: check`, que pede

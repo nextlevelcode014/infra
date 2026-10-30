@@ -75,9 +75,9 @@ Os comandos rodam da raiz do clone, salvo quando o passo diz outro lugar.
    tailscale ip -4
    ```
 
-   É o `infra-admin-1` da ACL (`ansible/tailscale/policy.hujson`): só esse IP
-   chega no SSH do Proxmox, do Pi, da VPS e dos LXCs. A máquina nova vai
-   receber o mesmo IP no passo 2 da próxima seção, e a ACL não muda.
+   É um dos `infra-admin-N` da ACL (`ansible/tailscale/policy.hujson`): só
+   esses IPs chegam no SSH do Proxmox, do Pi, da VPS e dos LXCs. A máquina
+   nova vai receber o mesmo IP no passo 2 da próxima seção, e a ACL não muda.
 
 6. **Copie o `.kdbx` para outro aparelho** e abra ele lá. Confira: os anexos
    dos passos 3 e 4 aparecem na cópia, não só na máquina que vai ser
