@@ -22,6 +22,10 @@ pi_docker_networks:
 
 pi_unlock_script: /usr/local/bin/secure-unlock
 
+# Sem chute do systemd por este tempo, o chip reinicia o Pi. Máximo do
+# bcm2835-wdt: 15 s.
+pi_watchdog_sec: 15s
+
 # Guarda de espaço livre do volume cifrado (GB).
 pi_disk_guard_script: /usr/local/bin/disk-guard
 pi_disk_guard_stop_gb: 100

@@ -18,7 +18,9 @@ O que ele faz:
   (`docs/backup.md`, "Como funciona");
 - instala o `reboot-watch` (ver "Atualizar");
 - grava `PSU_MAX_CURRENT` na EEPROM (só no Pi físico; ver "Fonte e boot
-  sozinho").
+  sozinho");
+- liga o watchdog de hardware no systemd (só fora de container; ver
+  "Watchdog: reinício sozinho quando trava").
 
 ## Passos manuais
 
@@ -211,6 +213,37 @@ porque derruba todas as stacks até o `secure-unlock`.
 
 3. A prova de verdade: um `sudo reboot` com você fora de casa. Se o Pi
    volta à tailnet sem ninguém apertar nada, está resolvido.
+
+### Watchdog: reinício sozinho quando trava
+
+Em 28/10 e 30/10/2026 o Pi travou sem deixar uma linha no journal, com
+memória, carga e I/O normais até o último minuto. Na segunda vez ficou fora
+da rede por três horas, até alguém tirar da tomada. O role liga o watchdog
+de hardware do chip (`RuntimeWatchdogSec=15s` em
+`/etc/systemd/system.conf.d/watchdog.conf`): o systemd chuta o timer a cada
+poucos segundos e, se o kernel trava, o chip reinicia a placa. Isso não
+corrige a causa da trava, só encurta a queda.
+
+Depois de um reinício pelo watchdog, o LUKS fica fechado como em qualquer
+boot: o Pi volta à tailnet sozinho, mas os serviços esperam o
+`secure-unlock` ("A cada boot"), que dá para rodar de fora de casa.
+
+Conferir que está ligado:
+
+```bash
+ssh ubuntu@nextlevelcode 'systemctl show -p RuntimeWatchdogUSec; cat /sys/class/watchdog/watchdog0/state'
+```
+
+Deve mostrar `RuntimeWatchdogUSec=15s` e `active`. O teste de verdade
+(`echo c > /proc/sysrq-trigger`, que derruba o kernel) não fica como passo:
+reinicia o Pi e fecha o LUKS.
+
+Para saber se um boot veio do watchdog: o journal do boot anterior termina
+no meio, sem a sequência de desligamento.
+
+```bash
+ssh ubuntu@nextlevelcode 'journalctl -b -1 -n 5 --no-pager'
+```
 
 ## pi-lab — staging do Pi
 

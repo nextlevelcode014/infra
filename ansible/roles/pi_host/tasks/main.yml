@@ -53,6 +53,30 @@
               Vale no próximo reboot; depois dele rode o secure-unlock
               (docs/pi.md, "Fonte e boot sozinho").
 
+# --- Watchdog de hardware ---------------------------------------------------
+# O Pi já travou sem deixar uma linha no journal e ficou fora até alguém
+# tirar da tomada. Com o watchdog, o systemd chuta o timer do chip a cada
+# poucos segundos; se o kernel trava, ninguém chuta e o chip reinicia a
+# placa. 15 s é o máximo do bcm2835-wdt. No pi-lab (LXC) não há chip: pula.
+
+- name: Ligar o watchdog de hardware no systemd (só fora de container)
+  when: ansible_facts.virtualization_type != 'lxc'
+  block:
+    - name: Criar o diretório de drop-in do systemd
+      ansible.builtin.file:
+        path: /etc/systemd/system.conf.d
+        state: directory
+        mode: "0755"
+
+    - name: Configurar o watchdog no systemd
+      ansible.builtin.copy:
+        dest: /etc/systemd/system.conf.d/watchdog.conf
+        mode: "0644"
+        content: |
+          [Manager]
+          RuntimeWatchdogSec={{ pi_watchdog_sec }}
+      notify: Reexecutar o systemd
+
 # --- LUKS -------------------------------------------------------------------
 # Criar a partição cifrada (luksFormat + mkfs) é manual e acontece uma vez:
 # precisa da passphrase, que não pode viver em lugar nenhum daqui. Ver

@@ -57,7 +57,7 @@ usadas depois.
 | `playbooks/caddy.yml` | `caddy` | binário custom com plugin DNS-01 + Caddyfile + drop-in |
 | `playbooks/forgejo.yml` | `forgejo` | stack do Forgejo + backup Borg |
 | `playbooks/vaultwarden.yml` | `vaultwarden` | stack do Vaultwarden + backup Borg |
-| `playbooks/pi.yml` | `pi_hosts` | base do Pi (LUKS, Docker, redes, disk-guard) |
+| `playbooks/pi.yml` | `pi_hosts` | base do Pi (LUKS, Docker, redes, disk-guard, watchdog) |
 | `playbooks/gluetun.yml` | `pi_hosts` | gateway VPN do Pi |
 | `playbooks/arr-stack.yml` | `pi_hosts` | stack Arr do Pi + backup Borg |
 | `playbooks/searxng.yml` | `pi_hosts` | SearXNG do Pi (sai pela VPN do gluetun) |
@@ -130,7 +130,7 @@ linha.
 | `compose_stack` | ciclo do compose de todo role de serviço: diretório (`tasks_from: dir`), render do `compose.yml.j2` de quem chamou, `up` com `pull: missing` ou standby (`docs/padrao-de-role.md`, "Compose") |
 | `forgejo` | compose do Forgejo + Postgres |
 | `vaultwarden` | compose do Vaultwarden |
-| `pi_host` | base do Pi: LUKS no crypttab/fstab, `secure-unlock`, Docker com data-root cifrado, redes, disk-guard |
+| `pi_host` | base do Pi: LUKS no crypttab/fstab, `secure-unlock`, Docker com data-root cifrado, redes, disk-guard, watchdog de hardware no systemd (pula LXC) |
 | `secure_links` | symlinks para o LUKS de caminhos fixos que um compose usa fora dele (a stack Arr); recebe `secure_links_paths` |
 | `borg_client` | Borg + chave + senha + known_hosts + borgmatic com um timer por host; dependência de todo role com backup/restore. `tasks_from: backup` gera o config de um serviço (`docs/backup.md`) |
 | `gluetun` | gateway VPN do Pi (ProtonVPN, killswitch); recria os dependentes presos a um gluetun antigo |

@@ -2,3 +2,10 @@
 - name: Recarregar systemd
   ansible.builtin.systemd_service:
     daemon_reload: true
+
+# O system.conf só é lido quando o PID 1 se reexecuta. Os serviços seguem
+# rodando; o systemd só troca o próprio processo.
+- name: Reexecutar o systemd
+  ansible.builtin.command:
+    argv: [systemctl, daemon-reexec]
+  changed_when: true
