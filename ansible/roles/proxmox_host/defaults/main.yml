@@ -24,3 +24,18 @@ proxmox_lab_acl_role: PVEVMAdmin
 proxmox_lab_vmid_first: 900
 proxmox_lab_vmid_last: 999
 proxmox_lab_acl_script: /usr/local/sbin/lab-acl
+
+# Rede do lab (ADR 0021): bridge própria, como a dos LXCs, e um firewall que
+# só deixa as VMs do lab saírem para a internet. Faixa e gateway são os mesmos
+# do modules/proxmox-vm do repo lab: mudar aqui é mudar lá.
+proxmox_lab_bridge: vmbr2
+proxmox_lab_address: 10.60.0.1/24
+proxmox_lab_subnet: 10.60.0.0/24
+proxmox_lab_isolamento_script: /usr/local/sbin/lab-isolamento
+# Destinos que o lab não alcança nem saindo pela vmbr0: a LAN onde o notebook
+# estiver (que não é sempre a de casa) e a CGNAT da tailnet.
+proxmox_lab_destinos_bloqueados:
+  - 10.0.0.0/8
+  - 172.16.0.0/12
+  - 192.168.0.0/16
+  - 100.64.0.0/10

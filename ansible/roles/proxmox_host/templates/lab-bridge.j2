@@ -1,0 +1,11 @@
+# Gerido pelo Ansible (role proxmox_host). Rede do lab: ADR 0021.
+# Sem porta física, como a dos LXCs. O NAT e o isolamento são do
+# {{ proxmox_lab_isolamento_script }}: sobem e descem junto com a bridge.
+auto {{ proxmox_lab_bridge }}
+iface {{ proxmox_lab_bridge }} inet static
+	address {{ proxmox_lab_address }}
+	bridge-ports none
+	bridge-stp off
+	bridge-fd 0
+	post-up {{ proxmox_lab_isolamento_script }} ligar
+	pre-down {{ proxmox_lab_isolamento_script }} desligar

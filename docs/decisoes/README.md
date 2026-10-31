@@ -55,6 +55,7 @@ fonte (PR, commit ou comentário de onde o motivo foi tirado).
 | [0018](0018-notebook-volta-pelo-nextcloud-sem-chave-privada-em-disco.md) | O notebook volta pelo Nextcloud, sem chave privada em disco | Aceita |
 | [0019](0019-state-do-terraform-no-hcp-terraform.md) | O state do Terraform mora no HCP Terraform, com execução local | Aceita |
 | [0020](0020-pastas-pessoais-moram-no-nextcloud-com-link-na-casa.md) | As pastas pessoais moram no Nextcloud, com link no lugar de sempre | Aceita |
+| [0021](0021-lab-numa-bridge-propria-que-so-sai-para-a-internet.md) | O lab mora numa bridge própria, que só sai para a internet | Aceita |
 
 ## Modelo
 

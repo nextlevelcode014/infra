@@ -10,3 +10,15 @@
   ansible.builtin.command:
     argv: [ifup, "{{ proxmox_lxc_bridge }}"]
   changed_when: true
+
+# Mesmo cuidado da bridge dos LXCs: só o ifup desta. O post-up já roda o
+# isolamento; o handler abaixo cobre a bridge que já estava no ar.
+- name: Subir a bridge do lab
+  ansible.builtin.command:
+    argv: [ifup, "{{ proxmox_lab_bridge }}"]
+  changed_when: true
+
+- name: Aplicar o isolamento do lab
+  ansible.builtin.command:
+    argv: ["{{ proxmox_lab_isolamento_script }}", ligar]
+  changed_when: true

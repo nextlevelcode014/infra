@@ -163,3 +163,53 @@ mudar no outro.
 Um destroy seguido de create **no mesmo VMID** em menos de um minuto (um
 `-/+` que não troca o VMID) ainda pode levar o 403: espere o timer e rode o
 `apply` de novo.
+
+## Rede do lab
+
+As VMs do repo `lab` moram na `vmbr2`, outra bridge só do Proxmox, e só saem
+para a internet (ADR 0021):
+
+```
+vmbr2 10.60.0.1/24 ─► VMs do lab 10.60.0.100-199 (VMID 900-999)
+  NAT para fora pela vmbr0; nada para a vmbr1, a LAN, a tailnet ou o host
+```
+
+O role `proxmox_host` grava a `vmbr2` em `/etc/network/interfaces.d/vmbr2` e
+o `/usr/local/sbin/lab-isolamento`, que sobe e desce com ela: NAT e as
+chains `LAB-FORWARD` e `LAB-INPUT` no topo do `FORWARD` e do `INPUT`. A
+faixa está no `defaults` do role e no `modules/proxmox-vm` do lab; mudar num
+é mudar no outro.
+
+1. **Aplicar** (é o mesmo playbook do host):
+
+   ```bash
+   ansible-playbook playbooks/proxmox.yml --ask-vault-pass
+   ```
+
+   Confira:
+
+   ```bash
+   ssh root@<proxmox_host> 'ip -br addr show vmbr2; iptables -S LAB-FORWARD; iptables -S LAB-INPUT; iptables -S FORWARD | head -2; iptables -t nat -S POSTROUTING | grep 10.60.0.0'
+   ```
+
+   Mostra a `vmbr2` com `10.60.0.1/24`, as duas chains com as regras de
+   `DROP`, o `-j LAB-FORWARD` como primeira regra do `FORWARD` e o
+   `MASQUERADE` saindo pela `vmbr0`.
+
+2. **Trocar a permissão de rede do `lab@pve`** da `vmbr0` para a `vmbr2`. É
+   ACL do Proxmox, como root, e mora no `docs/proxmox.md` do lab (seção 2):
+   lá estão os dois comandos e como conferir.
+
+3. **Conferir o isolamento** de dentro de uma VM do lab já criada na `vmbr2`
+   (o `README` do experimento diz o IP):
+
+   ```bash
+   ssh -J root@<proxmox_host> lab@10.60.0.101 \
+     'curl -sS -o /dev/null -w "%{http_code}\n" https://deb.debian.org;
+      for alvo in 10.50.0.200:443 10.60.0.1:8006 10.60.0.1:22; do
+        timeout 3 bash -c "</dev/tcp/${alvo%:*}/${alvo#*:}" 2>/dev/null && echo "ABERTO $alvo" || echo "fechado $alvo";
+      done'
+   ```
+
+   Tem que mostrar `200` (a internet funciona) e `fechado` nos três: o Caddy
+   na `vmbr1`, a API e o SSH do host.

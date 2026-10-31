@@ -31,3 +31,25 @@
   # No --check de um host novo a unit só "seria" criada, e o systemd não a
   # acha. Pula só nesse caso.
   when: not (ansible_check_mode and proxmox_lab_acl_units is changed)
+
+# --- Rede do lab ----------------------------------------------------------------
+# As VMs do lab moram na vmbr2, não na vmbr0: na vmbr0 elas ficariam na LAN
+# de onde o notebook estiver, alcançando o que houver nela, e com o
+# ip_forward ligado bastaria uma rota para chegarem à vmbr1 (ADR 0021). O
+# ip_forward e o source do interfaces.d já são exigidos pela rede dos LXCs.
+
+- name: Instalar o isolamento da rede do lab
+  ansible.builtin.template:
+    src: lab-isolamento.sh.j2
+    dest: "{{ proxmox_lab_isolamento_script }}"
+    owner: root
+    group: root
+    mode: "0700"
+  notify: Aplicar o isolamento do lab
+
+- name: Configurar a bridge do lab
+  ansible.builtin.template:
+    src: lab-bridge.j2
+    dest: "/etc/network/interfaces.d/{{ proxmox_lab_bridge }}"
+    mode: "0644"
+  notify: Subir a bridge do lab
