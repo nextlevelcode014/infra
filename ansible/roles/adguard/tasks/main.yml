@@ -14,6 +14,13 @@
     state: directory
   loop: [conf, work]
 
+- name: Aplicar o DNS declarado antes de subir a stack
+  ansible.builtin.include_role:
+    name: adguard_dns
+  vars:
+    adguard_dns_config_file: "{{ adguard_data_dir }}/conf/AdGuardHome.yaml"
+    adguard_dns_stack_dir: "{{ adguard_dir }}"
+
 - name: Subir o AdGuard
   ansible.builtin.include_role:
     name: compose_stack

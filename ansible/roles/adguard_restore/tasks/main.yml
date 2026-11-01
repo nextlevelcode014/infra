@@ -41,6 +41,13 @@
   loop: [conf, work]
   changed_when: true
 
+- name: Reaplicar o DNS declarado sobre a configuração restaurada
+  ansible.builtin.include_role:
+    name: adguard_dns
+  vars:
+    adguard_dns_config_file: "{{ adguard_restore_data_dir }}/conf/AdGuardHome.yaml"
+    adguard_dns_stack_dir: "{{ adguard_restore_stack_dir }}"
+
 - name: Subir o AdGuard restaurado
   community.docker.docker_compose_v2:
     project_src: "{{ adguard_restore_stack_dir }}"

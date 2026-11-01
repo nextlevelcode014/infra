@@ -1,0 +1,13 @@
+---
+# Compartilhado pelo deploy e pelo restore; valores desejados vencem o backup.
+adguard_dns_config_file: "{{ appdata_dir }}/adguard/conf/AdGuardHome.yaml"
+adguard_dns_stack_dir: /opt/adguard
+adguard_dns_upstreams:
+  - https://dns.quad9.net/dns-query
+  - https://dns.mullvad.net/dns-query
+adguard_dns_bootstrap:
+  - 9.9.9.10
+  - 149.112.112.10
+  - 1.1.1.1
+  - 1.0.0.1
+adguard_dns_mode: parallel

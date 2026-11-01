@@ -56,6 +56,7 @@ fonte (PR, commit ou comentário de onde o motivo foi tirado).
 | [0019](0019-state-do-terraform-no-hcp-terraform.md) | O state do Terraform mora no HCP Terraform, com execução local | Aceita |
 | [0020](0020-pastas-pessoais-moram-no-nextcloud-com-link-na-casa.md) | As pastas pessoais moram no Nextcloud, com link no lugar de sempre | Aceita |
 | [0021](0021-lab-numa-bridge-propria-que-so-sai-para-a-internet.md) | O lab mora numa bridge própria, que só sai para a internet | Aceita |
+| [0022](0022-dns-do-adguard-declarado-com-provedores-independentes.md) | DNS do AdGuard declarado, com provedores independentes | Aceita |
 
 ## Modelo
 

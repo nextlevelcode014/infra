@@ -5,8 +5,14 @@ Substitui o `conf/` (config, usuários, listas, regras) e o `work/`
 recente feito pelo Pi (`adguard_restore_source_host: ubuntu`). O querylog
 nunca está no archive: volta vazio. O `adguard.yml` nunca restaura.
 
+Antes de religar, o restore aplica `adguard_dns`: upstreams, bootstrap e modo
+são os declarados no código atual, mesmo quando o backup contém valores
+antigos. As demais opções e os usuários continuam vindo do backup. Isso
+vale também para Pi novo, sem compose: o arquivo é corrigido antes do
+primeiro deploy. Variáveis e conferência em `adguard.md`.
+
 **O DNS da casa fica fora** do momento em que o restore para o AdGuard até ele
-subir de novo, alguns segundos. A tailnet segue pelo fallback do Quad9; a LAN
+subir de novo, alguns segundos. A tailnet segue pela reserva pública configurada no console; a LAN
 fica sem DNS (`docs/adguard.md`, "Limitações").
 
 ## Antes de executar

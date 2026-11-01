@@ -1,0 +1,25 @@
+---
+- name: Validar os parâmetros DNS declarados
+  ansible.builtin.assert:
+    that:
+      - adguard_dns_upstreams is sequence and adguard_dns_upstreams is not string
+      - adguard_dns_upstreams | length > 0
+      - adguard_dns_bootstrap is sequence and adguard_dns_bootstrap is not string
+      - adguard_dns_bootstrap | length > 0
+      - adguard_dns_mode in ['parallel', 'load_balance', 'fastest_addr']
+
+- name: Verificar se o assistente já criou a configuração
+  ansible.builtin.stat:
+    path: "{{ adguard_dns_config_file }}"
+  register: adguard_dns_file
+
+- name: Avisar como concluir uma instalação nova
+  ansible.builtin.debug:
+    msg: >-
+      AdGuardHome.yaml ainda não existe. Conclua o assistente e reaplique
+      playbooks/adguard.yml para configurar upstreams, bootstrap e modo DNS.
+  when: not adguard_dns_file.stat.exists
+
+- name: Configurar DNS de uma instância existente ou restaurada
+  ansible.builtin.include_tasks: configurar.yml
+  when: adguard_dns_file.stat.exists

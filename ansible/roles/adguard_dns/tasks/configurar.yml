@@ -1,0 +1,95 @@
+---
+# O arquivo contém hash de senha e outras configurações privadas. Nunca diff.
+- name: Ler a configuração atual para detectar mudanças
+  ansible.builtin.slurp:
+    src: "{{ adguard_dns_config_file }}"
+  register: adguard_dns_before
+  no_log: true
+
+- name: Preparar os valores DNS desejados
+  ansible.builtin.set_fact:
+    adguard_dns_desired:
+      upstream_dns: "{{ adguard_dns_upstreams }}"
+      bootstrap_dns: "{{ adguard_dns_bootstrap }}"
+      upstream_mode: "{{ adguard_dns_mode }}"
+    adguard_dns_current: "{{ adguard_dns_before.content | b64decode | from_yaml }}"
+  no_log: true
+
+- name: Validar a configuração antes de parar o serviço
+  ansible.builtin.assert:
+    that:
+      - adguard_dns_current is mapping
+      - adguard_dns_current.dns is mapping
+      - (adguard_dns_current.dns.upstream_dns_file | default('')) == ''
+    fail_msg: >-
+      Configuração inválida ou upstream_dns_file ativo. Revise o arquivo:
+      upstreams de arquivo externo não são gerenciados por este role.
+  no_log: true
+
+- name: Comparar somente as chaves gerenciadas
+  ansible.builtin.set_fact:
+    adguard_dns_changed: >-
+      {{ adguard_dns_current.dns.upstream_dns | default([]) != adguard_dns_upstreams
+         or adguard_dns_current.dns.bootstrap_dns | default([]) != adguard_dns_bootstrap
+         or adguard_dns_current.dns.upstream_mode | default('') != adguard_dns_mode }}
+  no_log: true
+
+- name: Informar mudança prevista sem expor o arquivo
+  ansible.builtin.debug:
+    msg: Upstreams, bootstrap ou modo DNS precisam ser atualizados.
+  changed_when: true
+  when: adguard_dns_changed
+
+- name: Aplicar a configuração com o escritor parado
+  when:
+    - adguard_dns_changed
+    - not ansible_check_mode
+  block:
+    - name: Verificar se existe uma stack instalada
+      ansible.builtin.stat:
+        path: "{{ adguard_dns_stack_dir }}/compose.yml"
+      register: adguard_dns_stack
+
+    - name: Consultar o estado do container existente
+      community.docker.docker_container_info:
+        name: adguardhome
+      register: adguard_dns_container
+      when: adguard_dns_stack.stat.exists
+
+    - name: Registrar se o serviço precisa voltar ao ar
+      ansible.builtin.set_fact:
+        adguard_dns_was_running: >-
+          {{ adguard_dns_stack.stat.exists
+             and (adguard_dns_container.container.State.Running | default(false)) }}
+
+    - name: Atualizar o arquivo e recuperar o estado do serviço
+      block:
+        - name: Parar o AdGuard para ele não sobrescrever a edição
+          community.docker.docker_container:
+            name: adguardhome
+            state: stopped
+          when: adguard_dns_was_running
+
+        # O processo grava o YAML ao parar. Releia para preservar esse estado.
+        - name: Reler o arquivo depois da parada
+          ansible.builtin.slurp:
+            src: "{{ adguard_dns_config_file }}"
+          register: adguard_dns_stopped
+          no_log: true
+
+        - name: Mesclar as três chaves DNS preservando as demais opções
+          ansible.builtin.copy:
+            dest: "{{ adguard_dns_config_file }}"
+            content: >-
+              {{ (adguard_dns_stopped.content | b64decode | from_yaml)
+                 | combine({'dns': adguard_dns_desired}, recursive=true)
+                 | to_nice_yaml(indent=2, sort_keys=false) }}
+            mode: "0600"
+          no_log: true
+          diff: false
+      always:
+        - name: Religar somente o container que estava rodando
+          community.docker.docker_container:
+            name: adguardhome
+            state: started
+          when: adguard_dns_was_running

@@ -1,0 +1,103 @@
+---
+# Sem inventário real, vault, Docker ou dados de produção.
+- name: Validar a configuração DNS com arquivos fictícios
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  become: false
+  tasks:
+    - name: Criar diretório descartável
+      ansible.builtin.tempfile:
+        state: directory
+        prefix: adguard-dns-test-
+      register: adguard_dns_test_dir
+
+    - name: Exercitar o mesmo role usado pelo deploy e restore
+      vars:
+        adguard_dns_config_file: "{{ adguard_dns_test_dir.path }}/AdGuardHome.yaml"
+        adguard_dns_stack_dir: "{{ adguard_dns_test_dir.path }}/sem-stack"
+      block:
+        - name: Conferir que instalação nova não inventa usuário nem arquivo
+          ansible.builtin.include_role:
+            name: adguard_dns
+
+        - name: Conferir ausência do arquivo antes do assistente
+          ansible.builtin.stat:
+            path: "{{ adguard_dns_config_file }}"
+          register: adguard_dns_test_missing
+
+        - name: Validar ausência
+          ansible.builtin.assert:
+            that: not adguard_dns_test_missing.stat.exists
+
+        - name: Simular um backup com DNS antigo e dados que devem sobreviver
+          ansible.builtin.copy:
+            dest: "{{ adguard_dns_config_file }}"
+            mode: '0600'
+            content: |
+              users:
+                - name: admin-ficticio
+                  password: hash-ficticio
+              filtering:
+                protection_enabled: true
+              user_rules: ['||example.invalid^']
+              dns:
+                upstream_dns: ['https://dns.quad9.net/dns-query']
+                bootstrap_dns: ['9.9.9.9']
+                upstream_mode: load_balance
+                upstream_dns_file: ''
+                cache_size: 4194304
+                local_ptr_upstreams: ['192.168.18.1']
+
+        - name: Simular check mode sobre configuração antiga
+          ansible.builtin.include_role:
+            name: adguard_dns
+            apply:
+              check_mode: true
+
+        - name: Ler arquivo após simulação
+          ansible.builtin.slurp:
+            src: "{{ adguard_dns_config_file }}"
+          register: adguard_dns_test_check
+
+        - name: Conferir que check mode não gravou
+          ansible.builtin.assert:
+            that:
+              - (adguard_dns_test_check.content | b64decode | from_yaml).dns.upstream_mode == 'load_balance'
+              - adguard_dns_changed
+
+        - name: Corrigir o DNS do backup sem stack instalada
+          ansible.builtin.include_role:
+            name: adguard_dns
+
+        - name: Ler resultado
+          ansible.builtin.slurp:
+            src: "{{ adguard_dns_config_file }}"
+          register: adguard_dns_test_result
+
+        - name: Validar DNS atualizado e demais opções intactas
+          vars:
+            adguard_dns_test_parsed: "{{ adguard_dns_test_result.content | b64decode | from_yaml }}"
+          ansible.builtin.assert:
+            that:
+              - adguard_dns_test_parsed.dns.upstream_mode == 'parallel'
+              - adguard_dns_test_parsed.dns.upstream_dns == ['https://dns.quad9.net/dns-query', 'https://dns.mullvad.net/dns-query']
+              - "'1.1.1.1' in adguard_dns_test_parsed.dns.bootstrap_dns"
+              - adguard_dns_test_parsed.users == [{'name':'admin-ficticio', 'password':'hash-ficticio'}]
+              - adguard_dns_test_parsed.user_rules == ['||example.invalid^']
+              - adguard_dns_test_parsed.filtering.protection_enabled
+              - adguard_dns_test_parsed.dns.cache_size == 4194304
+              - adguard_dns_test_parsed.dns.local_ptr_upstreams == ['192.168.18.1']
+
+        - name: Reaplicar para conferir idempotência
+          ansible.builtin.include_role:
+            name: adguard_dns
+
+        - name: Exigir ausência de mudanças na segunda aplicação
+          ansible.builtin.assert:
+            that: not adguard_dns_changed
+      always:
+        - name: Remover os arquivos fictícios
+          ansible.builtin.file:
+            path: "{{ adguard_dns_test_dir.path }}"
+            state: absent

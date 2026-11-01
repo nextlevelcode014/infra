@@ -26,3 +26,10 @@ só.
 parece estranho, procure lá. Decisão nova que não é óbvia pelo código (o que
 se descartou, uma regra para o que vier depois) leva um ADR no mesmo PR; ADR
 aceito não se reescreve, é substituído (`docs/decisoes/README.md`).
+
+## Preferência de configuração
+
+Priorize arquivos versionados e aplicação pelo Ansible para gerenciar a infra.
+Interfaces gráficas ficam para exceções documentadas. Uma API pode ser o
+mecanismo de aplicação, mas os valores desejados devem estar no código;
+segredos continuam fora do Git.

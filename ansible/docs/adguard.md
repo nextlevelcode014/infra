@@ -5,19 +5,41 @@ próprio host e a interface web atrás do Caddy:
 
 | O quê | Onde |
 |---|---|
-| DNS para a LAN (roteador) | `lan_ip:53` (hoje `192.168.50.187`), TCP/UDP |
+| DNS para a LAN (roteador) | `lan_ip:53` (hoje `192.168.18.99`), TCP/UDP |
 | DNS para a tailnet | `ts_ip:53`, TCP/UDP |
 | Interface web | `https://adguard.lab.nextlevelcode.pro` (Caddy → `ts_ip:8084`, rota em `caddy_lab_pi_routes`) |
 | Dados | `/mnt/secure/appdata/adguard` (`adguard_data_dir`): `conf/` e `work/` |
 
 O DNS escuta nos dois IPs e nunca em `0.0.0.0`: o `systemd-resolved` do host
 ocupa `127.0.0.53`. O DHCP do AdGuard fica desligado: quem distribui IP é o
-roteador. O upstream é o Quad9 por DoH (`https://dns.quad9.net/dns-query`),
-configurado na interface do AdGuard, não no repo.
+roteador. O DNS é declarado em `roles/adguard_dns/defaults/main.yml` e aplicado pelo
+Ansible no deploy e no restore:
+
+| Variável | Padrão |
+|---|---|
+| `adguard_dns_upstreams` | Quad9 e Mullvad por DoH |
+| `adguard_dns_bootstrap` | Quad9 (`9.9.9.10`, `149.112.112.10`) e Cloudflare (`1.1.1.1`, `1.0.0.1`) |
+| `adguard_dns_mode` | `parallel` |
+
+Em `parallel`, as consultas que chegam aos upstreams vão aos dois provedores;
+o primeiro a responder atende. Isso aumenta a exposição das consultas aos
+dois provedores, uma escolha aceita para reduzir a espera quando um falha.
+O bootstrap resolve os nomes dos servidores DoH por DNS comum: precisa de
+provedores independentes também. Os endereços IPv4 bastam para estabelecer
+DoH; consultas AAAA continuam funcionando.
+
+O role mescla somente `dns.upstream_dns`, `dns.bootstrap_dns` e
+`dns.upstream_mode` no `AdGuardHome.yaml`. Preserva usuários, filtros, regras
+e as demais opções, mas a serialização pode mudar a formatação do YAML.
+Se houver diferença, para o container, relê o arquivo após a parada, grava
+sem exibir conteúdo no diff e religa se ele estava rodando. Sem diferença,
+não reinicia. `--check --diff` só informa a necessidade de mudança.
+`upstream_dns_file` precisa estar vazio: o role recusa uma fonte externa
+que teria precedência sobre a lista declarada. Decisão: ADR 0022.
 
 ## Antes de aplicar
 
-- **ACL** (`tailscale/policy.hujson`), já na política: dispositivos da tailnet
+- **ACL** (`tailscale/policy.hujson`), já na política: membros e `tag:vps`
   → `tag:pi` em `udp:53` e `tcp:53`, e `tag:caddy` → `tag:pi:8084`. Sem isso,
   o DNS da tailnet não responde e a interface não abre pelo Caddy.
 - **Reserva fixa do Pi no roteador.** O Pi pega IP por DHCP, e o DNS da LAN
@@ -70,8 +92,14 @@ configurado na interface do AdGuard, não no repo.
    Em `http://localhost:3000`: interface web na porta **80** e DNS na **53**,
    as duas em todas as interfaces (é a rede do container; quem limita aos
    IPs do host é o compose). Crie o admin e guarde a senha no Vaultwarden.
-   Depois, em Settings → DNS settings, o upstream
-   `https://dns.quad9.net/dns-query`.
+   Depois do assistente, reaplique os valores declarados:
+
+   ```bash
+   ansible-playbook playbooks/adguard.yml --ask-vault-pass --limit rpi
+   ```
+
+   O assistente inicial continua manual porque cria a credencial de admin.
+   Upstreams, bootstrap e modo passam a ser gerenciados pelo Ansible.
 
    Confira: os dois `dig` do passo 3 respondem como lá.
 
@@ -96,40 +124,33 @@ configurado na interface do AdGuard, não no repo.
    uci add dhcp host
    uci set dhcp.@host[-1].name='nextlevelcode'
    uci set dhcp.@host[-1].mac='<MAC do Pi>'
-   uci set dhcp.@host[-1].ip='192.168.50.187'
-   uci add_list dhcp.lan.dhcp_option='6,192.168.50.187'
+   uci set dhcp.@host[-1].ip='192.168.18.99'
+   uci add_list dhcp.lan.dhcp_option='6,192.168.18.99'
    uci commit dhcp
    /etc/init.d/dnsmasq restart
    ```
 
    Confira num dispositivo da LAN, depois de renovar o DHCP: o DNS dele é
-   `192.168.50.187`, e `doubleclick.net` resolve para `0.0.0.0`.
+   `192.168.18.99`, e `doubleclick.net` resolve para `0.0.0.0`.
 
-7. **Nameservers da tailnet no console do Tailscale** (DNS → Nameservers),
-   nesta ordem: o `ts_ip` do Pi (AdGuard), depois **Quad9** escolhido na lista
-   de provedores do "Add nameserver" (entra como `9.9.9.9` e já traz os outros
-   endereços do Quad9; o console recusa o `149.112.112.112` à parte). O Quad9
-   é o mesmo upstream do AdGuard, então só um provedor vê as consultas, e com
-   o Pi fora ele ainda bloqueia malware e phishing. É passo de console porque
-   o DNS da tailnet não está na `policy.hujson`.
+7. **Nameservers da tailnet no console do Tailscale** (DNS → Nameservers):
+   AdGuard (`ts_ip` do Pi) e Cloudflare como reserva global, conforme o
+   paliativo registrado na issue #66. O DNS da tailnet não está na
+   `policy.hujson`, por isso este passo ainda é manual.
 
-   O fallback não espera o AdGuard falhar: o Tailscale dispara para os
-   nameservers com um pequeno atraso entre eles e fica com a primeira
-   resposta. Se o AdGuard demora, a consulta sai pelo Quad9 sem bloqueio de
-   anúncio. Domínio bloqueado que às vezes resolve é isso, não falha do
-   AdGuard.
+   Os LXCs com `tag:caddy` e `tag:proxmox-lxc` não têm acesso à porta 53 do
+   Pi pela ACL atual; dependem da reserva. A autonomia do DNS dos LXCs é
+   tratada na #66. A reserva pública não oferece os filtros locais do AdGuard.
 
-   Confira, num dispositivo da tailnet:
+   Confira num dispositivo da tailnet:
 
    ```bash
-   tailscale dns status                          # AdGuard e Quad9 entre os resolvers
-   dig +short @100.100.100.100 doubleclick.net   # 0.0.0.0: AdGuard respondendo
-   curl -s https://on.quad9.net | grep -o "YES\|NO"   # YES: termina no Quad9
+   tailscale dns status
+   dig +short @<ts_ip> doubleclick.net
    ```
 
-   O `on.quad9.net` diz YES tanto pelo AdGuard quanto pelo fallback, porque
-   os dois caminhos terminam no Quad9. Ele prova que a Cloudflare saiu, não
-   qual caminho a consulta fez.
+   O status deve mostrar AdGuard e Cloudflare; a consulta direta ao Pi deve
+   devolver `0.0.0.0` se a regra de bloqueio estiver ativa.
 
 8. **Primeiro backup:**
 
@@ -150,6 +171,28 @@ estatística. Monitor *Backup AdGuard*. Restore: `docs/adguard-restore.md`.
 
 ## Operação
 
+### Conferir DNS após aplicar ou restaurar
+
+```bash
+dig @192.168.18.99 nextlevelcode.pro +short
+ssh ubuntu@nextlevelcode 'docker logs --since 5m adguardhome 2>&1 | tail -30'
+```
+
+Confira: a consulta responde e não há falhas contínuas de resolução. Um
+upstream bloqueado ainda pode gerar `exchange failed` em `parallel`; isso
+isoladamente não indica indisponibilidade se o outro atende. Não publique
+logs brutos: podem conter nomes consultados.
+
+Para conferir só as opções gerenciadas, sem expor usuários ou outras opções:
+
+```bash
+ssh ubuntu@nextlevelcode sudo cat /mnt/secure/appdata/adguard/conf/AdGuardHome.yaml | \
+  awk '/^[[:space:]]+(upstream_dns|bootstrap_dns|upstream_mode):/ {mostrar=1; print; next} mostrar && /^[[:space:]]+- / {print; next} {mostrar=0}'
+```
+
+Confira: Quad9 e Mullvad, bootstrap Quad9 e Cloudflare e modo `parallel`.
+Reaplique o playbook: as tasks DNS não devem mudar nem parar o container.
+
 ### Atualizar
 
 Versão exata em `adguard_image` (projeto `0.x`, e ele migra o
@@ -163,7 +206,7 @@ Para subir, leia as notas da versão, troque a variável e reaplique o
 O AdGuard escuta no `lan_ip`, lido dos fatos. Se esse IP muda, o DNS da LAN
 para até reaplicar o playbook. A tailnet também perde o AdGuard: o container
 publica a 53 nos dois IPs, e num restart ou reboot não sobe se um deles
-sumir. Até reaplicar, a tailnet segue pelo fallback do Quad9.
+sumir. Até reaplicar, a tailnet segue pela reserva pública da tailnet.
 
 1. **No roteador novo**, a reserva fixa do Pi (MAC de
    `cat /sys/class/net/eth0/address`) com um IP da faixa nova, e o nome
@@ -196,8 +239,9 @@ repo não gerencia nenhum.
 - **Pi fora, LAN sem DNS.** Com a opção 6, os dispositivos da LAN só conhecem
   o AdGuard. Para ter fallback, em vez da opção 6 deixe o dnsmasq do OpenWrt
   como DNS dos clientes e o AdGuard como servidor dele
-  (`uci add_list dhcp.@dnsmasq[0].server='192.168.50.187'` mais um público
+  (`uci add_list dhcp.@dnsmasq[0].server='192.168.18.99'` mais um público
   como segundo). O custo é o AdGuard passar a ver só o IP do roteador nas
   consultas.
-- **Config fora do repo.** Listas, regras, upstream e usuário vivem no
-  `AdGuardHome.yaml`, editado pela interface. O backup é o que guarda isso.
+- **Configuração parcialmente declarada.** Upstreams, bootstrap e modo vivem
+  no código. Listas, regras e usuários ainda dependem do backup do
+  `AdGuardHome.yaml`; esta mudança não automatiza o assistente inicial.

@@ -137,6 +137,7 @@ linha.
 | `arr_stack` | stack Arr do Pi (Jellyfin, *arr, qBittorrent pela VPN, decluttarr) |
 | `searxng` | SearXNG do Pi; `settings.yml` renderizado, porta publicada pelo gluetun |
 | `adguard` | AdGuard do Pi; DNS em `lan_ip` e `ts_ip`, sem sidecar |
+| `adguard_dns` | upstreams, bootstrap e modo declarados; compartilhado pelo deploy e restore, preserva as demais opções |
 | `fmd` | FMD do Pi; sidecar com Funnel opcional (`fmd_tailscale_sidecar`), Anubis no caminho do Funnel (`fmd_anubis`) |
 | `exit_node` | exit node `vpn-exit` saindo pela ProtonVPN, com config WireGuard própria |
 | `nextcloud` | mastercontainer do AIO (os outros containers são do próprio AIO), coturn e o serve do host |
