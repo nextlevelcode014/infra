@@ -46,6 +46,9 @@ original (31,1 de 38 Wh).
 
 ## Rede dos LXCs
 
+DNS dentro dos LXCs: `docs/lxc-dns.md` (TLS com provedores independentes e
+MagicDNS apenas para nomes privados). O DNS do host Proxmox não muda.
+
 Os LXCs não ficam na LAN do roteador: moram na `vmbr1`, uma bridge só do
 Proxmox, sem porta física, e saem para a internet por NAT pela `vmbr0`
 (ADR 0009, na raiz). Trocar o Proxmox de rede muda só o DHCP da `vmbr0`; o IP

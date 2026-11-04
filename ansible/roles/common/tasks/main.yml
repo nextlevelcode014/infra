@@ -1,4 +1,9 @@
 ---
+- name: Preparar DNS antes de qualquer instalação nos LXCs
+  ansible.builtin.include_role:
+    name: lxc_dns
+  when: "'lxc' in group_names"
+
 - name: Definir timezone
   community.general.timezone:
     name: "{{ timezone }}"

@@ -1,0 +1,109 @@
+---
+- name: Recusar execução fora dos LXCs gerenciados
+  ansible.builtin.assert:
+    that:
+      - "'lxc' in group_names"
+      - ansible_facts.virtualization_type == 'lxc'
+      - lxc_dns_servers | length > 1
+
+- name: Conferir o resolvedor já instalado no template
+  ansible.builtin.service_facts:
+
+- name: Exigir systemd-resolved sem instalar pacotes pela rede sem DNS
+  ansible.builtin.assert:
+    that: "'systemd-resolved.service' in ansible_facts.services"
+    fail_msg: O template precisa trazer systemd-resolved antes deste playbook.
+
+- name: Exigir networkd ativo sem assumir a rede de outro gerenciador
+  ansible.builtin.assert:
+    that:
+      - "'systemd-networkd.service' in ansible_facts.services"
+      - ansible_facts.services['systemd-networkd.service'].state == 'running'
+      - lxc_dns_interface is match('^[a-zA-Z0-9_-]+$')
+
+- name: Conferir arquivo da interface gerado pelo Proxmox
+  ansible.builtin.stat:
+    path: "/etc/systemd/network/{{ lxc_dns_interface }}.network"
+  register: lxc_dns_network_file
+
+- name: Recusar template com gerenciamento de rede diferente do esperado
+  ansible.builtin.assert:
+    that: lxc_dns_network_file.stat.isreg | default(false)
+    fail_msg: Esperado arquivo .network do Proxmox; não substituir a configuração de rede.
+
+- name: Criar diretório de drop-in da interface
+  ansible.builtin.file:
+    path: "/etc/systemd/network/{{ lxc_dns_interface }}.network.d"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Declarar DNS público na interface de saída
+  ansible.builtin.template:
+    src: network-dns.conf.j2
+    dest: "/etc/systemd/network/{{ lxc_dns_interface }}.network.d/60-lxc-dns.conf"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Aplicar DNS da interface dos LXCs
+
+# Aplicar a saída pública antes de retirar o DNS global anterior.
+- name: Aplicar DNS público antes da migração do MagicDNS
+  ansible.builtin.meta: flush_handlers
+
+- name: Preparar integração local e remover reconciliação antiga
+  ansible.builtin.include_tasks: tailnet.yml
+
+- name: Criar diretório de configuração do resolvedor
+  ansible.builtin.file:
+    path: /etc/systemd/resolved.conf.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Declarar MagicDNS global e os listeners locais
+  ansible.builtin.template:
+    src: resolved.conf.j2
+    dest: /etc/systemd/resolved.conf.d/60-lxc-dns.conf
+    owner: root
+    group: root
+    mode: "0644"
+  no_log: "{{ lxc_dns_magicdns_active | bool }}"
+  notify: Reiniciar resolvedor dos LXCs
+
+- name: Impedir o Proxmox de sobrescrever o resolv.conf no boot
+  ansible.builtin.copy:
+    content: ""
+    dest: /etc/.pve-ignore.resolv.conf
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Garantir resolvedor habilitado e ativo
+  ansible.builtin.systemd_service:
+    name: systemd-resolved
+    enabled: true
+    state: started
+
+# Aplique a configuração antes de apontar os clientes ao stub.
+- name: Aplicar o DNS público antes de trocar o resolv.conf
+  ansible.builtin.meta: flush_handlers
+
+- name: Limpar estado transitório da integração anterior com MagicDNS
+  ansible.builtin.include_tasks: limpar-legado.yml
+  when: lxc_dns_magicdns_active | bool
+
+- name: Apontar os clientes ao stub local
+  ansible.builtin.file:
+    path: /etc/resolv.conf
+    src: /run/systemd/resolve/stub-resolv.conf
+    state: link
+    force: true
+    follow: false
+    owner: root
+    group: root
+
+- name: Apontar o Docker ao resolvedor local
+  ansible.builtin.include_tasks: docker.yml

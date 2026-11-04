@@ -1,0 +1,18 @@
+# Gerido pelo Ansible — DNS público independente do Pi (ADR 0023).
+[Resolve]
+DNS=
+{% if lxc_dns_magicdns_active | bool %}
+DNS=100.100.100.100
+{% endif %}
+FallbackDNS=
+Domains=
+{% if lxc_dns_magicdns_active | bool %}
+Domains={{ lxc_dns_tailnet_domain }}
+{% endif %}
+# Só o MagicDNS local é global. O TLS público é explícito em eth0.network.d.
+DNSOverTLS=no
+DNSSEC=no
+DNSStubListener=yes
+DNSStubListenerExtra={{ lxc_dns_docker_address }}
+LLMNR=no
+MulticastDNS=no

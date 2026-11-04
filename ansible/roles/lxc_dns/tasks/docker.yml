@@ -1,0 +1,45 @@
+---
+- name: Verificar configuração existente do Docker
+  ansible.builtin.stat:
+    path: /etc/docker/daemon.json
+  register: lxc_dns_docker_config
+
+- name: Ler opções existentes sem perder data-root nem outras configurações
+  ansible.builtin.slurp:
+    src: /etc/docker/daemon.json
+  register: lxc_dns_docker_content
+  when: lxc_dns_docker_config.stat.exists
+  no_log: true
+
+- name: Criar diretório de configuração do Docker
+  ansible.builtin.file:
+    path: /etc/docker
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Mesclar o DNS local na configuração do Docker
+  ansible.builtin.copy:
+    dest: /etc/docker/daemon.json
+    owner: root
+    group: root
+    mode: "0644"
+    content: >-
+      {{ (lxc_dns_docker_content.content | default('e30=') | b64decode | from_json)
+         | combine({'dns': [lxc_dns_docker_address]}) | to_nice_json }}
+  register: lxc_dns_docker_changed
+  no_log: true
+  when: >-
+    (lxc_dns_docker_content.content | default('e30=') | b64decode | from_json).get('dns', [])
+    != [lxc_dns_docker_address]
+
+# Não inicia um Docker que estava parado (por exemplo, staging limpo).
+- name: Reiniciar Docker ativo para adotar o DNS local
+  ansible.builtin.systemd_service:
+    name: docker
+    state: restarted
+  when:
+    - lxc_dns_docker_changed is changed
+    - "'docker.service' in ansible_facts.services"
+    - ansible_facts.services['docker.service'].state == 'running'

@@ -5,3 +5,6 @@
 # Ansible parece travado esperando a reautenticação (docs/proxmox.md, "Rede
 # dos LXCs").
 ansible_ssh_common_args: "-J root@{{ proxmox_host }}"
+
+# DNS público é do resolved; MagicDNS recebe só os nomes da tailnet.
+tailscale_args: "--ssh --accept-risk=lose-ssh --accept-dns=false --hostname={{ inventory_hostname }}-lxc"

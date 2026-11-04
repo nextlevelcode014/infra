@@ -8,7 +8,7 @@ locals {
   # aqui é mudar lá. Não depende da LAN onde o Proxmox estiver.
   lxc_bridge  = "vmbr1"
   lxc_gateway = "10.50.0.1"
-  # O DNS do roteador mudaria com a LAN. Quad9: público, sem log de IP.
-  # Os LXCs na tailnet passam a usar o MagicDNS ao entrar nela.
-  dns_servers = ["9.9.9.9", "149.112.112.112"]
+  # Bootstrap anterior ao Ansible, por DNS comum/53: provedores independentes.
+  # Depois, o role lxc_dns usa os mesmos provedores por TLS e separa MagicDNS.
+  dns_servers = ["86.54.11.100", "1.1.1.1"]
 }

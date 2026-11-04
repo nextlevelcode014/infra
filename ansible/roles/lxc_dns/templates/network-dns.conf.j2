@@ -1,0 +1,21 @@
+# Gerido pelo Ansible. Endereço e gateway continuam no arquivo do Proxmox.
+[Network]
+DNS=
+DNS={{ lxc_dns_servers | join(' ') }}
+Domains=
+Domains=~.
+DNSOverTLS=yes
+DNSDefaultRoute=yes
+
+# Não importar resolvedores se a interface passar a usar configuração dinâmica.
+[DHCPv4]
+UseDNS=no
+UseDomains=no
+
+[DHCPv6]
+UseDNS=no
+UseDomains=no
+
+[IPv6AcceptRA]
+UseDNS=no
+UseDomains=no

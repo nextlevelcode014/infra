@@ -1,0 +1,28 @@
+---
+# O resolved persiste configurações feitas por resolvectl em /run. Reiniciar
+# o daemon não basta para retirar o DNS/domínio deixado pela integração antiga.
+# Só limpar depois de aplicar o MagicDNS global; não recriar estado na interface.
+- name: Verificar se a interface do Tailscale existe
+  ansible.builtin.stat:
+    path: /sys/class/net/tailscale0
+  register: lxc_dns_tailnet_link
+
+- name: Consultar DNS e domínios transitórios da interface
+  ansible.builtin.command:
+    argv: [resolvectl, "{{ item }}", tailscale0]
+  loop: [dns, domain]
+  register: lxc_dns_tailnet_runtime
+  changed_when: false
+  check_mode: false
+  no_log: true
+  when: lxc_dns_tailnet_link.stat.exists
+
+- name: Retirar DNS e domínios residuais sem reiniciar Tailscale
+  ansible.builtin.command:
+    argv: [resolvectl, revert, tailscale0]
+  changed_when: true
+  when:
+    - lxc_dns_tailnet_link.stat.exists
+    - >-
+      (lxc_dns_tailnet_runtime.results[0].stdout.split(':', 1)[-1] | trim | length > 0)
+      or (lxc_dns_tailnet_runtime.results[1].stdout.split(':', 1)[-1] | trim | length > 0)

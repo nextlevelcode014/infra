@@ -1,0 +1,7 @@
+---
+# Somente DNS: inclui o pi-lab sem aplicar flags nem reiniciar LXCs.
+- name: Configurar DNS independente do Pi nos LXCs
+  hosts: lxc
+  gather_facts: true
+  roles:
+    - lxc_dns

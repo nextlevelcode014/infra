@@ -53,6 +53,7 @@ usadas depois.
 | Playbook | Hosts | Faz |
 |---|---|---|
 | `playbooks/lxc.yml` | `proxmox`, depois `lxc` | flags do container, depois a config base de todos |
+| `playbooks/lxc-dns.yml` | `lxc` | DNS público por TLS e MagicDNS privado, incluindo pi-lab; pode reiniciar Docker |
 | `playbooks/proxmox.yml` | `proxmox` | host do Proxmox (o notebook): modo de carga da bateria, a `vmbr1` dos LXCs, com NAT, a `vmbr2` do lab, isolada, e o timer que repõe a ACL do `lab@pve` (`docs/proxmox.md`); antes do `terraform apply` |
 | `playbooks/caddy.yml` | `caddy` | binário custom com plugin DNS-01 + Caddyfile + drop-in |
 | `playbooks/forgejo.yml` | `forgejo` | stack do Forgejo + backup Borg |
@@ -123,6 +124,7 @@ linha.
 | Role | O que é |
 |---|---|
 | `common` | timezone + NTP de máquina física |
+| `lxc_dns` | DNS público por TLS independente do Pi; stub do Docker e MagicDNS privado nos LXCs da tailnet |
 | `artis3n.tailscale.machine` | instala e sobe na tailnet, com `--ssh` |
 | `proxmox_host` | base do notebook do Proxmox: bateria em `Long_Life` (conservation mode); `vmbr1` dos LXCs com `ip_forward` e NAT, sem tocar a `vmbr0`; `lab-acl.timer`, que repõe a ACL do `lab@pve` nos VMIDs 900–999 (ADR 0017); `vmbr2` do lab, que só sai para a internet (ADR 0021) |
 | `lxc_flags` | exceção: aplica flags do container (ver abaixo) |

@@ -1,0 +1,63 @@
+---
+- name: Verificar se Tailscale já está instalado
+  ansible.builtin.stat:
+    path: /usr/bin/tailscale
+  register: lxc_dns_tailscale_binary
+
+- name: Definir se o MagicDNS local deve ser declarado
+  ansible.builtin.set_fact:
+    lxc_dns_magicdns_active: "{{ lxc_dns_tailnet_enabled | bool and lxc_dns_tailscale_binary.stat.exists }}"
+
+- name: Preservar MagicDNS sem importar os nameservers globais da tailnet
+  when: lxc_dns_magicdns_active | bool
+  block:
+    - name: Validar domínio privado recebido do inventário
+      ansible.builtin.assert:
+        that:
+          - lxc_dns_tailnet_domain is match('^[a-zA-Z0-9-]+\.ts\.net$')
+      no_log: true
+
+    - name: Consultar se o Tailscale ainda gerencia o DNS
+      ansible.builtin.command: /usr/bin/tailscale debug prefs
+      register: lxc_dns_tailscale_prefs
+      changed_when: false
+      check_mode: false
+      no_log: true
+
+    - name: Desligar somente a aceitação de DNS do Tailscale
+      ansible.builtin.command: /usr/bin/tailscale set --accept-dns=false
+      when: (lxc_dns_tailscale_prefs.stdout | from_json).CorpDNS | bool
+      changed_when: true
+
+# Migração pontual da implementação anterior; não instala reconciliação.
+- name: Verificar units antigas do MagicDNS
+  ansible.builtin.stat:
+    path: "/etc/systemd/system/{{ item }}"
+  loop: [lxc-magicdns.timer, lxc-magicdns.service]
+  register: lxc_dns_old_units
+
+- name: Parar e desabilitar units antigas antes de remover arquivos
+  ansible.builtin.command:
+    argv: [systemctl, disable, --now, "{{ item.item }}"]
+  loop: "{{ lxc_dns_old_units.results }}"
+  loop_control:
+    label: "{{ item.item }}"
+  when: item.stat.exists
+  changed_when: true
+
+- name: Remover integração antiga e seus vínculos
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /etc/systemd/system/lxc-magicdns.service
+    - /etc/systemd/system/lxc-magicdns.timer
+    - /usr/local/sbin/lxc-magicdns
+    - /etc/systemd/system/sys-subsystem-net-devices-tailscale0.device.wants/lxc-magicdns.service
+    - /etc/systemd/system/multi-user.target.wants/lxc-magicdns.service
+    - /etc/systemd/system/tailscaled.service.wants/lxc-magicdns.service
+    - /etc/systemd/system/systemd-resolved.service.wants/lxc-magicdns.service
+    - /etc/systemd/system/timers.target.wants/lxc-magicdns.timer
+  notify:
+    - Recarregar units dos LXCs
+    - Reiniciar resolvedor dos LXCs

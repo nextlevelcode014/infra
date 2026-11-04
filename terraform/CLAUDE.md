@@ -36,7 +36,8 @@ O módulo `lxc` **valida** a faixa e falha o plano se você sair dela. Próximo
 container livre: `204`.
 
 Rede padrão (`local.tf`): bridge `vmbr1`, só do Proxmox, gateway
-`10.50.0.1` (o próprio Proxmox, com NAT para fora), DNS do Quad9, datastore
+`10.50.0.1` (o próprio Proxmox, com NAT para fora), bootstrap DNS4EU Unfiltered
+e Cloudflare por DNS comum (o Ansible depois configura TLS), datastore
 `local-lvm`, template Ubuntu 26.04. A bridge não é do Terraform: quem a cria é
 o Ansible (`playbooks/proxmox.yml`), e ela tem que existir antes do `apply`.
 Da sua máquina não há rota até `10.50.0.0/24`: o SSH salta pelo Proxmox

@@ -35,4 +35,7 @@
     # Máquina de teste não entra na tailnet nem gasta a auth key real.
     - role: artis3n.tailscale.machine
       when: "'staging' not in group_names"
+    # Na primeira instalação, o common roda antes de existir Tailscale.
+    - role: lxc_dns
+      when: "'staging' not in group_names"
     - geerlingguy.docker
