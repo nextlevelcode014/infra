@@ -1,0 +1,1 @@
+Ensaio temporário de proteção de branch.
