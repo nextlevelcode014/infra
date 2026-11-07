@@ -109,6 +109,299 @@ visíveis sem login. O web só existe pelo domínio público: não há rota no
    Confira: `ssh -T forgejo` responde com o seu usuário, e
    `git ls-remote origin` funciona num clone (`ssh://git@forgejo-lxc:2222/<org>/<repo>.git`).
 
+## Permissões dos repositórios
+
+`playbooks/forgejo-repositorios.yml` administra somente os colaboradores e
+as regras declarados em `vars/forgejo-repositorios.yml`, pela API HTTPS.
+Roda na estação de operação com inventário local; não faz parte do deploy
+da stack ou do `site.yml`. A decisão está no [ADR 0025](../../docs/decisoes/0025-permissoes-do-forgejo-aplicadas-por-playbook-local.md).
+Os campos e métodos seguem o [contrato da API do Forgejo 17.0.1](https://codeberg.org/forgejo/forgejo/src/tag/v17.0.1/templates/swagger/v1_json.tmpl).
+
+O escopo inicial é `nextlevelcode/infra`: colaborador `agent` com `write`;
+`main` sem push direto, merge restrito a `nextlevelcode`, restrições para
+administradores e commits assinados obrigatórios. Não exige aprovações ou
+checks. O `lab` só entra no arquivo depois de sua validação e autorização.
+Itens não declarados são preservados; remover um item do YAML não o exclui
+no servidor. As operações não são uma transação: em caso de falha, confira
+o que já foi aplicado e o snapshot antes de repetir.
+
+### Preparar conta e credencial
+
+1. **Conta do agente.** Em instância com cadastro fechado, crie a conta sem
+   privilégios administrativos pela CLI, somente se ainda não existir:
+
+   ```bash
+   ssh -t root@10.50.0.201 docker exec -it forgejo \
+     forgejo admin user create --username agent --email <email> --random-password
+   ```
+
+   Confira: o login da conta funciona e ela não é administradora. É manual
+   porque envolve uma senha inicial e sua guarda no Bitwarden. Não repita a
+   criação de uma conta existente. A conta `agent` e seu token são para os
+   agentes de desenvolvimento; não são a identidade do runner de CI.
+
+2. **Token de operação.** Na conta que administra o repositório, gere um
+   token em **Settings → Applications**, com escopo `write:repository`.
+   Em acesso a repositórios, selecione **All (public, private, and limited)**:
+   tokens para repositórios específicos têm limitações administrativas,
+   incluindo a inclusão de colaboradores. O token acompanha o alcance da
+   conta; reserve-o para estas operações e não o compartilhe com o agente ou
+   runner. Não precisa do escopo `admin` da instância. Confira a
+   [documentação de escopos](https://forgejo.org/docs/v17.0/user/authentication/token-scope/).
+   Não use o token de `agent`, que não administra o repositório.
+
+   É manual para manter a emissão e revogação sob controle do responsável.
+   Guarde o token no Bitwarden e, a partir de `ansible/`, no vault:
+
+   ```bash
+   ansible-vault edit inventory/group_vars/all/vault.yml
+   ```
+
+   Preencha `vault_forgejo_repositorios_token`, conforme o `.example`.
+   Confira abrindo novamente o vault no editor, sem imprimir o token no
+   terminal. As chamadas autenticadas usam `no_log`, TLS validado, sem
+   redirecionamentos, proxy ou leitura de `.netrc`. O token fica na estação,
+   não é instalado no servidor nem fornecido ao runner.
+
+3. **Chave SSH da conta `agent`.** No Bitwarden, crie um item de chave SSH
+   exclusivo e disponibilize-o pelo agente SSH. É manual porque exige acesso
+   ao cofre e confirmação do usuário. Cadastre a pública em **Settings →
+   SSH / GPG Keys** da conta `agent` e salve somente a pública em
+   `~/.ssh/agent.pub`. A privada permanece no cofre ([ADR 0018](../../docs/decisoes/0018-notebook-volta-pelo-nextcloud-sem-chave-privada-em-disco.md)).
+
+   A entrada adicional no `~/.ssh/config` é:
+
+   ```sshconfig
+   Host forgejo-agent
+       HostName forgejo-lxc
+       Port 2222
+       User git
+       IdentityFile ~/.ssh/agent.pub
+       IdentitiesOnly yes
+   ```
+
+   Confira: `ssh -T forgejo-agent` identifica `agent`. O alias não troca os
+   remotes ou o login padrão do `tea`. A conta separada não isola credenciais
+   se o agente continua no ambiente do responsável; investigação na
+   [issue #78](https://forge.nextlevelcode.pro/nextlevelcode/infra/issues/78).
+
+### Conferir e aplicar
+
+Os comandos desta seção rodam **dentro de `ansible/`**, depois do merge e
+com autorização para os alvos. Mesmo `--check` consulta o serviço real.
+
+1. Confira o YAML público, o SHA do checkout e as diferenças:
+
+   ```bash
+   git remote -v
+   git rev-parse HEAD
+   git status --short
+   ansible-playbook -i localhost, playbooks/forgejo-repositorios.yml --ask-vault-pass --check --diff
+   ```
+
+   Confira: só aparecem os repositórios, regras e colaboradores declarados.
+   A simulação faz somente GET; não grava snapshot ou altera a API. Se o
+   estado já corresponder ao YAML, o resumo mostra `changed=0`. Erro de
+   autenticação, permissão, resposta inesperada ou campo ausente interrompe
+   a execução, sem ser tratado como ausência de regra.
+
+2. Com as diferenças revisadas e autorização para aplicar:
+
+   ```bash
+   ansible-playbook -i localhost, playbooks/forgejo-repositorios.yml --ask-vault-pass -e forgejo_repositorios_aplicar=true
+   ```
+
+   Confira: antes da primeira escrita em cada repositório, aparece o caminho
+   do snapshot em `~/.local/state/forgejo-repositorios/<execução>/`.
+   Diretório `0700`, arquivo `0600`; contém o estado anterior e desejado dos
+   itens gerenciados, sem tokens. A proteção é criada/ajustada e reconsultada
+   antes de conceder permissões aos colaboradores. Permissões também são
+   reconsultadas ao final. Não apaga e recria uma regra existente.
+
+3. Repita exatamente o comando de aplicação do passo 2.
+
+   Confira: `changed=0`, sem novas escritas na API ou novo snapshot. Consulte
+   também a regra pela identidade humana:
+
+   ```bash
+   tea api --login forgejo --method GET repos/nextlevelcode/infra/branch_protections/main
+   ```
+
+   Essa leitura confirma a configuração; a eficácia dos bloqueios exige o
+   ensaio abaixo. Mantenha os snapshots fora do Git e registre no PR o SHA,
+   comandos, resultados e limites, sem credenciais.
+
+### Ensaio operacional em branch temporária
+
+Exige autorização própria para criar branches, regra e PR de teste no
+`infra`. Preserve a regra de `main`. O merge desta seção é executado
+manualmente pelo responsável, na branch temporária.
+
+1. Crie uma cópia descartável e duas branches de teste, usando explicitamente
+   a identidade `agent` nos pushes. Primeiro confirme que não existem branches
+   ou regra com os nomes abaixo; se existirem, interrompa e escolha nomes
+   novos em todos os comandos.
+
+   ```bash
+   git remote -v
+   git ls-remote ssh://git@forgejo-lxc:2222/nextlevelcode/infra.git refs/heads/teste-protecao-main refs/heads/teste-protecao-origem
+   tea api --login forgejo --method GET repos/nextlevelcode/infra/branch_protections
+   git clone ssh://git@forgejo-lxc:2222/nextlevelcode/infra.git /tmp/forgejo-ensaio-protecao
+   git -C /tmp/forgejo-ensaio-protecao remote -v
+   git -C /tmp/forgejo-ensaio-protecao switch -c teste-protecao-main origin/main
+   git -C /tmp/forgejo-ensaio-protecao push forgejo-agent:nextlevelcode/infra.git HEAD:refs/heads/teste-protecao-main
+   git -C /tmp/forgejo-ensaio-protecao switch -c teste-protecao-origem
+   test ! -e /tmp/forgejo-ensaio-protecao/teste-protecao.txt
+   printf 'Ensaio temporário de proteção de branch.\n' > /tmp/forgejo-ensaio-protecao/teste-protecao.txt
+   git -C /tmp/forgejo-ensaio-protecao add teste-protecao.txt
+   git -C /tmp/forgejo-ensaio-protecao commit -S -m "Exercite a proteção em branch temporária"
+   git -C /tmp/forgejo-ensaio-protecao push forgejo-agent:nextlevelcode/infra.git HEAD:refs/heads/teste-protecao-origem
+   ```
+
+   Confira: os pushes funcionam como `agent`; o commit de origem está
+   assinado (`git -C /tmp/forgejo-ensaio-protecao log -1 --show-signature`).
+   Falha de conexão, autenticação ou assinatura invalida o controle positivo.
+
+2. A partir de `ansible/`, gere a mesma configuração trocando apenas o nome
+   da regra. O arquivo resultante contém somente dados públicos:
+
+   ```bash
+   python - <<'PY'
+   import json, yaml
+   from pathlib import Path
+   config = yaml.safe_load(Path('vars/forgejo-repositorios.yml').read_text())
+   regra = config['forgejo_repositorios'][0]['rules'][0]
+   assert regra['rule_name'] == 'main'
+   regra['rule_name'] = 'teste-protecao-main'
+   Path('/tmp/forgejo-ensaio-vars.json').write_text(json.dumps(config))
+   PY
+   ansible-playbook -i localhost, playbooks/forgejo-repositorios.yml --ask-vault-pass -e @/tmp/forgejo-ensaio-vars.json --check --diff
+   ansible-playbook -i localhost, playbooks/forgejo-repositorios.yml --ask-vault-pass -e @/tmp/forgejo-ensaio-vars.json -e forgejo_repositorios_aplicar=true
+   ansible-playbook -i localhost, playbooks/forgejo-repositorios.yml --ask-vault-pass -e @/tmp/forgejo-ensaio-vars.json -e forgejo_repositorios_aplicar=true
+   ```
+
+   Confira: criação da regra temporária, depois `changed=0`; a regra de
+   `main` permanece intacta. Revise as diferenças antes da aplicação: o
+   colaborador declarado também pertence ao escopo desta execução.
+
+3. Teste as operações que devem ser recusadas por proteção:
+
+   ```bash
+   git -C /tmp/forgejo-ensaio-protecao push forgejo-agent:nextlevelcode/infra.git HEAD:refs/heads/teste-protecao-main
+   git -C /tmp/forgejo-ensaio-protecao push forgejo-agent:nextlevelcode/infra.git :refs/heads/teste-protecao-main
+   tea pr create --login forgejo-agent --repo nextlevelcode/infra --base teste-protecao-main --head teste-protecao-origem --title 'Teste temporário de proteção' --description 'Ensaio autorizado; destino temporário, sem alteração em main.'
+   tea api --login forgejo-agent --method POST repos/nextlevelcode/infra/pulls/<numero-do-pr>/merge --data '{"Do":"squash"}'
+   ```
+
+   Confira: push e exclusão rejeitados pelo Forgejo; criação do PR permitida;
+   merge pela conta `agent` rejeitado. Substitua `<numero-do-pr>` pelo PR
+   recém-criado. Resposta por proteção/allowlist é a evidência; erro de rede,
+   token, assinatura ou PR sem diferença não comprova bloqueio de merge.
+
+4. Revise e faça o squash merge do PR pela sua conta, manualmente na web.
+   Confira: merge autorizado e commit novo na branch temporária. Só depois
+   teste uma reescrita realmente não fast-forward com a identidade `agent`:
+
+   ```bash
+   git -C /tmp/forgejo-ensaio-protecao push --force forgejo-agent:nextlevelcode/infra.git refs/heads/teste-protecao-main:refs/heads/teste-protecao-main
+   ```
+
+   Confira: o servidor recusa voltar ao commit anterior ao squash. A branch
+   local `teste-protecao-main` ainda aponta para esse commit anterior.
+
+5. Após guardar evidências sanitizadas, remova somente os recursos de teste,
+   pela identidade humana, com autorização para a limpeza:
+
+   ```bash
+   tea api --login forgejo --method DELETE repos/nextlevelcode/infra/branch_protections/teste-protecao-main
+   git -C /tmp/forgejo-ensaio-protecao push origin --delete teste-protecao-main teste-protecao-origem
+   tea api --login forgejo --method GET repos/nextlevelcode/infra/branch_protections/main
+   ```
+
+   Confira: branches e regra temporárias ausentes; `main` conserva a regra
+   original. O PR mergeado permanece como registro. Depois de guardar as
+   evidências, remova o clone e as variáveis temporárias:
+
+   ```bash
+   rm -r /tmp/forgejo-ensaio-protecao
+   rm /tmp/forgejo-ensaio-vars.json
+   ```
+
+   Confira: os dois caminhos não existem mais. Não reutilize os comandos de
+   remoção da regra temporária para excluir a proteção de `main`.
+
+### Recuperação administrativa
+
+Se uma alteração de proteção bloquear o fluxo esperado, interrompa novas
+aplicações. Mantenha uma sessão humana com acesso às configurações. A
+recuperação pode ser feita pela API ou em **Settings → Branches**, com a
+autorização do responsável, mudando somente a regra problemática.
+
+Para restaurar os campos gerenciados de uma regra que já existia, a partir
+de `ansible/`, escolha o snapshot informado na execução:
+
+```bash
+python - <caminho-do-snapshot.json> main <<'PY'
+import json, sys
+from pathlib import Path
+snapshot = json.loads(Path(sys.argv[1]).read_text())
+assert snapshot['repository'] == 'nextlevelcode/infra'
+regra = next(r for r in snapshot['plan']['rules'] if r['name'] == sys.argv[2])
+assert regra['before'] is not None, 'Regra não existia; avaliar a recuperação manualmente.'
+payload = {k: regra['before'][k] for k in regra['after'] if k != 'rule_name'}
+Path('/tmp/forgejo-regra-anterior.json').write_text(json.dumps(payload))
+PY
+tea api --login forgejo --method PATCH repos/nextlevelcode/infra/branch_protections/main --data @/tmp/forgejo-regra-anterior.json
+tea api --login forgejo --method GET repos/nextlevelcode/infra/branch_protections/main
+```
+
+Confira: os campos voltaram aos valores do snapshot; preserve a proteção
+contra push direto. O snapshot de uma criação tem `before: null`: sua
+remoção exige decisão própria; no ensaio, use somente a exclusão da regra
+temporária descrita acima. Se a API estiver indisponível, use a sessão web;
+se faltar acesso, recupere primeiro a conta administrativa pelos procedimentos
+da instância, sem alterar diretamente o banco para contornar a proteção.
+
+Permissões de colaboradores ficam em `plan.collaborators[].before` no mesmo
+snapshot. Confira esse registro antes de restaurar **somente** o usuário
+afetado; para uma associação anterior com `permission: write`:
+
+```bash
+tea api --login forgejo --method PUT repos/nextlevelcode/infra/collaborators/agent --data '{"permission":"write"}'
+tea api --login forgejo --method GET repos/nextlevelcode/infra/collaborators/agent/permission
+```
+
+Se o usuário não era colaborador (`member: false`), remover a associação
+nova é uma operação separada, após revisão e autorização:
+
+```bash
+tea api --login forgejo --method DELETE repos/nextlevelcode/infra/collaborators/agent
+tea api --login forgejo --method GET repos/nextlevelcode/infra/collaborators/agent
+```
+
+Confira: HTTP 404 na associação; acesso de leitura pública pode continuar
+existindo. Atualize o YAML aprovado antes da próxima aplicação para não
+reintroduzir o problema. Registre a recuperação e confira as regras ao final.
+
+### Verificações locais
+
+Sem inventário, vault ou API reais; usa Ansible, Python e PyYAML já
+instalados. Os testes abrem um servidor fictício em `127.0.0.1`, usam token
+fictício e diretórios temporários, encerrados e removidos ao final:
+
+```bash
+ansible-playbook -i localhost, playbooks/forgejo-repositorios.yml -e forgejo_repositorios_vault_file=../roles/forgejo_repositorios/tests/vault.yml --syntax-check
+python roles/forgejo_repositorios/tests/test_api.py -v
+```
+
+Confira: sintaxe aprovada e todos os testes sem skips. Eles verificam
+criação, atualização, idempotência, `--check` sem escritas, preservação de
+itens não gerenciados, snapshot, falhas e ocultação do token nos logs.
+Não comprovam a autorização do Forgejo real nem o bloqueio de push/merge.
+Ambiente sem permissão para sockets precisa liberar somente a execução
+local desse teste; falta de dependência ou socket bloqueado é falha/bloqueio,
+nunca aprovação.
+
 ## Assinatura dos merges
 
 O squash merge de um PR não reaproveita o commit da branch: o Forgejo cria um

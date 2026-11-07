@@ -39,6 +39,12 @@ Os containers **não** estão em arquivo nenhum: aparecem como recursos
 `terraform apply`, ou sem `terraform init` e `terraform login` nesta
 máquina, o grupo `lxc` fica vazio e os playbooks não acham ninguém.
 
+Exceção de inventário: `playbooks/forgejo-repositorios.yml` roda localmente
+com `-i localhost,`, sem consultar o state ou os hosts. Carrega o vault
+explicitamente só para a credencial da API; sintaxe e regressões usam o
+vault fictício do role. `--check` consulta o Forgejo real e não é offline.
+Aplicação exige autorização própria e `forgejo_repositorios_aplicar=true`.
+
 Cada host do grupo `lxc` chega com `ansible_host` (IP fixo na `vmbr1`, a bridge
 só do Proxmox; o SSH salta por ele, `group_vars/lxc/vars.yml`),
 `ansible_user=root`, `ansible_ssh_private_key_file` e `lxc_vmid` — os três
@@ -57,6 +63,7 @@ usadas depois.
 | `playbooks/proxmox.yml` | `proxmox` | host do Proxmox (o notebook): modo de carga da bateria, a `vmbr1` dos LXCs, com NAT, a `vmbr2` do lab, isolada, e o timer que repõe a ACL do `lab@pve` (`docs/proxmox.md`); antes do `terraform apply` |
 | `playbooks/caddy.yml` | `caddy` | binário custom com plugin DNS-01 + Caddyfile + drop-in |
 | `playbooks/forgejo.yml` | `forgejo` | stack do Forgejo + backup Borg |
+| `playbooks/forgejo-repositorios.yml` | `localhost` | colaboradores e proteção de branches pela API; execução própria, fora do `site.yml` |
 | `playbooks/vaultwarden.yml` | `vaultwarden` | stack do Vaultwarden + backup Borg |
 | `playbooks/pi.yml` | `pi_hosts` | base do Pi (LUKS, Docker, redes, disk-guard, watchdog) |
 | `playbooks/gluetun.yml` | `pi_hosts` | gateway VPN do Pi |
@@ -131,6 +138,7 @@ linha.
 | `caddy` | binário custom (DNS-01) + Caddyfile + systemd drop-in; `caddy_caddyfile_template` escolhe o Caddyfile do host (Proxmox, VPS ou Pi); binário amd64 ou arm64 pela arquitetura |
 | `compose_stack` | ciclo do compose de todo role de serviço: diretório (`tasks_from: dir`), render do `compose.yml.j2` de quem chamou, `up` com `pull: missing` ou standby (`docs/padrao-de-role.md`, "Compose") |
 | `forgejo` | compose do Forgejo + Postgres |
+| `forgejo_repositorios` | permissões e proteção pela API, executado na estação de operação |
 | `vaultwarden` | compose do Vaultwarden |
 | `pi_host` | base do Pi: LUKS no crypttab/fstab, `secure-unlock`, Docker com data-root cifrado, redes, disk-guard, watchdog de hardware no systemd (pula LXC) |
 | `secure_links` | symlinks para o LUKS de caminhos fixos que um compose usa fora dele (a stack Arr); recebe `secure_links_paths` |

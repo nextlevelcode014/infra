@@ -1,0 +1,30 @@
+---
+- name: Validar a configuração antes de acessar a API
+  ansible.builtin.assert:
+    that:
+      - (forgejo_repositorios | forgejo_repositorios_validar) | length > 0
+      - >-
+        forgejo_repositorios_api_url is match('^https://[^/@?#]+/api/v1$') or
+        ((forgejo_repositorios_http_local | bool) and
+         forgejo_repositorios_api_url is match('^http://127\.0\.0\.1:[0-9]+/api/v1$'))
+      - ansible_check_mode or (forgejo_repositorios_aplicar | bool)
+    fail_msg: Use HTTPS e --check; aplicação exige forgejo_repositorios_aplicar=true.
+
+- name: Exigir a credencial administrativa do repositório
+  ansible.builtin.assert:
+    that:
+      - forgejo_repositorios_token is string
+      - forgejo_repositorios_token | length > 0
+      - forgejo_repositorios_token != 'CHANGE-ME'
+  no_log: true
+
+- name: Definir o diretório único de recuperação desta execução
+  ansible.builtin.set_fact:
+    forgejo_repositorios_backup_execucao: "{{ forgejo_repositorios_backup_dir }}/{{ now(utc=true, fmt='%Y%m%dT%H%M%S%fZ') }}"
+
+- name: Reconciliar somente os repositórios declarados
+  ansible.builtin.include_tasks: repositorio.yml
+  loop: "{{ forgejo_repositorios }}"
+  loop_control:
+    loop_var: forgejo_repositorios_repo
+    label: "{{ forgejo_repositorios_repo.owner }}/{{ forgejo_repositorios_repo.name }}"

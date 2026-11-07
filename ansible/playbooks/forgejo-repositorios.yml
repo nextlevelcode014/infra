@@ -1,0 +1,12 @@
+---
+# Independente do inventário de máquinas e do deploy da stack.
+- name: Administrar os repositórios do Forgejo pela API
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  become: false
+  vars_files:
+    - ../vars/forgejo-repositorios.yml
+    - "{{ forgejo_repositorios_vault_file | default(playbook_dir ~ '/../inventory/group_vars/all/vault.yml') }}"
+  roles:
+    - forgejo_repositorios

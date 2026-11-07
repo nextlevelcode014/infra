@@ -1,0 +1,3 @@
+---
+# Exclusivo de sintaxe e testes locais; não autentica em serviço real.
+vault_forgejo_repositorios_token: token-ficticio-somente-testes

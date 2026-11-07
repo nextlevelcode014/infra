@@ -59,6 +59,7 @@ fonte (PR, commit ou comentário de onde o motivo foi tirado).
 | [0022](0022-dns-do-adguard-declarado-com-provedores-independentes.md) | DNS do AdGuard declarado, com provedores independentes | Aceita |
 | [0023](0023-dns-publico-dos-lxcs-independente-do-pi.md) | DNS público dos LXCs independente do Pi | Aceita |
 | [0024](0024-contrato-de-evidencias-compartilhado-com-o-lab.md) | Contrato de evidências compartilhado com o lab | Aceita |
+| [0025](0025-permissoes-do-forgejo-aplicadas-por-playbook-local.md) | Permissões do Forgejo aplicadas por playbook local | Aceita |
 
 ## Modelo
 

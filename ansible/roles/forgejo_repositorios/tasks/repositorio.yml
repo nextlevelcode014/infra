@@ -1,0 +1,202 @@
+---
+- name: Definir o endpoint do repositório
+  ansible.builtin.set_fact:
+    forgejo_repositorios_endpoint: "{{ forgejo_repositorios_api_url }}/repos/{{ forgejo_repositorios_repo.owner }}/{{ forgejo_repositorios_repo.name }}"
+
+- name: Consultar e aplicar pela API sem registrar a credencial
+  # uri não suporta check mode: só os GET são forçados a executar em --check.
+  # O guard das mutações abaixo é explícito, e os testes conferem os métodos.
+  module_defaults:
+    ansible.builtin.uri:
+      headers:
+        Authorization: "token {{ forgejo_repositorios_token }}"
+      unredirected_headers: [Authorization]
+      follow_redirects: none
+      use_netrc: false
+      use_proxy: false
+      validate_certs: true
+      timeout: 20
+  block:
+    - name: Conferir acesso administrativo ao repositório existente
+      ansible.builtin.uri:
+        url: "{{ forgejo_repositorios_endpoint }}"
+        method: GET
+        status_code: 200
+      register: forgejo_repositorios_acesso
+      check_mode: false
+      no_log: true
+
+    - name: Exigir permissão administrativa antes de planejar alterações
+      ansible.builtin.assert:
+        that: forgejo_repositorios_acesso.json.permissions.admin | default(false) | bool
+        fail_msg: A credencial não administra o repositório; use o token apropriado.
+
+    - name: Ler as regras existentes
+      ansible.builtin.uri:
+        url: "{{ forgejo_repositorios_endpoint }}/branch_protections"
+        method: GET
+        status_code: 200
+      register: forgejo_repositorios_regras
+      check_mode: false
+      no_log: true
+
+    - name: Consultar a associação dos colaboradores declarados
+      ansible.builtin.uri:
+        url: "{{ forgejo_repositorios_endpoint }}/collaborators/{{ item.key }}"
+        method: GET
+        status_code: [204, 404]
+      loop: "{{ forgejo_repositorios_repo.collaborators | dict2items }}"
+      register: forgejo_repositorios_membros
+      check_mode: false
+      no_log: true
+
+    - name: Consultar a permissão dos usuários declarados
+      ansible.builtin.uri:
+        url: "{{ forgejo_repositorios_endpoint }}/collaborators/{{ item.key }}/permission"
+        method: GET
+        status_code: 200
+      loop: "{{ forgejo_repositorios_repo.collaborators | dict2items }}"
+      register: forgejo_repositorios_permissoes
+      check_mode: false
+      no_log: true
+
+    - name: Comparar somente os campos gerenciados
+      ansible.builtin.set_fact:
+        forgejo_repositorios_plano: >-
+          {{ forgejo_repositorios_repo | forgejo_repositorios_planejar(
+             forgejo_repositorios_regras.json, forgejo_repositorios_membros.results,
+             forgejo_repositorios_permissoes.results) }}
+
+    - name: Apresentar as diferenças de proteção
+      ansible.builtin.debug:
+        msg:
+          regra: "{{ item.name }}"
+          acao: "{{ 'criar' if item.before is none else 'atualizar' }}"
+          campos: "{{ item.fields }}"
+          desejado: "{{ item.after }}"
+      loop: "{{ forgejo_repositorios_plano.rules }}"
+      loop_control:
+        label: "{{ item.name }}"
+      when: item.changed
+      changed_when: ansible_check_mode
+
+    - name: Apresentar as diferenças de colaboradores
+      ansible.builtin.debug:
+        msg:
+          usuario: "{{ item.name }}"
+          antes: "{{ item.before }}"
+          depois: "{{ item.after }}"
+      loop: "{{ forgejo_repositorios_plano.collaborators }}"
+      loop_control:
+        label: "{{ item.name }}"
+      when: item.changed
+      changed_when: ansible_check_mode
+
+    - name: Guardar o estado anterior antes de qualquer escrita na API
+      when:
+        - forgejo_repositorios_plano.changed
+        - not ansible_check_mode
+      block:
+        - name: Preparar o diretório privado de recuperação
+          ansible.builtin.file:
+            path: "{{ forgejo_repositorios_backup_execucao }}"
+            state: directory
+            mode: '0700'
+
+        - name: Salvar regras e permissões gerenciadas sem tokens
+          ansible.builtin.copy:
+            dest: "{{ forgejo_repositorios_backup_execucao }}/{{ forgejo_repositorios_repo.owner }}_{{ forgejo_repositorios_repo.name }}.json"
+            content: >-
+              {{ {'repository': forgejo_repositorios_repo.owner ~ '/' ~ forgejo_repositorios_repo.name,
+                  'plan': forgejo_repositorios_plano} | to_nice_json }}
+            mode: '0600'
+            force: false
+
+        - name: Informar onde recuperar o estado anterior
+          ansible.builtin.debug:
+            msg: "Recuperação: {{ forgejo_repositorios_backup_execucao }}"
+
+    # Proteção antes de conceder escrita a um colaborador novo.
+    - name: Criar as regras ausentes
+      ansible.builtin.uri:
+        url: "{{ forgejo_repositorios_endpoint }}/branch_protections"
+        method: POST
+        body_format: json
+        body: "{{ item.after }}"
+        status_code: 201
+      loop: "{{ forgejo_repositorios_plano.rules }}"
+      when: not ansible_check_mode and item.changed and item.before is none
+      changed_when: true
+      no_log: true
+
+    - name: Atualizar os campos declarados das regras existentes
+      ansible.builtin.uri:
+        url: "{{ forgejo_repositorios_endpoint }}/branch_protections/{{ item.name }}"
+        method: PATCH
+        body_format: json
+        body: "{{ item.after | dict2items | rejectattr('key', 'equalto', 'rule_name') | items2dict }}"
+        status_code: 200
+      loop: "{{ forgejo_repositorios_plano.rules }}"
+      when: not ansible_check_mode and item.changed and item.before is not none
+      changed_when: true
+      no_log: true
+
+    - name: Reconsultar as proteções antes de conceder permissões
+      ansible.builtin.uri:
+        url: "{{ forgejo_repositorios_endpoint }}/branch_protections"
+        method: GET
+        status_code: 200
+      register: forgejo_repositorios_regras_depois
+      when: not ansible_check_mode
+      no_log: true
+
+    - name: Exigir que o Forgejo tenha aplicado as regras
+      ansible.builtin.assert:
+        that: >-
+          not ((forgejo_repositorios_repo | forgejo_repositorios_planejar(
+            forgejo_repositorios_regras_depois.json, forgejo_repositorios_membros.results,
+            forgejo_repositorios_permissoes.results)).rules | selectattr('changed') | list | length > 0)
+        fail_msg: A API não confirmou as proteções; interrompido antes de conceder permissões.
+      when: not ansible_check_mode
+
+    - name: Adicionar ou ajustar somente os colaboradores declarados
+      ansible.builtin.uri:
+        url: "{{ forgejo_repositorios_endpoint }}/collaborators/{{ item.name }}"
+        method: PUT
+        body_format: json
+        body:
+          permission: "{{ item.after }}"
+        status_code: 204
+      loop: "{{ forgejo_repositorios_plano.collaborators }}"
+      when: not ansible_check_mode and item.changed
+      changed_when: true
+      no_log: true
+
+    - name: Reconsultar a associação depois de aplicar
+      ansible.builtin.uri:
+        url: "{{ forgejo_repositorios_endpoint }}/collaborators/{{ item.key }}"
+        method: GET
+        status_code: 204
+      loop: "{{ forgejo_repositorios_repo.collaborators | dict2items }}"
+      when: not ansible_check_mode
+      no_log: true
+
+    - name: Reconsultar as permissões depois de aplicar
+      ansible.builtin.uri:
+        url: "{{ forgejo_repositorios_endpoint }}/collaborators/{{ item.key }}/permission"
+        method: GET
+        status_code: 200
+      loop: "{{ forgejo_repositorios_repo.collaborators | dict2items }}"
+      register: forgejo_repositorios_permissoes_depois
+      when: not ansible_check_mode
+      no_log: true
+
+    - name: Exigir que o Forgejo tenha aplicado as permissões
+      ansible.builtin.assert:
+        that: item.json.permission == item.item.value
+        fail_msg: A API não confirmou a permissão solicitada.
+      loop: "{{ forgejo_repositorios_permissoes_depois.results }}"
+      loop_control:
+        label: "{{ item.item.key }}"
+      when: not ansible_check_mode
+      no_log: true

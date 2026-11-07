@@ -5,8 +5,8 @@
 #   ansible-vault edit inventory/group_vars/all/vault.yml
 #
 # vault.yml fica fora do git (.gitignore). Os nomes das variáveis abaixo são
-# os mesmos usados em inventory/group_vars/all/vars.yml — se renomear aqui,
-# renomee lá também.
+# usados pelos roles ou expostos em inventory/group_vars/all/vars.yml — se
+# renomear aqui, atualize também quem referencia a variável.
 
 # Tailnet e IPs Tailscale. Não são segredo: ficam aqui só para não aparecerem
 # no repo público. vars.yml os expõe como tailnet, proxmox_host,
@@ -29,6 +29,12 @@ vault_tailscale_authkey: "tskey-auth-CHANGE-ME"
 # {{ forgejo_dir }}/docker-compose.yml do container, então use uma senha
 # exclusiva para este stack.
 vault_forgejo_db_password: "CHANGE-ME"
+
+# Token de operação para administrar colaboradores e proteção dos repositórios
+# pela API. Não é o token da conta agent nem o registro do runner.
+# O playbook local carrega o vault explicitamente; não copia o token ao LXC.
+# Escopo e preparação: docs/forgejo.md, "Permissões dos repositórios".
+vault_forgejo_repositorios_token: "CHANGE-ME"
 
 # Chave SSH com que o Forgejo assina os merges que ele mesmo cria (squash
 # dos PRs). É da instância, não de uma pessoa, e não tem passphrase: o
