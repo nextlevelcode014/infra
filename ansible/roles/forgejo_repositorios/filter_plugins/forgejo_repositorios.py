@@ -72,6 +72,16 @@ def validar(repositorios):
     return repositorios
 
 
+def selecionar(repositorios, alvos):
+    validar(repositorios)
+    exigir(isinstance(alvos, list) and all(isinstance(a, str) for a in alvos),
+           'alvos deve ser uma lista de identificadores owner/repo.')
+    exigir(len(alvos) == len(set(alvos)), 'Alvos duplicados.')
+    declarados = {f"{r['owner']}/{r['name']}" for r in repositorios}
+    exigir(not (set(alvos) - declarados), 'Alvo não declarado; confira owner/repo antes de aplicar.')
+    return [r for r in repositorios if not alvos or f"{r['owner']}/{r['name']}" in alvos]
+
+
 def planejar(repo, regras, membros, permissoes):
     """Considera só os itens declarados e preserva os demais campos/regras."""
     validar([repo])
@@ -117,4 +127,8 @@ def planejar(repo, regras, membros, permissoes):
 
 class FilterModule:
     def filters(self):
-        return {'forgejo_repositorios_validar': validar, 'forgejo_repositorios_planejar': planejar}
+        return {
+            'forgejo_repositorios_validar': validar,
+            'forgejo_repositorios_selecionar': selecionar,
+            'forgejo_repositorios_planejar': planejar,
+        }

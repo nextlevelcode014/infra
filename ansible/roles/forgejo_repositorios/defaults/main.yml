@@ -2,6 +2,8 @@
 forgejo_repositorios_api_url: https://forge.nextlevelcode.pro/api/v1
 forgejo_repositorios_token: "{{ vault_forgejo_repositorios_token }}"
 forgejo_repositorios: []
+# Lista de owner/repo; vazia seleciona todos os declarados. Alvo desconhecido falha.
+forgejo_repositorios_alvos: []
 forgejo_repositorios_aplicar: false
 forgejo_repositorios_backup_dir: "{{ lookup('env', 'HOME') }}/.local/state/forgejo-repositorios"
 # Exclusivo dos testes com API fictícia em loopback; TLS permanece validado.

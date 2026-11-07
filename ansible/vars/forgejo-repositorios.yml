@@ -1,11 +1,11 @@
 ---
-# Somente o infra nesta etapa. O lab será incluído depois da validação.
+# Política compartilhada; aplicação pode selecionar um repositório por vez.
 forgejo_repositorios:
   - owner: nextlevelcode
     name: infra
     collaborators:
       agent: write
-    rules:
+    rules: &protecao_main
       - rule_name: main
         enable_push: false
         enable_push_whitelist: false
@@ -30,3 +30,8 @@ forgejo_repositorios:
         protected_file_patterns: ''
         unprotected_file_patterns: ''
         apply_to_admins: true
+  - owner: nextlevelcode
+    name: lab
+    collaborators:
+      agent: write
+    rules: *protecao_main

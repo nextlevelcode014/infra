@@ -2,7 +2,7 @@
 - name: Validar a configuração antes de acessar a API
   ansible.builtin.assert:
     that:
-      - (forgejo_repositorios | forgejo_repositorios_validar) | length > 0
+      - (forgejo_repositorios | forgejo_repositorios_selecionar(forgejo_repositorios_alvos)) | length > 0
       - >-
         forgejo_repositorios_api_url is match('^https://[^/@?#]+/api/v1$') or
         ((forgejo_repositorios_http_local | bool) and
@@ -24,7 +24,7 @@
 
 - name: Reconciliar somente os repositórios declarados
   ansible.builtin.include_tasks: repositorio.yml
-  loop: "{{ forgejo_repositorios }}"
+  loop: "{{ forgejo_repositorios | forgejo_repositorios_selecionar(forgejo_repositorios_alvos) }}"
   loop_control:
     loop_var: forgejo_repositorios_repo
     label: "{{ forgejo_repositorios_repo.owner }}/{{ forgejo_repositorios_repo.name }}"

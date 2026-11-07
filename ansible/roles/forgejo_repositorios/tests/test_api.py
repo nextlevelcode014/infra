@@ -8,6 +8,7 @@ from pathlib import Path
 import subprocess
 import tempfile
 import threading
+from types import SimpleNamespace
 import unittest
 
 import yaml
@@ -19,12 +20,21 @@ ROLE = Path(__file__).resolve().parents[1]
 SPEC = importlib.util.spec_from_file_location('planejamento', ROLE / 'filter_plugins/forgejo_repositorios.py')
 planejamento = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(planejamento)
-DESEJADO = yaml.safe_load((ANSIBLE / 'vars/forgejo-repositorios.yml').read_text())['forgejo_repositorios'][0]
+REPOSITORIOS = yaml.safe_load((ANSIBLE / 'vars/forgejo-repositorios.yml').read_text())['forgejo_repositorios']
+DESEJADO = next(r for r in REPOSITORIOS if r['name'] == 'infra')
+LAB = next(r for r in REPOSITORIOS if r['name'] == 'lab')
 PREFIXO = '/api/v1/repos/nextlevelcode/infra'
 TOKEN = 'token-ficticio-somente-testes'
 
 
 class PlanejamentoTest(unittest.TestCase):
+    def test_selecao_explicita_recusa_alvo_inexistente_ou_ambiguo(self):
+        self.assertEqual(planejamento.selecionar(REPOSITORIOS, ['nextlevelcode/lab']), [LAB])
+        self.assertEqual(planejamento.selecionar(REPOSITORIOS, []), REPOSITORIOS)
+        for alvos in ['lab', ['nextlevelcode/inexistente'], ['nextlevelcode/lab'] * 2, [None]]:
+            with self.subTest(alvos=alvos), self.assertRaises(AnsibleFilterError):
+                planejamento.selecionar(REPOSITORIOS, alvos)
+
     def test_recusa_configuracao_ambigua_ou_incorreta(self):
         for campo, valor in [('enable_push', 'false'), ('required_approvals', True),
                              ('rule_name', '../main'), ('campo_futuro', True)]:
@@ -67,35 +77,40 @@ class ApiFicticia(BaseHTTPRequestHandler):
         api.chamadas.append((self.command, self.path))
         if self.headers.get('Authorization') != f'token {TOKEN}':
             return self.responder(401, {'message': TOKEN})
-        rota = self.path.removeprefix(PREFIXO)
-        if not self.path.startswith(PREFIXO):
+        partes = self.path.split('/')
+        if partes[:5] != ['', 'api', 'v1', 'repos', 'nextlevelcode'] or len(partes) < 6:
             return self.responder(404)
+        nome = partes[5]
+        estado = api.repositorios.get(nome)
+        if estado is None:
+            return self.responder(404)
+        rota = '/' + '/'.join(partes[6:]) if len(partes) > 6 else ''
         if self.command == 'GET':
             if rota == '':
-                return self.responder(200, {'permissions': {'admin': api.admin}})
+                return self.responder(200, {'permissions': {'admin': estado.admin}})
             if rota == '/branch_protections':
-                return self.responder(200, list(api.regras.values()))
+                return self.responder(200, list(estado.regras.values()))
             if rota.startswith('/collaborators/'):
                 usuario = rota.split('/')[2]
                 if rota.endswith('/permission'):
-                    return self.responder(200, {'permission': api.membros.get(usuario, 'read')})
-                return self.responder(204 if usuario in api.membros else 404)
+                    return self.responder(200, {'permission': estado.membros.get(usuario, 'read')})
+                return self.responder(204 if usuario in estado.membros else 404)
             return self.responder(404)
         corpo = json.loads(self.rfile.read(int(self.headers.get('Content-Length', 0))))
-        api.snapshots_antes_de_escrever.append(bool(list(api.backup.glob('*/*.json'))))
-        if api.negar:
+        api.snapshots_antes_de_escrever.append(bool(list(api.backup.glob(f'*/nextlevelcode_{nome}.json'))))
+        if estado.negar:
             return self.responder(403, {'message': f'Erro fictício com segredo: {TOKEN}'})
         if self.command == 'POST' and rota == '/branch_protections':
-            if not api.ignorar:
-                api.regras[corpo['rule_name']] = corpo
+            if not estado.ignorar:
+                estado.regras[corpo['rule_name']] = corpo
             return self.responder(201, corpo)
         if self.command == 'PATCH' and rota.startswith('/branch_protections/'):
             nome = rota.split('/')[2]
-            api.regras[nome].update(corpo)
-            return self.responder(200, api.regras[nome])
+            estado.regras[nome].update(corpo)
+            return self.responder(200, estado.regras[nome])
         if self.command == 'PUT' and rota.startswith('/collaborators/'):
-            if not api.ignorar_colaborador:
-                api.membros[rota.split('/')[2]] = corpo['permission']
+            if not estado.ignorar_colaborador:
+                estado.membros[rota.split('/')[2]] = corpo['permission']
             return self.responder(204)
         return self.responder(404)
 
@@ -111,13 +126,13 @@ class PlaybookTest(unittest.TestCase):
         self.addCleanup(self.tmp.cleanup)
         self.raiz = Path(self.tmp.name)
         self.api = ThreadingHTTPServer(('127.0.0.1', 0), ApiFicticia)
-        self.api.regras = {}
-        self.api.membros = {'outro': 'read'}
+        def novo_estado():
+            return SimpleNamespace(regras={}, membros={'outro': 'read'}, admin=True,
+                                   negar=False, ignorar=False, ignorar_colaborador=False)
+        self.infra = novo_estado()
+        self.lab = novo_estado()
+        self.api.repositorios = {'infra': self.infra, 'lab': self.lab}
         self.api.chamadas = []
-        self.api.admin = True
-        self.api.negar = False
-        self.api.ignorar = False
-        self.api.ignorar_colaborador = False
         self.api.backup = self.raiz / 'backup'
         self.api.snapshots_antes_de_escrever = []
         self.thread = threading.Thread(target=self.api.serve_forever, daemon=True)
@@ -136,6 +151,7 @@ class PlaybookTest(unittest.TestCase):
             'forgejo_repositorios_vault_file': str(ROLE / 'tests/vault.yml'),
             'forgejo_repositorios_backup_dir': str(self.raiz / 'backup'),
             'forgejo_repositorios_aplicar': aplicar,
+            'forgejo_repositorios_alvos': ['nextlevelcode/infra'],
             **(extras or {}),
         }
         arquivo = self.raiz / 'variaveis.json'
@@ -172,8 +188,8 @@ class PlaybookTest(unittest.TestCase):
         self.assertFalse((self.raiz / 'backup').exists())
         self.executar()
         self.assertEqual(self.escritas(), ['POST', 'PUT'])
-        self.assertEqual(self.api.regras['main'], DESEJADO['rules'][0])
-        self.assertEqual(self.api.membros, {'outro': 'read', 'agent': 'write'})
+        self.assertEqual(self.infra.regras['main'], DESEJADO['rules'][0])
+        self.assertEqual(self.infra.membros, {'outro': 'read', 'agent': 'write'})
         backups = list((self.raiz / 'backup').glob('*/*.json'))
         self.assertEqual(len(backups), 1)
         self.assertEqual(backups[0].stat().st_mode & 0o777, 0o600)
@@ -192,49 +208,82 @@ class PlaybookTest(unittest.TestCase):
     def test_corrige_drift_e_preserva_o_que_nao_gerencia(self):
         atual = copy.deepcopy(DESEJADO['rules'][0])
         atual.update(enable_push=True, campo_futuro='preservar')
-        self.api.regras = {'main': atual, 'outra': {'rule_name': 'outra', 'enable_push': True}}
-        self.api.membros['agent'] = 'admin'
+        self.infra.regras = {'main': atual, 'outra': {'rule_name': 'outra', 'enable_push': True}}
+        self.infra.membros['agent'] = 'admin'
         self.executar(check=True)
         self.assertFalse(self.escritas())
-        self.assertTrue(self.api.regras['main']['enable_push'])
+        self.assertTrue(self.infra.regras['main']['enable_push'])
         self.executar()
         self.assertEqual(self.escritas(), ['PATCH', 'PUT'])
-        self.assertFalse(self.api.regras['main']['enable_push'])
-        self.assertEqual(self.api.regras['main']['campo_futuro'], 'preservar')
-        self.assertTrue(self.api.regras['outra']['enable_push'])
-        self.assertEqual(self.api.membros['agent'], 'write')
+        self.assertFalse(self.infra.regras['main']['enable_push'])
+        self.assertEqual(self.infra.regras['main']['campo_futuro'], 'preservar')
+        self.assertTrue(self.infra.regras['outra']['enable_push'])
+        self.assertEqual(self.infra.membros['agent'], 'write')
 
     def test_falha_http_interrompe_antes_de_conceder_acesso(self):
-        self.api.negar = True
+        self.infra.negar = True
         self.executar(sucesso=False)
         self.assertEqual(self.escritas(), ['POST'])
-        self.assertNotIn('agent', self.api.membros)
+        self.assertNotIn('agent', self.infra.membros)
         self.assertEqual(len(list((self.raiz / 'backup').glob('*/*.json'))), 1)
 
     def test_detecta_sucesso_http_sem_aplicacao_da_regra(self):
-        self.api.ignorar = True
+        self.infra.ignorar = True
         self.executar(sucesso=False)
         self.assertEqual(self.escritas(), ['POST'])
-        self.assertNotIn('agent', self.api.membros)
+        self.assertNotIn('agent', self.infra.membros)
 
     def test_recusa_credencial_sem_acesso_administrativo(self):
-        self.api.admin = False
+        self.infra.admin = False
         self.executar(check=True, sucesso=False)
         self.assertEqual(self.api.chamadas, [('GET', PREFIXO)])
 
     def test_detecta_sucesso_http_sem_aplicacao_da_permissao(self):
-        self.api.regras['main'] = copy.deepcopy(DESEJADO['rules'][0])
-        self.api.membros['agent'] = 'read'
-        self.api.ignorar_colaborador = True
+        self.infra.regras['main'] = copy.deepcopy(DESEJADO['rules'][0])
+        self.infra.membros['agent'] = 'read'
+        self.infra.ignorar_colaborador = True
         self.executar(sucesso=False)
         self.assertEqual(self.escritas(), ['PUT'])
-        self.assertEqual(self.api.membros['agent'], 'read')
+        self.assertEqual(self.infra.membros['agent'], 'read')
 
     def test_aplicacao_sem_confirmacao_e_configuracao_invalida_nao_acessam_api(self):
         self.executar(aplicar=False, sucesso=False)
         self.executar(extras={'forgejo_repositorios_token': 'CHANGE-ME'}, sucesso=False)
         self.executar(extras={'forgejo_repositorios_api_url': 'http://example.invalid/api/v1'}, sucesso=False)
+        self.executar(extras={'forgejo_repositorios_alvos': ['nextlevelcode/inexistente']}, sucesso=False)
         self.assertFalse(self.api.chamadas)
+
+    def test_seleciona_lab_sem_consultar_ou_corrigir_infra_com_drift(self):
+        self.infra.regras['main'] = {'rule_name': 'main', 'enable_push': True}
+        self.infra.membros['agent'] = 'admin'
+        antes = copy.deepcopy(vars(self.infra))
+        extras = {'forgejo_repositorios_alvos': ['nextlevelcode/lab']}
+        self.executar(check=True, extras=extras)
+        self.assertFalse(self.escritas())
+        self.executar(extras=extras)
+        self.assertEqual(self.lab.regras['main'], LAB['rules'][0])
+        self.assertEqual(self.lab.membros['agent'], 'write')
+        self.assertEqual(vars(self.infra), antes)
+        self.assertTrue(all(path.startswith('/api/v1/repos/nextlevelcode/lab')
+                            for _, path in self.api.chamadas))
+        arquivos = list((self.raiz / 'backup').glob('*/*.json'))
+        self.assertEqual([p.name for p in arquivos], ['nextlevelcode_lab.json'])
+        self.api.chamadas.clear()
+        self.assertIn('changed=0', self.executar(extras=extras))
+        self.assertFalse(self.escritas())
+
+    def test_aplica_dois_repositorios_com_estados_e_snapshots_independentes(self):
+        extras = {'forgejo_repositorios_alvos': []}
+        self.executar(extras=extras)
+        self.assertEqual(self.escritas(), ['POST', 'PUT', 'POST', 'PUT'])
+        self.assertEqual(self.infra.regras['main'], DESEJADO['rules'][0])
+        self.assertEqual(self.lab.regras['main'], LAB['rules'][0])
+        arquivos = list((self.raiz / 'backup').glob('*/*.json'))
+        self.assertEqual({p.name for p in arquivos}, {'nextlevelcode_infra.json', 'nextlevelcode_lab.json'})
+        self.assertTrue(all(self.api.snapshots_antes_de_escrever))
+        self.api.chamadas.clear()
+        self.assertIn('changed=0', self.executar(extras=extras))
+        self.assertFalse(self.escritas())
 
 
 if __name__ == '__main__':

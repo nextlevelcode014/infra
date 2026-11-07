@@ -44,6 +44,8 @@ com `-i localhost,`, sem consultar o state ou os hosts. Carrega o vault
 explicitamente só para a credencial da API; sintaxe e regressões usam o
 vault fictício do role. `--check` consulta o Forgejo real e não é offline.
 Aplicação exige autorização própria e `forgejo_repositorios_aplicar=true`.
+`forgejo_repositorios_alvos` seleciona uma lista explícita de `owner/repo`;
+vazia processa todos os declarados, e alvo inexistente interrompe antes da API.
 
 Cada host do grupo `lxc` chega com `ansible_host` (IP fixo na `vmbr1`, a bridge
 só do Proxmox; o SSH salta por ele, `group_vars/lxc/vars.yml`),
