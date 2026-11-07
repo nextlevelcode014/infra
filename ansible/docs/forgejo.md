@@ -217,13 +217,65 @@ Restore: `docs/forgejo-restore.md`.
 
 ## Operação
 
-- **Atualizar:** as duas imagens têm versão exata (`forgejo_image` e
-  `forgejo_db_image`, no `defaults` do role), porque o Forgejo migra o banco
-  ao subir e a migração não volta atrás. Para subir: ler as notas da versão,
-  conferir que o monitor *Backup Forgejo* está verde, trocar a variável e
-  reaplicar o `forgejo.yml` (no Pi, o `pi-recuperacao.yml`). Reaplicar sem
-  trocar a variável não muda a versão.
 - **Monitores:** *Forgejo* (`/api/healthz` pelo domínio público, o único
   caminho que o Anubis libera sem desafio) e *Forgejo (SSH)* (porta 2222 em
   `forgejo_tailscale_ip`).
 - **Proxmox fora:** o Pi assume, `docs/pi-recuperacao.md`.
+
+### Atualizar o Forgejo no LXC
+
+Faça em janela autorizada, com os usuários avisados para suspender escritas
+até a verificação. O Forgejo migra o banco na primeira subida. Os passos
+ficam manuais para conferir o backup antes da migração e permitir que o
+responsável decida se o serviço pode voltar a receber escritas.
+
+1. Confira as notas das versões envolvidas e o
+   [guia de atualização](https://forgejo.org/docs/latest/admin/upgrade/).
+   No LXC, esvazie a fila e gere um archive novo com o servidor parado
+   e o PostgreSQL ativo. O borgmatic volta a subir a stack antiga ao terminar.
+
+   ```bash
+   sudo docker exec forgejo forgejo manager flush-queues
+   sudo docker compose -f /opt/forgejo/compose.yml stop server
+   sudo borgmatic -c /etc/borgmatic/forgejo.yaml create --verbosity 1 --stats
+   sudo borgmatic -c /etc/borgmatic/forgejo.yaml repo-list
+   ```
+
+   Confira o sucesso do backup e anote o archive `forgejo-*` da janela.
+   Se falhar, interrompa a atualização e confira se a stack antiga voltou
+   com `sudo docker compose -f /opt/forgejo/compose.yml ps`.
+
+2. Fixe a versão da imagem em `forgejo_image`, nos defaults do role.
+   Mantenha também a imagem do PostgreSQL fixada em `forgejo_db_image`.
+   Após o merge, no diretório `ansible/`, aplique no LXC Forgejo.
+
+   ```bash
+   ansible-playbook playbooks/forgejo.yml --ask-vault-pass --limit forgejo
+   ```
+
+3. No LXC, confira versão, saúde, migrações e diagnóstico. No clone do
+   `infra`, rode `git remote -v` e `git ls-remote --exit-code origin refs/heads/main`
+   para conferir a leitura por SSH. Confira também a escrita com `git push`
+   na branch do PR, usando um commit da mudança. Na web, abra o PR e a aba Actions.
+
+   ```bash
+   sudo docker exec forgejo forgejo --version
+   sudo docker logs --tail 100 forgejo
+   sudo docker exec forgejo sh -ec '
+     forgejo doctor check --config "${GITEA_APP_INI:?}" --default --log-file /tmp/doctor.log
+   '
+   sudo docker exec forgejo cat /tmp/doctor.log
+   ```
+
+   Da estação de trabalho, confira o endpoint público.
+
+   ```bash
+   curl -fsS https://forge.nextlevelcode.pro/api/healthz
+   ```
+
+4. Se a migração falhar, siga [o runbook de restore](forgejo-restore.md) com
+   o código anterior à atualização e confira se o restore selecionará o
+   archive anotado antes de confirmar. Restaurar repõe banco e arquivos em
+   conjunto. Combine a recuperação com o responsável antes de aceitar escritas.
+
+Para atualizar a contingência no Pi, siga [o runbook do Pi](pi-recuperacao.md).

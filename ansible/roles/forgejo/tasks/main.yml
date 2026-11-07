@@ -46,6 +46,8 @@
   loop:
     - forgejo
     - forgejo/conf
+    - forgejo/data
+    - forgejo/data/log
     - forgejo/signing
 
 # Chave da assinatura dos merges (docs/forgejo.md). O Forgejo procura a
