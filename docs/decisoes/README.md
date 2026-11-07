@@ -58,6 +58,7 @@ fonte (PR, commit ou comentário de onde o motivo foi tirado).
 | [0021](0021-lab-numa-bridge-propria-que-so-sai-para-a-internet.md) | O lab mora numa bridge própria, que só sai para a internet | Aceita |
 | [0022](0022-dns-do-adguard-declarado-com-provedores-independentes.md) | DNS do AdGuard declarado, com provedores independentes | Aceita |
 | [0023](0023-dns-publico-dos-lxcs-independente-do-pi.md) | DNS público dos LXCs independente do Pi | Aceita |
+| [0024](0024-contrato-de-evidencias-compartilhado-com-o-lab.md) | Contrato de evidências compartilhado com o lab | Aceita |
 
 ## Modelo
 

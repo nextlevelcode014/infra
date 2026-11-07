@@ -62,6 +62,10 @@ Nada vai direto para o `main`: branch, PR no Forgejo, squash merge. Passo
 que não dá para automatizar (console, login, token) entra no doc do serviço,
 na ordem em que acontece, com o comando e como conferir.
 
+O [fluxo de mudança e contrato de evidências](docs/fluxo-de-mudanca.md)
+define como escolher verificações pelo risco, registrar resultados e separar
+o merge manual da aplicação nos ambientes.
+
 ## Decisões
 
 O porquê das escolhas que não são óbvias pelo código fica em

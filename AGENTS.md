@@ -36,6 +36,13 @@ segredos continuam fora do Git.
 
 ## Documentação e revisão
 
+- Os critérios para usar `grill-me`, `engineering:debug` e
+  `engineering:code-review` estão em
+  [Uso das skills](docs/fluxo-de-mudanca.md#uso-das-skills). Carregue apenas
+  a skill pertinente; as instruções do projeto continuam sendo a referência.
+- Siga o [fluxo de mudança e contrato de evidências](docs/fluxo-de-mudanca.md):
+  classifique as verificações pelo efeito, identifique o código testado e
+  registre resultados e limites no PR. O merge é manual, feito pelo responsável.
 - Mantenha nos guias as regras e os procedimentos reutilizáveis. Registre
   contexto da mudança, escolhas e resultados de testes no PR. Use ADRs
   para decisões duradouras.
