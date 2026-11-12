@@ -14,6 +14,11 @@
     "hosts": {
         "infra-admin-1": "<ip-tailscale-do-desktop-1>",
         "infra-admin-2": "<ip-tailscale-do-desktop-2>",
+
+        // Piloto da issue #86. Endereços exatos dos dois aparelhos e do LXC.
+        "andbible-teste-1": "<ip-tailscale-do-andbible-teste-1>",
+        "andbible-teste-2": "<ip-tailscale-do-andbible-teste-2>",
+        "lab-andbible":    "<ip-tailscale-do-lab-andbible>",
     },
 
     "grants": [
@@ -81,6 +86,12 @@
             "src": ["infra-admin-1", "infra-admin-2"],
             "dst": ["tag:lab"],
             "ip":  ["*"],
+        },
+        // Aparelhos do piloto: só HTTPS para o LXC descartável do AndBible.
+        {
+            "src": ["andbible-teste-1", "andbible-teste-2"],
+            "dst": ["lab-andbible"],
+            "ip":  ["tcp:443"],
         },
         // CI do lab (GitHub Actions, nó efêmero): só pede deploy ao Coolify de
         // uma máquina do lab. Mais nada, nem SSH.
@@ -312,6 +323,14 @@
                 "tag:caddy:443", "tag:caddy-vps:443",
                 "tag:vps:22",
             ],
+        },
+        {
+            "src":    "andbible-teste-1",
+            "accept": ["lab-andbible:443"],
+        },
+        {
+            "src":    "andbible-teste-2",
+            "accept": ["lab-andbible:443"],
         },
         // O CI do lab chega no Coolify do lab, e em mais nada.
         {
