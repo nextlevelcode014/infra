@@ -8,7 +8,7 @@
 
     "ipsets": {},
 
-    // IPs Tailscale dos desktops de administração. Ficam sem tag (user-owned).
+    // IPs Tailscale dos desktops de administração.
     // O IP real não fica no repo: troque o placeholder ao colar no console
     // (tailscale/README.md).
     "hosts": {
@@ -91,11 +91,11 @@
         },
 
         // --- Caddy do Proxmox -> backends -------------------------------------
-        // Forgejo (3000) e Vaultwarden (8080) nos LXCs.
+        // Forgejo (3000), Vaultwarden (8080) e Bread of Life (4000) nos LXCs.
         {
             "src": ["tag:caddy"],
             "dst": ["tag:proxmox-lxc"],
-            "ip":  ["tcp:3000", "tcp:8080"],
+            "ip":  ["tcp:3000", "tcp:8080", "tcp:4000"],
         },
         // Portas publicadas no IP Tailscale do Pi, uma por rota do Caddyfile.
         {
@@ -259,6 +259,10 @@
     // Rodam a cada save no console: se uma edição reabrir um acesso, o save
     // falha em vez de passar despercebido.
     "tests": [
+        {
+            "src": "infra-admin-1",
+            "deny": ["tag:proxmox-lxc:4000"],
+        },
         // Nós em container (FMD, exit node) não alcançam nada da infra.
         {
             "src": "tag:containers",
@@ -278,7 +282,7 @@
         // O Caddy do Proxmox alcança os backends, e só eles.
         {
             "src":    "tag:caddy",
-            "accept": ["tag:pi:6868", "tag:pi:11000", "tag:proxmox-lxc:3000", "tag:proxmox-lxc:8080"],
+            "accept": ["tag:pi:6868", "tag:pi:11000", "tag:proxmox-lxc:3000", "tag:proxmox-lxc:8080", "tag:proxmox-lxc:4000"],
             "deny":   ["tag:pi:22", "tag:pi:53", "tag:proxmox:8006"],
         },
         // O Caddy público só chega no Forgejo; o Vaultwarden não é público,
@@ -286,7 +290,7 @@
         {
             "src":    "tag:caddy-vps",
             "accept": ["tag:forgejo:3000"],
-            "deny":   ["tag:proxmox-lxc:8080", "tag:pi:3000", "tag:pi:8083", "tag:pi:8096"],
+            "deny":   ["tag:proxmox-lxc:8080", "tag:proxmox-lxc:4000", "tag:pi:3000", "tag:pi:8083", "tag:pi:8096"],
         },
         // O monitor alcança o que monitora, e não administra nada.
         {
@@ -299,7 +303,7 @@
         {
             "src":    "tag:pi",
             "accept": ["tag:caddy:443", "tag:caddy-vps:443"],
-            "deny":   ["tag:proxmox:22", "tag:proxmox-lxc:22", "tag:vps:22"],
+            "deny":   ["tag:proxmox:22", "tag:proxmox-lxc:22", "tag:proxmox-lxc:4000", "tag:vps:22"],
         },
         // O lab não alcança nada da infra.
         {
@@ -307,7 +311,7 @@
             "deny": [
                 "tag:pi:22", "tag:pi:53", "tag:pi:2222",
                 "tag:proxmox:22", "tag:proxmox:8006",
-                "tag:proxmox-lxc:22", "tag:proxmox-lxc:8080",
+                "tag:proxmox-lxc:22", "tag:proxmox-lxc:8080", "tag:proxmox-lxc:4000",
                 "tag:forgejo:2222", "tag:forgejo:3000",
                 "tag:caddy:443", "tag:caddy-vps:443",
                 "tag:vps:22",

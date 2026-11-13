@@ -25,6 +25,13 @@ vault_proxmox_token_secret: "CHANGE-ME"
 # https://login.tailscale.com/admin/settings/oauth
 vault_tailscale_authkey: "tskey-auth-CHANGE-ME"
 
+# Segredo estável de assinatura dos tokens. Gere com openssl rand -hex 32.
+vault_bread_of_life_token_secret: "CHANGE-ME"
+
+# IPs Tailscale exatos dos clientes. Inclua IPv4 e IPv6 se usados no acesso.
+# Lista vazia mantém a rota do Bread of Life fechada no Caddy.
+vault_bread_of_life_client_ips: []
+
 # Senha do Postgres do Forgejo. Vai parar em texto no
 # {{ forgejo_dir }}/docker-compose.yml do container, então use uma senha
 # exclusiva para este stack.

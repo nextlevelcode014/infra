@@ -40,7 +40,7 @@ nome do nó antes: o nome MagicDNS pode diferir do hostname.
 | Raspberry Pi (o host) | `tag:pi` |
 | Proxmox (hypervisor) | `tag:proxmox` |
 | LXC do Caddy | `tag:caddy` |
-| LXCs do Forgejo e do Vaultwarden | `tag:proxmox-lxc`; o do Forgejo também `tag:forgejo` |
+| LXCs do Forgejo, do Vaultwarden e do Bread of Life | `tag:proxmox-lxc`; o do Forgejo também `tag:forgejo` |
 | VPS | `tag:vps`, `tag:caddy-vps` |
 | Nós Tailscale em container (sidecar do FMD, exit node) | `tag:containers`; o FMD também `tag:public` (Funnel) |
 | Máquinas do repo `lab` | `tag:lab`, pela auth key efêmera (não se aplica à mão) |

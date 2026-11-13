@@ -1,0 +1,6 @@
+---
+- name: Configurar Bread of Life
+  hosts: "bread-of-life:&lxc:!staging"
+  gather_facts: true
+  roles:
+    - bread_of_life

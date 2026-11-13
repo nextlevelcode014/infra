@@ -1,0 +1,11 @@
+---
+bread_of_life_dir: /opt/bread-of-life
+bread_of_life_data_dir: "{{ bread_of_life_dir }}/data"
+
+# Release dos clientes v0.5.2. O servidor desse commit declara 0.5.0.
+bread_of_life_source_commit: 2f3a5fc35c7f6477fd5f138f83e635cb59aa434e
+bread_of_life_source_sha256: c8e29b207359b6e1c13092aacace26cfd7ba75ef45e0dd1232a63d6450814508
+bread_of_life_image: "docker.io/library/node:24-slim@sha256:dc26ae92c9fb15cf6b1d63e20f0944b2efe0f115b20e00be48fb23fceb061c54"
+bread_of_life_token_secret: "{{ vault_bread_of_life_token_secret }}"
+# O Docker publica somente na interface Tailscale. A ACL libera o Caddy.
+bread_of_life_bind_ip: "{{ ansible_facts['tailscale0']['ipv4']['address'] }}"

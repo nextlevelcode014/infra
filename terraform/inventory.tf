@@ -49,3 +49,16 @@ resource "ansible_host" "pi_lab" {
     lxc_vmid                     = module.pi_lab.vm_id
   }
 }
+
+resource "ansible_host" "bread_of_life" {
+  name   = "bread-of-life"
+  groups = ["lxc"]
+
+  depends_on = [module.bread_of_life]
+  variables = {
+    ansible_host                 = module.bread_of_life.ip_address
+    ansible_user                 = "root"
+    ansible_ssh_private_key_file = "~/.ssh/id_ed25519.pub"
+    lxc_vmid                     = module.bread_of_life.vm_id
+  }
+}

@@ -16,6 +16,19 @@
         reverse_proxy vaultwarden-lxc:8080
     }
 
+    @bread_of_life host bread-of-life.{{ caddy_domain }}
+    handle @bread_of_life {
+{% if caddy_bread_of_life_client_ips %}
+        @bread_of_life_clientes remote_ip {{ caddy_bread_of_life_client_ips | join(' ') }}
+        handle @bread_of_life_clientes {
+            reverse_proxy bread-of-life-lxc:4000
+        }
+{% endif %}
+        handle {
+            respond 403
+        }
+    }
+
     # --- Raspberry Pi: portas publicadas no IP Tailscale (caddy_lab_pi_routes) ---
 {% for route in caddy_lab_pi_routes %}
 

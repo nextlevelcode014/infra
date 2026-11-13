@@ -4,6 +4,7 @@
 #   forgejo      -> vmid 201 -> 10.50.0.201
 #   vaultwarden  -> vmid 202 -> 10.50.0.202
 #   pi-lab       -> vmid 203 -> 10.50.0.203  (staging do Raspberry Pi)
+#   bread-of-life -> vmid 204 -> 10.50.0.204
 # O Ansible consome isso pelo grupo "lxc" (ver inventory.tf).
 
 module "caddy" {
@@ -84,6 +85,25 @@ module "pi_lab" {
   # Faz o papel do volume LUKS do Pi (/mnt/secure), onde ficam os dados dos
   # serviços e o data-root do Docker.
   mount_points = [{ path = "/mnt/secure", size = "20G" }]
+}
+
+module "bread_of_life" {
+  source           = "./modules/lxc"
+  node_name        = var.node_name
+  vm_id            = 204
+  hostname         = "bread-of-life"
+  ip_address       = "10.50.0.204/24"
+  bridge           = local.lxc_bridge
+  gateway          = local.lxc_gateway
+  cores            = 1
+  memory           = 1024
+  disk_size        = 8
+  datastore_id     = "local-lvm"
+  template_file_id = local.ubuntu_template
+  template_type    = local.template_type
+  dns_servers      = local.dns_servers
+  ssh_public_key   = local.ssh_public_key
+  nesting          = true
 }
 
 output "caddy" {

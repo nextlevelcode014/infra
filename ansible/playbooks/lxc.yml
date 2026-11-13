@@ -5,13 +5,20 @@
 - name: Aplicar flags do LXC
   hosts: proxmox
   gather_facts: false
+  vars:
+    lxc_flags_hosts: "{{ lxc_flags_alvos | default(groups['lxc']) }}"
   tasks:
+    - name: Validar os alvos das flags
+      ansible.builtin.assert:
+        that:
+          - lxc_flags_hosts | type_debug == 'list'
+          - lxc_flags_hosts | difference(groups['lxc']) | length == 0
     - name: Garantir keyctl no container
       ansible.builtin.include_role:
         name: lxc_flags
       vars:
         lxc_vmid: "{{ hostvars[item].lxc_vmid }}"
-      loop: "{{ groups['lxc'] }}"
+      loop: "{{ lxc_flags_hosts }}"
 
 # pi_hosts fica de fora: o pi-lab é LXC, mas se passa pelo Raspberry Pi e
 # recebe a base dele (playbooks/pi.yml) — sem Tailscale, com o Docker do Pi.

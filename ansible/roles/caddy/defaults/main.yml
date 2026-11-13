@@ -17,6 +17,9 @@ caddy_upgrade: false
 # nela; o do Pi (Caddyfile.pi.j2) é a reserva do *.lab quando o Proxmox cai.
 caddy_caddyfile_template: Caddyfile.j2
 
+# Lista de IPs Tailscale dos clientes autorizados no Caddy do Proxmox.
+caddy_bread_of_life_client_ips: "{{ vault_bread_of_life_client_ips | default([]) }}"
+
 # Token da Cloudflare do DNS-01. Cada Caddy tem o seu: dá para revogar um sem
 # derrubar o outro, e a auditoria da Cloudflare mostra qual deles agiu. A VPS
 # sobrescreve com vault_caddy_vps_cloudflare_token (group_vars/vps), e o Pi

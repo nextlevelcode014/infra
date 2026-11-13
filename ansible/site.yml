@@ -24,6 +24,7 @@
 - import_playbook: playbooks/caddy.yml
 - import_playbook: playbooks/forgejo.yml
 - import_playbook: playbooks/vaultwarden.yml
+- import_playbook: playbooks/bread-of-life.yml
 - import_playbook: playbooks/pi.yml
 - import_playbook: playbooks/gluetun.yml
 - import_playbook: playbooks/arr-stack.yml

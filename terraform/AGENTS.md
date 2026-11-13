@@ -28,12 +28,13 @@ Todo container gerenciado aqui usa a **faixa 200-299**, e hostname, VMID e
 | forgejo | 201 | 10.50.0.201 | git + CI |
 | vaultwarden | 202 | 10.50.0.202 | senhas |
 | pi-lab | 203 | 10.50.0.203 | staging do Raspberry Pi: grupos `staging` + `pi_staging`, volume `/mnt/secure` no papel do LUKS |
+| bread-of-life | 204 | 10.50.0.204 | sincronização privada do Bread of Life |
 
 `pi_staging` fica sob `pi_hosts` no Ansible, o grupo que recebe os playbooks
 do Raspberry Pi.
 
 O módulo `lxc` **valida** a faixa e falha o plano se você sair dela. Próximo
-container livre: `204`.
+container livre: `205`.
 
 Rede padrão (`local.tf`): bridge `vmbr1`, só do Proxmox, gateway
 `10.50.0.1` (o próprio Proxmox, com NAT para fora), bootstrap DNS4EU Unfiltered

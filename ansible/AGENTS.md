@@ -67,6 +67,7 @@ usadas depois.
 | `playbooks/forgejo.yml` | `forgejo` | stack do Forgejo + backup Borg |
 | `playbooks/forgejo-repositorios.yml` | `localhost` | colaboradores e proteção de branches pela API; execução própria, fora do `site.yml` |
 | `playbooks/vaultwarden.yml` | `vaultwarden` | stack do Vaultwarden + backup Borg |
+| `playbooks/bread-of-life.yml` | `bread-of-life` | sincronização Bread of Life, com HTTPS pelo Caddy do Proxmox |
 | `playbooks/pi.yml` | `pi_hosts` | base do Pi (LUKS, Docker, redes, disk-guard, watchdog) |
 | `playbooks/gluetun.yml` | `pi_hosts` | gateway VPN do Pi |
 | `playbooks/arr-stack.yml` | `pi_hosts` | stack Arr do Pi + backup Borg |
@@ -92,6 +93,10 @@ A config base (em `lxc.yml`) é `common` → `artis3n.tailscale.machine` →
 `geerlingguy.docker`, aplicada ao grupo `lxc` menos `pi_hosts`. O `pi-lab` é
 LXC mas se passa pelo Pi: do `lxc.yml` recebe só as flags. Serviços específicos
 entram em playbook próprio, como Caddy, Forgejo e Vaultwarden já fazem.
+
+Ao preparar um LXC individual, passe `-e '{"lxc_flags_alvos":["<host>"]}'`
+junto com `--limit proxmox,<host>`. O limite seleciona os hosts das plays.
+A lista restringe o loop das flags que roda dentro do Proxmox.
 
 O Pi não passa pela base de `lxc.yml`: é host físico com LUKS em
 `/mnt/secure`. A base dele é o role `pi_host`, e **todo role de serviço do Pi
@@ -142,6 +147,7 @@ linha.
 | `forgejo` | compose do Forgejo + Postgres |
 | `forgejo_repositorios` | permissões e proteção pela API, executado na estação de operação |
 | `vaultwarden` | compose do Vaultwarden |
+| `bread_of_life` | servidor de sincronização do Bread of Life e proxy HTTPS no Tailscale |
 | `pi_host` | base do Pi: LUKS no crypttab/fstab, `secure-unlock`, Docker com data-root cifrado, redes, disk-guard, watchdog de hardware no systemd (pula LXC) |
 | `secure_links` | symlinks para o LUKS de caminhos fixos que um compose usa fora dele (a stack Arr); recebe `secure_links_paths` |
 | `borg_client` | Borg + chave + senha + known_hosts + borgmatic com um timer por host; dependência de todo role com backup/restore. `tasks_from: backup` gera o config de um serviço (`docs/backup.md`) |

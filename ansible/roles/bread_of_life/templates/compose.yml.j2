@@ -1,0 +1,27 @@
+services:
+  sync:
+    image: "{{ bread_of_life_image }}"
+    user: "1000:1000"
+    read_only: true
+    init: true
+    restart: unless-stopped
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 512m
+    cpus: 1.0
+    command: [node, /app/server.mjs]
+    env_file: [sync.env]
+    environment:
+      NODE_ENV: production
+      PORT: "4000"
+      DB_PATH: /app/data/sync.db
+    ports:
+      - "{{ bread_of_life_bind_ip }}:4000:4000"
+    volumes:
+      - "{{ bread_of_life_dir }}/server-{{ bread_of_life_source_commit }}.mjs:/app/server.mjs:ro"
+      - "{{ bread_of_life_data_dir }}:/app/data"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 5

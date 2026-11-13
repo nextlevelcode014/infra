@@ -26,6 +26,7 @@ modelo.
 |---|---|---|---|
 | AdGuard | Pi | `adguard.md` | `adguard-restore.md` |
 | Anubis | VPS | `anubis.md` | — |
+| Bread of Life | LXC | `bread-of-life.md` | issue #89 |
 | Stack Arr | Pi | `arr-stack.md` | `arr-stack-restore.md` |
 | Exit node | Pi | `exit-node.md` | — |
 | FMD | Pi | `fmd.md` | `fmd-restore.md` |

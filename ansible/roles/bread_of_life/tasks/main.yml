@@ -1,0 +1,67 @@
+---
+- name: Validar o segredo de assinatura do vault
+  ansible.builtin.assert:
+    that:
+      - bread_of_life_token_secret is match('^[a-f0-9]{64}$')
+  no_log: true
+
+- name: Conferir identidade Tailscale do LXC
+  ansible.builtin.command:
+    argv: [tailscale, status, --json, --peers=false]
+  register: bread_of_life_tailscale_status
+  changed_when: false
+  check_mode: false
+  no_log: true
+
+- name: Exigir que o LXC esteja conectado com a tag dos LXCs
+  ansible.builtin.assert:
+    that:
+      - bread_of_life_tailscale.BackendState == 'Running'
+      - ansible_facts['tailscale0']['ipv4']['address'] is defined
+      - "bread_of_life_tailscale.Self.Tags | default([], true) == ['tag:proxmox-lxc']"
+    fail_msg: Confira o cadastro do LXC com tag:proxmox-lxc no Tailscale.
+  vars:
+    bread_of_life_tailscale: "{{ bread_of_life_tailscale_status.stdout | from_json }}"
+
+- name: Preparar diretório da stack
+  ansible.builtin.include_role:
+    name: compose_stack
+    tasks_from: dir
+  vars:
+    compose_stack_dir: "{{ bread_of_life_dir }}"
+
+- name: Preparar diretório persistente do SQLite
+  ansible.builtin.file:
+    path: "{{ bread_of_life_data_dir }}"
+    state: directory
+    owner: "1000"
+    group: "1000"
+    mode: "0700"
+
+- name: Baixar servidor oficial com verificação de conteúdo
+  ansible.builtin.get_url:
+    url: "https://raw.githubusercontent.com/matt-shearing/bread-of-life/{{ bread_of_life_source_commit }}/deploy/sync-server/server.mjs"
+    checksum: "sha256:{{ bread_of_life_source_sha256 }}"
+    dest: "{{ bread_of_life_dir }}/server-{{ bread_of_life_source_commit }}.mjs"
+    owner: root
+    group: root
+    mode: "0444"
+  when: not ansible_check_mode
+
+- name: Gravar ambiente privado do serviço
+  ansible.builtin.copy:
+    content: "TOKEN_SECRET={{ bread_of_life_token_secret }}\n"
+    dest: "{{ bread_of_life_dir }}/sync.env"
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+  when: not ansible_check_mode
+
+- name: Subir o servidor e aguardar a saúde
+  ansible.builtin.include_role:
+    name: compose_stack
+  vars:
+    compose_stack_dir: "{{ bread_of_life_dir }}"
+    compose_stack_wait: true
+  when: not ansible_check_mode
