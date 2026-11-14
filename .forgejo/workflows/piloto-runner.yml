@@ -12,8 +12,6 @@ on:
 concurrency:
   group: piloto-infra-runner
   cancel-in-progress: true
-permissions:
-  contents: read
 jobs:
   piloto:
     runs-on: infra-ci
