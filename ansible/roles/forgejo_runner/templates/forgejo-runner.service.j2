@@ -1,5 +1,5 @@
 [Unit]
-Description=Forgejo Runner do infra
+Description=Forgejo Runner
 Wants=network-online.target
 Requires=docker.service forgejo-runner-firewall.service
 After=network-online.target docker.service forgejo-runner-firewall.service
@@ -10,6 +10,9 @@ Group=forgejo-runner
 SupplementaryGroups=docker
 WorkingDirectory={{ forgejo_runner_home }}
 LoadCredential=forgejo-token:{{ forgejo_runner_config_dir }}/token
+{% if forgejo_runner_lab_ativar | bool %}
+LoadCredential=forgejo-token-lab:{{ forgejo_runner_config_dir }}/token-lab
+{% endif %}
 ExecStart=/usr/local/bin/forgejo-runner daemon --config {{ forgejo_runner_config_dir }}/runner.yml
 Restart=on-failure
 RestartSec=5s

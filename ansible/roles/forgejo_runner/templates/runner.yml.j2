@@ -21,3 +21,9 @@ server:
       url: {{ forgejo_runner_url | to_json }}
       uuid: {{ forgejo_runner_uuid | default('') | to_json }}
       token_url: 'file:$CREDENTIALS_DIRECTORY/forgejo-token'
+{% if forgejo_runner_lab_ativar | bool %}
+    lab:
+      url: {{ forgejo_runner_url | to_json }}
+      uuid: {{ vault_forgejo_runner_lab_uuid | to_json }}
+      token_url: 'file:$CREDENTIALS_DIRECTORY/forgejo-token-lab'
+{% endif %}

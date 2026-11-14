@@ -6,3 +6,4 @@ forgejo_runner_home: /var/lib/forgejo-runner
 forgejo_runner_config_dir: /etc/forgejo-runner
 forgejo_runner_imagem: ""
 forgejo_runner_ativar: false
+forgejo_runner_lab_ativar: "{{ (vault_forgejo_runner_lab_uuid | default('') | length > 0) or (vault_forgejo_runner_lab_token | default('') | length > 0) }}"

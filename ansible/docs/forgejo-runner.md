@@ -5,7 +5,9 @@ define os limites do executor. O Terraform cria `forgejo-runner` desligada
 e sem partida automática. A VM fica no grupo `forgejo_runners`, com
 endereço fixo numa bridge exclusiva. Os parâmetros da rede são lidos de
 [`ansible/vars/rede-runner.yml`](../vars/rede-runner.yml). O registro
-pertence ao repositório `nextlevelcode/infra`.
+do infra pertence ao repositório `nextlevelcode/infra`. O lab tem registro
+próprio, restrito a `nextlevelcode/lab`. As duas conexões usam o mesmo
+controlador na VM, com capacidade total de um job e o mesmo isolamento.
 
 ## Preparar e criar
 
@@ -68,15 +70,17 @@ antes de voltar a aceitar jobs.
 A política da VPS, aplicada separadamente com
 `ansible-playbook playbooks/anubis.yml --ask-vault-pass --limit vps` na
 pasta `ansible/`, prevê passagem para RPC com os cabeçalhos de runner e
-Git de leitura do `infra`. Com a aplicação autorizada, confirme:
+Git de leitura de `infra` e `lab`. Com a aplicação autorizada, confirme:
 
 ```bash
 GIT_TERMINAL_PROMPT=0 git -c credential.helper= \
   ls-remote https://forge.nextlevelcode.pro/nextlevelcode/infra.git refs/heads/main
+GIT_TERMINAL_PROMPT=0 git -c credential.helper= \
+  ls-remote https://forge.nextlevelcode.pro/nextlevelcode/lab.git refs/heads/main
 curl -sS -o /dev/null -w '%{content_type}\n' https://forge.nextlevelcode.pro/api/v1/version
 ```
 
-O Git deve imprimir a ref. A API anônima continua sob o desafio. Confira
+O Git deve imprimir a ref de cada repositório. A API anônima continua sob o desafio. Confira
 também um fetch real por HTTPS e o envio de logs do runner no piloto.
 
 ## Publicar a imagem e registrar
@@ -139,6 +143,35 @@ que faz o cliente voltar ao GET com autenticação Basic.
    Confira que o registro específico ficou online e anunciou a label
    `infra-ci`. O token fica num arquivo local root-only e o systemd entrega
    a credencial ao controlador por `LoadCredential`.
+
+## Conectar o registro do lab
+
+Com autorização para a aplicação e o registro:
+
+1. Na pasta `ansible/`, execute
+   `ansible-playbook playbooks/anubis.yml --ask-vault-pass --limit vps`.
+   Confira a leitura Git dos dois repositórios pelos comandos acima.
+2. No repositório `nextlevelcode/lab`, abra **Settings → Actions →
+   Runners → Create new runner**. Na pasta `ansible/`, rode
+   `ansible-vault edit inventory/group_vars/all/vault.yml` e guarde o UUID
+   e o token em `vault_forgejo_runner_lab_uuid` e
+   `vault_forgejo_runner_lab_token`. A interface entrega a credencial do
+   registro de repositório diretamente ao responsável.
+3. Com o runner ocioso, rode da pasta `ansible/`:
+
+   ```bash
+   ansible-playbook playbooks/forgejo-runner.yml --ask-vault-pass --limit forgejo-runner \
+     -e forgejo_runner_ativar=true -e forgejo_runner_uuid=<uuid-do-infra> \
+     -e forgejo_runner_imagem=<imagem@sha256:digest>
+   ```
+
+   A mudança reinicia o controlador. Confira em **Settings → Actions →
+   Runners** de cada repositório que o registro correspondente aparece
+   online com a label `infra-ci`. Execute um PR de cada repo e confira no
+   Forgejo o registro que recebeu o job. Use o mesmo comando com
+   `-e forgejo_runner_lab_ativar=false` para retirar a conexão do lab e
+   manter a do infra. Para tornar a retirada persistente, esvazie as duas
+   variáveis no vault e revogue o registro no painel do lab.
 
 ## Piloto, atualização e recuperação
 

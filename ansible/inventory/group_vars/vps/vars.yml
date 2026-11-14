@@ -43,7 +43,7 @@ anubis_instances:
       rules:
         # git clone/fetch por HTTPS: o cliente git não roda JavaScript.
         - import: (data)/clients/git.yaml
-        # CI do infra: passagem para clientes de máquina. Forgejo autentica o RPC.
+        # CI do infra e do lab: passagem para clientes de máquina. Forgejo autentica o RPC.
         - name: forgejo-ci-rpc
           action: ALLOW
           expression:
@@ -59,7 +59,7 @@ anubis_instances:
             all:
               - host == "forge.nextlevelcode.pro"
               - method == "GET"
-              - path == "/nextlevelcode/infra.git/info/refs"
+              - path.matches("^/nextlevelcode/(infra|lab)[.]git/info/refs$")
               - '"service" in query && query["service"] == "git-upload-pack"'
         - name: forgejo-ci-git-fetch
           action: ALLOW
@@ -67,7 +67,7 @@ anubis_instances:
             all:
               - host == "forge.nextlevelcode.pro"
               - method == "POST"
-              - path == "/nextlevelcode/infra.git/git-upload-pack"
+              - path.matches("^/nextlevelcode/(infra|lab)[.]git/git-upload-pack$")
               - '"Content-Type" in headers'
               - headers["Content-Type"] == "application/x-git-upload-pack-request"
         # OCI do CI. Forgejo valida o token e as permissões do pacote.

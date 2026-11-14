@@ -11,6 +11,10 @@
       - not (forgejo_runner_ativar | bool) or (forgejo_runner_uuid | default('') is match('^[0-9a-fA-F]{8}(-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}$'))
       - not (forgejo_runner_ativar | bool) or (forgejo_runner_imagem is match('^[^ @]+@sha256:[0-9a-f]{64}$'))
       - not (forgejo_runner_ativar | bool) or (vault_forgejo_runner_token | default('') | length > 0)
+      - not (forgejo_runner_lab_ativar | bool) or (vault_forgejo_runner_lab_uuid | default('') is match('^[0-9a-fA-F]{8}(-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}$'))
+      - not (forgejo_runner_lab_ativar | bool) or (vault_forgejo_runner_lab_token | default('') | length > 0)
+      - not (forgejo_runner_lab_ativar | bool) or vault_forgejo_runner_lab_uuid | lower != forgejo_runner_uuid | default('') | lower
+      - not (forgejo_runner_lab_ativar | bool) or vault_forgejo_runner_lab_token != vault_forgejo_runner_token | default('')
   no_log: true
 
 - name: Preparar os diretórios públicos de configuração
@@ -129,6 +133,24 @@
   register: forgejo_runner_credencial
   when: forgejo_runner_ativar | bool
 
+- name: Gravar a credencial do registro do lab
+  ansible.builtin.copy:
+    content: "{{ vault_forgejo_runner_lab_token }}"
+    dest: "{{ forgejo_runner_config_dir }}/token-lab"
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+  diff: false
+  register: forgejo_runner_lab_credencial
+  when: forgejo_runner_ativar | bool and forgejo_runner_lab_ativar | bool
+
+- name: Remover a credencial local de um registro lab desativado
+  ansible.builtin.file:
+    path: "{{ forgejo_runner_config_dir }}/token-lab"
+    state: absent
+  when: not (forgejo_runner_lab_ativar | bool)
+
 - name: Instalar a unidade do controlador
   ansible.builtin.template:
     src: forgejo-runner.service.j2
@@ -144,6 +166,7 @@
     state: >-
       {{ 'stopped' if not (forgejo_runner_ativar | bool) else
          ('restarted' if (forgejo_runner_binario is changed or forgejo_runner_config is changed
-                          or forgejo_runner_credencial is changed or forgejo_runner_unit is changed)
+                          or forgejo_runner_credencial is changed or forgejo_runner_lab_credencial is changed
+                          or forgejo_runner_unit is changed)
           else 'started') }}
   when: not ansible_check_mode
