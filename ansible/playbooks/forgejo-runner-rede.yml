@@ -1,0 +1,8 @@
+---
+- name: Preparar a rede do runner no Proxmox
+  hosts: proxmox
+  gather_facts: false
+  vars_files:
+    - ../vars/rede-runner.yml
+  roles:
+    - rede_runner

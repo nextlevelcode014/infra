@@ -1,0 +1,11 @@
+---
+# Consumido também por terraform/runner.tf.
+runner_rede_bridge: vmbr3
+runner_rede_uplink: vmbr0
+runner_rede_cidr: 10.70.0.0/30
+runner_rede_gateway: 10.70.0.1
+runner_rede_ip: 10.70.0.2
+runner_rede_dns:
+  - 9.9.9.9
+  - 149.112.112.112
+runner_vmid: 300

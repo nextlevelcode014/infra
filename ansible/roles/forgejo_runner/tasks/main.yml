@@ -1,0 +1,149 @@
+---
+- name: Conferir o alvo e os parâmetros de ativação
+  ansible.builtin.assert:
+    that:
+      - inventory_hostname == 'forgejo-runner'
+      - ansible_host == runner_rede_ip
+      - ansible_facts.architecture == 'x86_64'
+      - ansible_facts.distribution == 'Ubuntu'
+      - ansible_facts.default_ipv4.address | default('') == runner_rede_ip
+      - ansible_facts.default_ipv4.gateway | default('') == runner_rede_gateway
+      - not (forgejo_runner_ativar | bool) or (forgejo_runner_uuid | default('') is match('^[0-9a-fA-F]{8}(-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}$'))
+      - not (forgejo_runner_ativar | bool) or (forgejo_runner_imagem is match('^[^ @]+@sha256:[0-9a-f]{64}$'))
+      - not (forgejo_runner_ativar | bool) or (vault_forgejo_runner_token | default('') | length > 0)
+  no_log: true
+
+- name: Preparar os diretórios públicos de configuração
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  loop:
+    - "{{ forgejo_runner_config_dir }}"
+    - /etc/systemd/system/docker.service.d
+
+- name: Usar HTTPS para os repositórios oficiais da imagem Ubuntu
+  ansible.builtin.replace:
+    path: /etc/apt/sources.list.d/ubuntu.sources
+    regexp: 'http://((?:[a-z]+\.)?archive\.ubuntu\.com|security\.ubuntu\.com)(?=/ubuntu)'
+    replace: 'https://\1'
+
+- name: Instalar nftables
+  ansible.builtin.apt:
+    name: nftables
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+    policy_rc_d: 101
+
+- name: Impedir que a unidade padrão carregue um ruleset global
+  ansible.builtin.systemd_service:
+    name: nftables.service
+    enabled: false
+    masked: true
+  when: not ansible_check_mode
+
+- name: Instalar o filtro local da VM
+  ansible.builtin.template:
+    src: firewall.nft.j2
+    dest: "{{ forgejo_runner_config_dir }}/firewall.nft"
+    mode: "0644"
+    validate: /usr/sbin/nft -c -f %s
+  register: forgejo_runner_firewall
+
+- name: Instalar a unidade do firewall
+  ansible.builtin.template:
+    src: forgejo-runner-firewall.service.j2
+    dest: /etc/systemd/system/forgejo-runner-firewall.service
+    mode: "0644"
+  register: forgejo_runner_firewall_unit
+
+- name: Exigir o firewall também nas partidas do Docker
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/docker.service.d/forgejo-runner-firewall.conf
+    mode: "0644"
+    content: |
+      [Unit]
+      Requires=forgejo-runner-firewall.service
+      After=forgejo-runner-firewall.service
+
+- name: Aplicar o filtro antes de configurar o Docker
+  ansible.builtin.systemd_service:
+    name: forgejo-runner-firewall.service
+    daemon_reload: true
+    enabled: true
+    state: "{{ 'restarted' if forgejo_runner_firewall is changed or forgejo_runner_firewall_unit is changed else 'started' }}"
+  when: not ansible_check_mode
+
+- name: Configurar o Docker para jobs descartáveis
+  ansible.builtin.include_role:
+    name: geerlingguy.docker
+  vars:
+    docker_install_compose_plugin: false
+    docker_daemon_options:
+      ipv6: false
+      log-driver: local
+      log-opts:
+        max-size: 10m
+        max-file: "3"
+  when: not ansible_check_mode
+
+- name: Criar a conta de serviço
+  ansible.builtin.user:
+    name: forgejo-runner
+    system: true
+    home: "{{ forgejo_runner_home }}"
+    shell: /usr/sbin/nologin
+    create_home: true
+
+- name: Instalar o runner com versão e checksum fixos
+  ansible.builtin.get_url:
+    url: "https://code.forgejo.org/forgejo/runner/releases/download/v{{ forgejo_runner_version }}/forgejo-runner-{{ forgejo_runner_version }}-linux-amd64"
+    checksum: "sha256:{{ forgejo_runner_sha256 }}"
+    dest: /usr/local/bin/forgejo-runner
+    owner: root
+    group: root
+    mode: "0755"
+  register: forgejo_runner_binario
+
+- name: Gravar a configuração pública do controlador
+  ansible.builtin.template:
+    src: runner.yml.j2
+    dest: "{{ forgejo_runner_config_dir }}/runner.yml"
+    owner: root
+    group: root
+    mode: "0644"
+  register: forgejo_runner_config
+
+- name: Gravar a credencial do registro
+  ansible.builtin.copy:
+    content: "{{ vault_forgejo_runner_token }}"
+    dest: "{{ forgejo_runner_config_dir }}/token"
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+  diff: false
+  register: forgejo_runner_credencial
+  when: forgejo_runner_ativar | bool
+
+- name: Instalar a unidade do controlador
+  ansible.builtin.template:
+    src: forgejo-runner.service.j2
+    dest: /etc/systemd/system/forgejo-runner.service
+    mode: "0644"
+  register: forgejo_runner_unit
+
+- name: Aplicar o estado explicitamente solicitado
+  ansible.builtin.systemd_service:
+    name: forgejo-runner.service
+    daemon_reload: true
+    enabled: "{{ forgejo_runner_ativar | bool }}"
+    state: >-
+      {{ 'stopped' if not (forgejo_runner_ativar | bool) else
+         ('restarted' if (forgejo_runner_binario is changed or forgejo_runner_config is changed
+                          or forgejo_runner_credencial is changed or forgejo_runner_unit is changed)
+          else 'started') }}
+  when: not ansible_check_mode

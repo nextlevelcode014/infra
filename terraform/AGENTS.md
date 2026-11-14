@@ -47,6 +47,13 @@ Da sua máquina não há rota até `10.50.0.0/24`: o SSH salta pelo Proxmox
 `destroy` apaga o container **e os discos** (`purge_on_destroy`). Só há dados
  descartáveis aqui, mas confirme antes de destruir em produção.
 
+## VM do runner
+
+O VMID 300 corresponde à VM `forgejo-runner`, com inventário no grupo
+`forgejo_runners`. O Terraform cria a VM desligada. A bridge e o filtro
+precisam estar prontos para o provisionamento. Veja a ordem e as
+verificações no [guia do runner](../ansible/docs/forgejo-runner.md).
+
 ## Como adicionar um container
 
 1. Bloco novo em `containers.tf`, chamando `./modules/lxc` com o próximo número

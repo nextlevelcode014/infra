@@ -1,0 +1,12 @@
+[Unit]
+Description=Firewall da VM do Forgejo Runner
+Wants=network-pre.target
+Before=network-pre.target docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/sbin/nft -f {{ forgejo_runner_config_dir }}/firewall.nft
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

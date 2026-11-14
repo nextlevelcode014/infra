@@ -65,6 +65,8 @@ usadas depois.
 | `playbooks/proxmox.yml` | `proxmox` | host do Proxmox (o notebook): modo de carga da bateria, a `vmbr1` dos LXCs, com NAT, a `vmbr2` do lab, isolada, e o timer que repõe a ACL do `lab@pve` (`docs/proxmox.md`); antes do `terraform apply` |
 | `playbooks/caddy.yml` | `caddy` | binário custom com plugin DNS-01 + Caddyfile + drop-in |
 | `playbooks/forgejo.yml` | `forgejo` | stack do Forgejo + backup Borg |
+| `playbooks/forgejo-runner-rede.yml` | `proxmox` | bridge e filtro exclusivos da VM do CI |
+| `playbooks/forgejo-runner.yml` | `forgejo_runners` | Docker, firewall e serviço do CI, com ativação explícita ([guia](docs/forgejo-runner.md)) |
 | `playbooks/forgejo-repositorios.yml` | `localhost` | colaboradores e proteção de branches pela API; execução própria, fora do `site.yml` |
 | `playbooks/vaultwarden.yml` | `vaultwarden` | stack do Vaultwarden + backup Borg |
 | `playbooks/bread-of-life.yml` | `bread-of-life` | sincronização Bread of Life, com HTTPS pelo Caddy do Proxmox |

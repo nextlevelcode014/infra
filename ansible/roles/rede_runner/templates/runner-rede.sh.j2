@@ -1,0 +1,11 @@
+#!/bin/sh
+# Gerido pelo Ansible. Um gateway novo só é permitido após reaplicar o filtro.
+set -eu
+
+# Fixa o próximo salto; destinos diretamente conectados usam o próprio IP.
+rotas=$(ip -4 route show default dev {{ runner_rede_uplink }})
+gateway=$(printf '%s\n' "$rotas" | awk '$1 == "default" && $2 == "via" {print $3; exit}')
+case "$gateway" in
+    ''|*[!0-9.]*) echo 'Gateway IPv4 da uplink indisponível.' >&2; exit 1 ;;
+esac
+exec nft -D "runner_uplink_gateway=$gateway" -f /etc/forgejo-runner-rede.nft

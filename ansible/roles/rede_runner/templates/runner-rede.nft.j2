@@ -1,0 +1,44 @@
+# Gerido pelo Ansible. Troca somente a tabela do runner, em uma transação.
+destroy table inet forgejo_runner
+table inet forgejo_runner {
+    set destinos_bloqueados {
+        type ipv4_addr
+        flags interval
+        elements = {
+            0.0.0.0/8, 10.0.0.0/8, 100.64.0.0/10, 127.0.0.0/8,
+            169.254.0.0/16, 172.16.0.0/12, 192.0.0.0/24, 192.168.0.0/16,
+            198.18.0.0/15, 224.0.0.0/3
+        }
+    }
+
+    chain chegada_ao_host {
+        type filter hook input priority -10; policy accept;
+        iifname "{{ runner_rede_bridge }}" ip saddr {{ runner_rede_ip }} ct state established,related counter accept
+        iifname "{{ runner_rede_bridge }}" counter drop
+    }
+
+    chain encaminhamento {
+        type filter hook forward priority -10; policy accept;
+        iifname "{{ runner_rede_bridge }}" jump saida_runner
+        oifname "{{ runner_rede_bridge }}" meta nfproto ipv4 ct state established,related counter accept
+        oifname "{{ runner_rede_bridge }}" counter drop
+    }
+
+    chain saida_runner {
+        meta nfproto ipv6 counter drop
+        ip saddr != {{ runner_rede_ip }} counter drop
+        oifname != "{{ runner_rede_uplink }}" counter drop
+        ip daddr @destinos_bloqueados counter drop
+        ip daddr $runner_uplink_gateway counter drop
+        rt ip nexthop != $runner_uplink_gateway counter drop
+        tcp dport 443 counter accept
+        ip daddr { {{ runner_rede_dns | join(', ') }} } udp dport 53 counter accept
+        ip daddr { {{ runner_rede_dns | join(', ') }} } tcp dport 53 counter accept
+        counter drop
+    }
+
+    chain nat_runner {
+        type nat hook postrouting priority srcnat; policy accept;
+        iifname "{{ runner_rede_bridge }}" oifname "{{ runner_rede_uplink }}" ip saddr {{ runner_rede_ip }} masquerade
+    }
+}

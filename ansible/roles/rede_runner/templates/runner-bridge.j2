@@ -1,0 +1,8 @@
+# Gerido pelo Ansible. A uplink precisa obter gateway antes desta bridge.
+auto {{ runner_rede_bridge }}
+iface {{ runner_rede_bridge }} inet static
+    address {{ runner_rede_gateway }}/{{ runner_rede_cidr.split('/')[1] }}
+    bridge-ports none
+    bridge-stp off
+    bridge-fd 0
+    pre-up /usr/local/sbin/forgejo-runner-rede

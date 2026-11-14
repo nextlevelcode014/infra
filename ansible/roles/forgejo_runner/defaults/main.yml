@@ -1,0 +1,8 @@
+---
+forgejo_runner_version: "13.2.1"
+forgejo_runner_sha256: bb369fe1ecb50fdc983c0b1d993f19b0920df6e5864511892b3cdbf16d858b34
+forgejo_runner_url: https://forge.nextlevelcode.pro
+forgejo_runner_home: /var/lib/forgejo-runner
+forgejo_runner_config_dir: /etc/forgejo-runner
+forgejo_runner_imagem: ""
+forgejo_runner_ativar: false

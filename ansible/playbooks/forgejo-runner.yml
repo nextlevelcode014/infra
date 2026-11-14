@@ -1,0 +1,11 @@
+---
+- name: Configurar a VM do runner
+  hosts: forgejo_runners
+  gather_facts: true
+  vars_files:
+    - ../vars/rede-runner.yml
+  vars:
+    ansible_ssh_host_key_checking: true
+    ansible_ssh_common_args: "-J root@{{ proxmox_host }} -o StrictHostKeyChecking=yes"
+  roles:
+    - forgejo_runner

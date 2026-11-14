@@ -1,0 +1,65 @@
+---
+- name: Ler os includes do ifupdown
+  ansible.builtin.slurp:
+    src: /etc/network/interfaces
+  register: runner_interfaces
+
+- name: Conferir os pré-requisitos da bridge
+  ansible.builtin.assert:
+    that:
+      - (runner_interfaces.content | b64decode) is search('^source /etc/network/interfaces\.d/\*', multiline=True)
+    fail_msg: O host precisa carregar /etc/network/interfaces.d/* antes de configurar a bridge do runner.
+
+- name: Instalar as regras de rede do runner
+  ansible.builtin.template:
+    src: runner-rede.nft.j2
+    dest: /etc/forgejo-runner-rede.nft
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Instalar o carregador das regras de rede
+  ansible.builtin.template:
+    src: runner-rede.sh.j2
+    dest: /usr/local/sbin/forgejo-runner-rede
+    owner: root
+    group: root
+    mode: "0755"
+    validate: /bin/sh -n %s
+
+- name: Aplicar as regras antes de subir a bridge
+  ansible.builtin.command:
+    argv: [/usr/local/sbin/forgejo-runner-rede]
+  changed_when: false
+  when: not ansible_check_mode
+
+- name: Ativar encaminhamento IPv4
+  ansible.posix.sysctl:
+    name: net.ipv4.ip_forward
+    value: "1"
+    sysctl_file: /etc/sysctl.d/90-lxc-nat.conf
+    sysctl_set: true
+
+- name: Declarar a bridge exclusiva
+  ansible.builtin.template:
+    src: runner-bridge.j2
+    dest: "/etc/network/interfaces.d/{{ runner_rede_bridge }}"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Ver se a bridge já tem o endereço de gateway
+  ansible.builtin.command:
+    argv: [ip, -4, -o, address, show, to, "{{ runner_rede_gateway }}/32"]
+  changed_when: false
+  check_mode: false
+  register: runner_bridge_estado
+
+- name: Subir apenas a bridge do runner
+  ansible.builtin.command:
+    argv: [ifup, "{{ runner_rede_bridge }}"]
+  when:
+    - not ansible_check_mode
+    - >-
+      not (runner_bridge_estado.stdout is search('^\d+: ' ~ runner_rede_bridge ~ ' ', multiline=True))
+  changed_when: true

@@ -1,0 +1,23 @@
+# Gerido pelo Ansible. Token separado e entregue por systemd.
+runner:
+  capacity: 1
+  timeout: 15m
+  shutdown_timeout: 30s
+  insecure: false
+  labels:
+    - {{ ("infra-ci:docker://" ~ forgejo_runner_imagem) | to_json }}
+cache:
+  enabled: false
+container:
+  network: ""
+  enable_ipv6: false
+  privileged: false
+  valid_volumes: []
+  docker_host: "-"
+  options: "--cpus=1.5 --memory=3g --pids-limit=512 --security-opt=no-new-privileges"
+server:
+  connections:
+    infra:
+      url: {{ forgejo_runner_url | to_json }}
+      uuid: {{ forgejo_runner_uuid | default('') | to_json }}
+      token_url: 'file:$CREDENTIALS_DIRECTORY/forgejo-token'

@@ -1,0 +1,20 @@
+[Unit]
+Description=Forgejo Runner do infra
+Wants=network-online.target
+Requires=docker.service forgejo-runner-firewall.service
+After=network-online.target docker.service forgejo-runner-firewall.service
+
+[Service]
+User=forgejo-runner
+Group=forgejo-runner
+SupplementaryGroups=docker
+WorkingDirectory={{ forgejo_runner_home }}
+LoadCredential=forgejo-token:{{ forgejo_runner_config_dir }}/token
+ExecStart=/usr/local/bin/forgejo-runner daemon --config {{ forgejo_runner_config_dir }}/runner.yml
+Restart=on-failure
+RestartSec=5s
+TimeoutStopSec=45s
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

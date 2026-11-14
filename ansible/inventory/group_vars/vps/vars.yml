@@ -43,6 +43,33 @@ anubis_instances:
       rules:
         # git clone/fetch por HTTPS: o cliente git não roda JavaScript.
         - import: (data)/clients/git.yaml
+        # CI do infra: passagem para clientes de máquina. Forgejo autentica o RPC.
+        - name: forgejo-ci-rpc
+          action: ALLOW
+          expression:
+            all:
+              - host == "forge.nextlevelcode.pro"
+              - method == "POST"
+              - '"X-Runner-Uuid" in headers && "X-Runner-Token" in headers'
+              - >-
+                path.matches("^/api/actions/(ping[.]v1[.]PingService/Ping|runner[.]v1[.]RunnerService/(Declare|FetchTask|UpdateTask|UpdateLog|UpdateStepSummary))$")
+        - name: forgejo-ci-git-discovery
+          action: ALLOW
+          expression:
+            all:
+              - host == "forge.nextlevelcode.pro"
+              - method == "GET"
+              - path == "/nextlevelcode/infra.git/info/refs"
+              - '"service" in query && query["service"] == "git-upload-pack"'
+        - name: forgejo-ci-git-fetch
+          action: ALLOW
+          expression:
+            all:
+              - host == "forge.nextlevelcode.pro"
+              - method == "POST"
+              - path == "/nextlevelcode/infra.git/git-upload-pack"
+              - '"Content-Type" in headers'
+              - headers["Content-Type"] == "application/x-git-upload-pack-request"
         # Feeds .rss/.atom dos repositórios, para leitores de feed.
         - import: (data)/apps/gitea-rss-feeds.yaml
         # API com token (o tea usa https://forge.nextlevelcode.pro/api/v1).

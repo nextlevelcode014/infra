@@ -146,3 +146,6 @@ vault_uptime_kuma_password: "CHANGE-ME"
 vault_uptime_kuma_smtp_username: "monitor@nextlevelcode.pro"
 vault_uptime_kuma_smtp_password: "CHANGE-ME"
 vault_uptime_kuma_smtp_to: "voce@exemplo.com"
+
+# Registro exclusivo do Forgejo Runner no infra, usado ao ativar o serviço.
+vault_forgejo_runner_token: "SUBSTITUA"

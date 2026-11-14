@@ -1,0 +1,16 @@
+# Gerido pelo Ansible. Sem flush das tabelas do Docker.
+destroy table inet runner_vm
+table inet runner_vm {
+    chain entrada {
+        type filter hook input priority -10; policy drop;
+        iifname "lo" accept
+        meta nfproto ipv6 counter drop
+        ct state established,related accept
+        iifname "{{ ansible_facts.default_ipv4.interface }}" ip saddr {{ runner_rede_gateway }} ip daddr {{ runner_rede_ip }} tcp dport 22 counter accept
+    }
+
+    chain encaminhamento {
+        type filter hook forward priority -10; policy accept;
+        meta nfproto ipv6 counter drop
+    }
+}

@@ -15,6 +15,8 @@ cadastro fechado (`DISABLE_REGISTRATION=true`) e repositórios públicos
 visíveis sem login. O web só existe pelo domínio público: não há rota no
 `*.lab`.
 
+Para o executor de Actions, veja o [guia do runner](forgejo-runner.md).
+
 ## Antes de aplicar
 
 - **Vault** (`inventory/group_vars/all/vault.yml`, modelo em
