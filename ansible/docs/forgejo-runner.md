@@ -90,6 +90,23 @@ digest depois da publicação. Para escrever, autentique o Docker com
 `docker login forge.nextlevelcode.pro` usando um token com acesso de
 escrita ao pacote. Faça o login na estação de build.
 
+O containerd pode combinar o escopo `*` do desafio inicial com o escopo
+`repository:nextlevelcode/infra-ci:pull,push`. Para conferir a negociação
+sem enviar credenciais nem imprimir o token da resposta:
+
+```bash
+curl -sS -G -o /dev/null -w '%{http_code} %{content_type}\n' \
+  --data-urlencode 'service=container_registry' \
+  --data-urlencode 'scope=*' \
+  --data-urlencode 'scope=repository:nextlevelcode/infra-ci:pull,push' \
+  https://forge.nextlevelcode.pro/v2/token
+curl -sS -o /dev/null -w '%{http_code}\n' \
+  --data 'grant_type=password' https://forge.nextlevelcode.pro/v2/token
+```
+
+O GET deve retornar 200 com JSON. O POST deve receber o 404 do Forgejo,
+que faz o cliente voltar ao GET com autenticação Basic.
+
 1. Com autorização de publicação, construa a imagem de ferramentas e
    publique no registry público escolhido, de uma máquina com Docker,
    acesso de escrita ao registry e checkout da revisão preparada:

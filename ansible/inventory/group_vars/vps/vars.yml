@@ -79,7 +79,19 @@ anubis_instances:
               - method == "GET"
               - >-
                 path in ["/v2", "/v2/"] || (path == "/v2/token" &&
-                (!("scope" in query) || query["scope"] in ["", "*"] || query["scope"].matches("^repository:nextlevelcode/infra-ci:(pull|push|pull,push|push,pull)$")))
+                (!("scope" in query) || query["scope"] in ["", "*"] ||
+                query["scope"].matches("^([*][, ])?repository:nextlevelcode/infra-ci:(pull|push|pull,push|push,pull)([, ][*])?$")))
+        # O containerd tenta OAuth por POST. O Forgejo responde 404 e o
+        # cliente volta ao GET com Basic. O desafio do Anubis quebra a volta.
+        - name: forgejo-ci-oci-oauth-fallback
+          action: ALLOW
+          expression:
+            all:
+              - host == "forge.nextlevelcode.pro"
+              - method == "POST"
+              - path == "/v2/token"
+              - '"Content-Type" in headers'
+              - headers["Content-Type"] == "application/x-www-form-urlencoded"
         - name: forgejo-ci-oci-pull
           action: ALLOW
           expression:
