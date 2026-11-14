@@ -101,6 +101,7 @@ curl -sS -G -o /dev/null -w '%{http_code} %{content_type}\n' \
   --data-urlencode 'scope=repository:nextlevelcode/infra-ci:pull,push' \
   https://forge.nextlevelcode.pro/v2/token
 curl -sS -o /dev/null -w '%{http_code}\n' \
+  -H 'Content-Type: application/x-www-form-urlencoded; charset=utf-8' \
   --data 'grant_type=password' https://forge.nextlevelcode.pro/v2/token
 ```
 

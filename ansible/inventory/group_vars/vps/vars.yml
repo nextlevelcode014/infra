@@ -91,7 +91,7 @@ anubis_instances:
               - method == "POST"
               - path == "/v2/token"
               - '"Content-Type" in headers'
-              - headers["Content-Type"] == "application/x-www-form-urlencoded"
+              - headers["Content-Type"].matches("(?i)^application/x-www-form-urlencoded( *; *charset=utf-8)?$")
         - name: forgejo-ci-oci-pull
           action: ALLOW
           expression:
