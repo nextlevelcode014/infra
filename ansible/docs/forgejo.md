@@ -318,6 +318,46 @@ pelo responsável. Os comandos não provisionam ambientes do laboratório.
    `main`. Com o ensaio aprovado, siga para sua ativação na seção seguinte.
 
 
+### Ensaio dos checks obrigatórios
+
+Depois de confirmar sucesso e falha do workflow de PR no repositório,
+repita o ensaio em branches temporárias com a regra de `main` do YAML.
+Use o contexto `Verificações do PR / Verificações de PR (pull_request)`
+e confirme que o Forgejo exige a incorporação da base atual ao head.
+
+Pela conta habilitada para merge, confira no PR temporário que falta de
+status, execução pendente e erro deliberado bloqueiam o merge. Um caminho
+versionado sem regra de seleção, como o `teste-protecao.txt` do ensaio,
+produz uma falha útil. Renomeie para `teste-protecao.md` e confirme que o
+novo SHA recebe seu próprio check e que o botão de merge fica disponível
+após o sucesso. Para ler os status, use o SHA completo de cada revisão:
+
+```bash
+tea api --login forgejo --method GET "repos/nextlevelcode/${FORGEJO_ENSAIO_REPO}/commits/<sha-do-head>/status"
+```
+
+Avance o destino temporário com outro PR e squash manual. Observe que a
+origem desatualizada fica bloqueada mesmo com check aprovado. Na origem
+do ensaio, incorpore a nova base, publique e confira no resumo do job
+os SHAs atualizados:
+
+```bash
+git fetch origin
+git merge origin/teste-protecao-main
+git push origin HEAD:refs/heads/teste-protecao-origem
+```
+
+No cenário de runner indisponível, observe que a espera mantém o merge
+bloqueado. Como o controlador atende os dois repositórios, qualquer
+interrupção real requer uma janela autorizada com a fila ociosa. Ao
+final do ensaio aprovado, aplique a regra a um repositório por vez.
+
+Em indisponibilidade prolongada, registre o PR, o SHA, o motivo e os
+checks locais antes de pedir autorização para uma exceção. Se a exceção
+for aprovada, use o procedimento de recuperação administrativa para
+alterar apenas o bloqueio que impediu o merge. Reaplique a regra
+versionada após a operação e reconsulte `branch_protections/main`.
+
 ### Conferir e aplicar
 
 Os comandos desta seção rodam **dentro de `ansible/`**, depois do merge,
