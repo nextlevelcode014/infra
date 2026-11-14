@@ -12,6 +12,10 @@ máquinas está aqui, em duas partes:
 O Terraform registra cada LXC no state, e o Ansible lê esse state como
 inventário. Por isso os dois moram no mesmo repo.
 
+## Verificações locais
+
+Use os [checks locais](docs/verificacoes-locais.md) para verificar a revisão do PR.
+
 ## As máquinas
 
 ```
