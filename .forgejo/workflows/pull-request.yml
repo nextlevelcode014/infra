@@ -1,0 +1,74 @@
+name: Verificações do PR
+run-name: "PR #${{ github.event.pull_request.number }} - ${{ github.event.pull_request.head.sha }}"
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+
+concurrency:
+  group: verificacoes-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  verificar:
+    name: Verificações de PR
+    runs-on: infra-ci
+    env:
+      # PRs executam código não confiável; o job não precisa da API do Forgejo.
+      FORGEJO_TOKEN: ""
+      GITHUB_TOKEN: ""
+    steps:
+      - name: Buscar e verificar o SHA proposto
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          BASE_REPOSITORY: ${{ github.event.pull_request.base.repo.clone_url }}
+          HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.clone_url }}
+          RUNNER_IMAGE_DIGEST: sha256:3c5b4fdee2e6f20062859c05b69415fbe81287f40ebfd311de88b69a947a776d
+        run: |
+          set +e
+          log=$(mktemp "${RUNNER_TEMP:-/tmp}/verificar-pr.XXXXXX")
+          (
+            set -eu
+            repo=$(mktemp -d "${RUNNER_TEMP:-/tmp}/checkout-pr.XXXXXX")
+            trap 'rm -rf "$repo"' EXIT
+            git -C "$repo" init -q
+            git -C "$repo" fetch --no-tags "$BASE_REPOSITORY" "$BASE_SHA"
+            git -C "$repo" fetch --no-tags "$HEAD_REPOSITORY" "$HEAD_SHA"
+            git -C "$repo" checkout -q --detach "$HEAD_SHA"
+            test "$(git -C "$repo" rev-parse HEAD)" = "$HEAD_SHA"
+            printf 'SHA proposto conferido: %s\n' "$HEAD_SHA"
+            printf 'SHA base conferido: %s\n' "$BASE_SHA"
+            cd "$repo"
+            python3 --version
+            terraform version
+            ansible-playbook --version
+            python3 verificar.py pr "$BASE_SHA" "$HEAD_SHA" \
+              --colecoes /usr/share/ansible/collections
+          ) 2>&1 | tee "$log"
+          resultado=${PIPESTATUS[0]}
+          {
+            echo '# Verificações do PR'
+            echo
+            echo "- Base do PR: \`$BASE_SHA\`"
+            echo "- SHA proposto: \`$HEAD_SHA\`"
+            echo '- Checkout: SHA proposto conferido contra o `HEAD` antes dos checks.'
+            echo "- Executor: label \`infra-ci\`; imagem de ferramentas \`$RUNNER_IMAGE_DIGEST\`; Forgejo Runner 13.2.1."
+            echo
+            echo '## Seleção e resultado'
+            echo
+            echo 'A seleção usa o diff entre a base e o SHA proposto; não há filtro de caminhos no evento, então mudanças documentais também recebem este check.'
+            echo
+            grep -E '^Perfil |^Terraform:|^Ansible:|^\[.*\]|^Verificações selecionadas concluídas\.' "$log" || true
+            echo
+            if [ "$resultado" -eq 0 ]; then
+              echo 'Resultado: aprovado.'
+            else
+              echo "Resultado: falhou (código $resultado)."
+            fi
+            echo
+            echo 'Limites: este job executa o perfil `pr` de `verificar.py`. A definição de checks obrigatórios para merge pertence à Etapa 7.'
+          } >> "$GITHUB_STEP_SUMMARY"
+          rm -f "$log"
+          exit "$resultado"

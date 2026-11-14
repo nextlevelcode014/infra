@@ -21,12 +21,26 @@ classificação, e qualquer comando que falhar interrompe a verificação.
 | Terraform Hetzner | Os mesmos comandos no root `terraform/hetzner` | Mesmo isolamento, com o lock do root Hetzner |
 | Ansible, incluindo roles, inventário e dependências | `ansible-playbook -i localhost, --syntax-check` no `site.yml` e nos playbooks. Regressões de DNS, Forgejo e AdGuard | Inventário fictício, API HTTP simulada em loopback e arquivos descartáveis. O teste DNS usa `systemctl --root` numa árvore temporária |
 | `verificar.py` | Todos os checks locais | Mesmo efeito dos checks individuais |
+| `.forgejo/workflows/` | Todos os checks locais | Mudança na orquestração da CI deve validar os componentes que ela pode selecionar |
 | Markdown, política Tailscale ou `.gitignore` | Conferência de valores privados no diff | Revisão da política Tailscale é manual |
 
 A conferência de privacidade roda nos dois perfis. Ela busca nomes de
 tailnet e IPv4 Tailscale nas linhas acrescentadas, com exceções para os
 endereços genéricos e para o domínio fictício do teste DNS. Mostra apenas os
 caminhos suspeitos. Revise também os demais dados sensíveis antes de publicar.
+
+## Execução em pull requests
+
+O workflow `.forgejo/workflows/pull-request.yml` inicia nas aberturas,
+reaberturas e atualizações de commits (`synchronize`). Ele busca os SHAs da
+base e do head informados pelo evento, confere que o head é o `HEAD` do
+checkout e executa `python3 verificar.py pr <base> <head>`. O workflow não
+filtra caminhos: mudança documental também recebe o check, e mudança em
+`.forgejo/workflows/` seleciona todos os checks locais. Um novo evento do
+mesmo PR cancela uma execução anterior ainda em andamento. A síntese do job
+registra os SHAs, a seleção e os limites, e o título da execução mostra o
+número do PR e o SHA do head. Checks obrigatórios para merge são configurados
+separadamente na Etapa 7.
 
 ## Dependências
 
