@@ -61,6 +61,7 @@ fonte (PR, commit ou comentário de onde o motivo foi tirado).
 | [0024](0024-contrato-de-evidencias-compartilhado-com-o-lab.md) | Contrato de evidências compartilhado com o lab | Aceita |
 | [0025](0025-permissoes-do-forgejo-aplicadas-por-playbook-local.md) | Permissões do Forgejo aplicadas por playbook local | Aceita |
 | [0026](0026-bread-of-life-com-https-no-caddy.md) | Bread of Life usa HTTPS no Caddy do Proxmox | Proposta |
+| [0027](0027-runner-do-forgejo-em-vm-com-rede-propria.md) | Runner do Forgejo em VM e bridge próprias | Aceita |
 
 ## Modelo
 
