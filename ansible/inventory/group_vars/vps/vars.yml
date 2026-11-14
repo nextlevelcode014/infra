@@ -70,6 +70,34 @@ anubis_instances:
               - path == "/nextlevelcode/infra.git/git-upload-pack"
               - '"Content-Type" in headers'
               - headers["Content-Type"] == "application/x-git-upload-pack-request"
+        # OCI do CI. Forgejo valida o token e as permissões do pacote.
+        - name: forgejo-ci-oci-login
+          action: ALLOW
+          expression:
+            all:
+              - host == "forge.nextlevelcode.pro"
+              - method == "GET"
+              - >-
+                path in ["/v2", "/v2/"] || (path == "/v2/token" &&
+                (!("scope" in query) || query["scope"] in ["", "*"] || query["scope"].matches("^repository:nextlevelcode/infra-ci:(pull|push|pull,push|push,pull)$")))
+        - name: forgejo-ci-oci-pull
+          action: ALLOW
+          expression:
+            all:
+              - host == "forge.nextlevelcode.pro"
+              - method in ["GET", "HEAD"]
+              - path.matches("^/v2/nextlevelcode/infra-ci/(manifests/[^/]+|blobs/sha256:[a-f0-9]{64})$")
+        - name: forgejo-ci-oci-push
+          action: ALLOW
+          expression:
+            all:
+              - host == "forge.nextlevelcode.pro"
+              - '"Authorization" in headers'
+              - >-
+                (method == "POST" && path in ["/v2/nextlevelcode/infra-ci/blobs/uploads", "/v2/nextlevelcode/infra-ci/blobs/uploads/"]) ||
+                (method in ["GET", "PATCH", "PUT", "DELETE"] &&
+                path.matches("^/v2/nextlevelcode/infra-ci/blobs/uploads/[a-zA-Z0-9_.=-]+$")) ||
+                (method == "PUT" && path.matches("^/v2/nextlevelcode/infra-ci/manifests/[^/]+$"))
         # Feeds .rss/.atom dos repositórios, para leitores de feed.
         - import: (data)/apps/gitea-rss-feeds.yaml
         # API com token (o tea usa https://forge.nextlevelcode.pro/api/v1).

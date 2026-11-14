@@ -81,12 +81,21 @@ também um fetch real por HTTPS e o envio de logs do runner no piloto.
 
 ## Publicar a imagem e registrar
 
+O Anubis encaminha descoberta e emissão de token OCI no endereço público
+do Forgejo. O tráfego de manifests, blobs e uploads fica restrito ao
+pacote `nextlevelcode/infra-ci`. Depois de aplicar a política, confira com
+`curl -sS -o /dev/null -w '%{http_code} %{content_type}\n' https://forge.nextlevelcode.pro/v2/`
+que a resposta é a do registry (200 ou 401), e confira o pull anônimo pelo
+digest depois da publicação. Para escrever, autentique o Docker com
+`docker login forge.nextlevelcode.pro` usando um token com acesso de
+escrita ao pacote. Faça o login na estação de build.
+
 1. Com autorização de publicação, construa a imagem de ferramentas e
    publique no registry público escolhido, de uma máquina com Docker,
    acesso de escrita ao registry e checkout da revisão preparada:
 
    ```bash
-   export IMAGEM_CI='<registry-publico>/<repositorio>/infra-ci:piloto-1'
+   export IMAGEM_CI='forge.nextlevelcode.pro/nextlevelcode/infra-ci:piloto-1'
    docker build --platform linux/amd64 --tag "$IMAGEM_CI" ansible/roles/forgejo_runner/files
    docker push "$IMAGEM_CI"
    docker image inspect "$IMAGEM_CI" --format '{{json .RepoDigests}}'
