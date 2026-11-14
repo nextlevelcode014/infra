@@ -56,4 +56,4 @@ jobs:
             refs/heads/main:refs/remotes/origin/main "$PILOTO_SHA"
           git checkout -q --detach "$PILOTO_SHA"
           test "$(git rev-parse HEAD)" = "$PILOTO_SHA"
-          python3 verificar.py completo origin/main HEAD
+          python3 verificar.py completo origin/main HEAD --colecoes /usr/share/ansible/collections
