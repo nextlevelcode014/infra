@@ -1,0 +1,59 @@
+name: Piloto do runner
+on:
+  push:
+    branches: [codex/valide-o-piloto-do-runner]
+  workflow_dispatch:
+    inputs:
+      cenario:
+        description: Cenário do piloto
+        default: sucesso
+        type: choice
+        options: [sucesso, falha, cancelamento]
+concurrency:
+  group: piloto-infra-runner
+  cancel-in-progress: true
+permissions:
+  contents: read
+jobs:
+  piloto:
+    runs-on: infra-ci
+    steps:
+      - name: Verificar o isolamento
+        env:
+          CENARIO: ${{ inputs.cenario || 'sucesso' }}
+          PILOTO_SHA: ${{ github.sha }}
+        run: |
+          set -eu
+          test ! -S /var/run/docker.sock
+          test ! -e /etc/forgejo-runner/token
+          test ! -d /run/credentials/forgejo-runner.service
+          test ! -e .marcador-piloto-runner
+          touch .marcador-piloto-runner
+          python3 - <<'PY'
+          import socket
+          for host, port in [
+              ("10.70.0.1", 22),
+              ("10.70.0.2", 22),
+              ("10.50.0.201", 3000),
+              ("10.60.0.100", 22),
+              ("2606:4700:4700::1111", 443),
+          ]:
+              try:
+                  with socket.create_connection((host, port), timeout=2):
+                      raise RuntimeError(f"Conexão indevida para {host}:{port}")
+              except OSError:
+                  pass
+          print("Sondas negativas concluídas.")
+          PY
+          printf 'Marcador criado para %s.\n' "$CENARIO"
+          case "$CENARIO" in
+            cancelamento) sleep 240 ;;
+            falha) exit 23 ;;
+          esac
+          sleep 40
+          git init -q
+          git fetch -q https://forge.nextlevelcode.pro/nextlevelcode/infra.git \
+            refs/heads/main:refs/remotes/origin/main "$PILOTO_SHA"
+          git checkout -q --detach "$PILOTO_SHA"
+          test "$(git rev-parse HEAD)" = "$PILOTO_SHA"
+          python3 verificar.py completo origin/main HEAD

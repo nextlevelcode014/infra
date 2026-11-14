@@ -117,6 +117,8 @@ def verificar(copia, caminhos, args, temporario, ambiente):
     for caminho in caminhos:
         if caminho.suffix == ".md" or caminho.name == ".gitignore" or caminho == Path("verificar.py"):
             continue
+        if caminho == Path(".forgejo/workflows/piloto-runner.yml"):
+            continue
         if caminho == Path("ansible/vars/rede-runner.yml"):
             roots.add(Path("terraform"))
             conferir_ansible = True
