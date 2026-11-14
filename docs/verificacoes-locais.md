@@ -19,7 +19,7 @@ classificação, e qualquer comando que falhar interrompe a verificação.
 | Terraform Proxmox ou módulo LXC | `terraform fmt -check -diff` no root e no módulo, `terraform init -backend=false -input=false -lockfile=readonly` e `terraform validate` no root | Providers fixados pelo lock. Inicialização pode baixar providers para a cópia temporária |
 | Rede do runner (`ansible/vars/rede-runner.yml`) | Checks do root Proxmox e do Ansible | Terraform e Ansible leem os mesmos parâmetros |
 | Terraform Hetzner | Os mesmos comandos no root `terraform/hetzner` | Mesmo isolamento, com o lock do root Hetzner |
-| Ansible, incluindo roles, inventário e dependências | `ansible-playbook -i localhost, --syntax-check` no `site.yml` e nos playbooks. Regressões de DNS, Forgejo e AdGuard | Inventário fictício, API HTTP simulada em loopback e arquivos descartáveis. O teste DNS usa `systemctl --root` numa árvore temporária |
+| Ansible, incluindo roles, inventário e dependências | `ansible-playbook -i localhost, --syntax-check` no `site.yml` e nos playbooks. Regressões de DNS, Forgejo e AdGuard | Inventário fictício; só no syntax-check, padrões de hosts sem correspondência são ignorados. API HTTP simulada em loopback e arquivos descartáveis. O teste DNS usa `systemctl --root` numa árvore temporária |
 | `verificar.py` | Todos os checks locais | Mesmo efeito dos checks individuais |
 | `.forgejo/workflows/` | Todos os checks locais | Mudança na orquestração da CI deve validar os componentes que ela pode selecionar |
 | Markdown, política Tailscale ou `.gitignore` | Conferência de valores privados no diff | Revisão da política Tailscale é manual |

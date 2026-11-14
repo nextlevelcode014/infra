@@ -103,6 +103,8 @@ def ambiente_ansible(ambiente, temporario, pasta, colecoes):
 def sintaxe(pasta, playbooks, ambiente):
     executar(["ansible-playbook", "--version"], pasta, ambiente)
     comando = ["ansible-playbook", "-i", "localhost,", "--syntax-check"]
+    # O inventário local não contém os grupos de produção declarados nos playbooks.
+    ambiente = {**ambiente, "ANSIBLE_HOST_PATTERN_MISMATCH": "ignore"}
     for playbook in sorted(playbooks):
         executar([*comando, playbook], pasta, ambiente)
 
