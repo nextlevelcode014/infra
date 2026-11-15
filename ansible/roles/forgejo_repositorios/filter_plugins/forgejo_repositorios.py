@@ -19,6 +19,14 @@ LISTAS = {
 }
 TEXTOS = {'rule_name', 'protected_file_patterns', 'unprotected_file_patterns'}
 CAMPOS = BOOLEANOS | LISTAS | TEXTOS | {'required_approvals'}
+MODOS_MERGE = {
+    'merge': 'allow_merge_commits',
+    'rebase': 'allow_rebase',
+    'rebase-merge': 'allow_rebase_explicit',
+    'squash': 'allow_squash_merge',
+    'fast-forward-only': 'allow_fast_forward_only_merge',
+}
+CONFIGURACOES = {'default_merge_style', 'default_delete_branch_after_merge'}
 NOME = re.compile(r'^[A-Za-z0-9_][A-Za-z0-9_.-]*$')
 
 
@@ -39,7 +47,17 @@ def validar(repositorios):
     nomes = []
     for repo in repositorios:
         exigir(isinstance(repo, dict), 'Repositório deve ser um mapa.')
-        exigir(set(repo) == {'owner', 'name', 'collaborators', 'rules'}, 'Campos inesperados no repositório.')
+        obrigatorios = {'owner', 'name', 'collaborators', 'rules'}
+        exigir(obrigatorios <= repo.keys() <= obrigatorios | {'settings'}, 'Campos inesperados no repositório.')
+        configuracao = repo.get('settings', {})
+        exigir(isinstance(configuracao, dict) and configuracao.keys() <= CONFIGURACOES,
+               'Configuração de merge inválida ou com campo não suportado.')
+        if 'default_merge_style' in configuracao:
+            modo = configuracao['default_merge_style']
+            exigir(isinstance(modo, str) and modo in MODOS_MERGE, 'Método de merge padrão não suportado.')
+        if 'default_delete_branch_after_merge' in configuracao:
+            exigir(type(configuracao['default_delete_branch_after_merge']) is bool,
+                   'default_delete_branch_after_merge deve ser booleano YAML.')
         for campo in ('owner', 'name'):
             exigir(isinstance(repo[campo], str) and NOME.fullmatch(repo[campo]), f'{campo} inválido.')
         nomes.append(f"{repo['owner']}/{repo['name']}")
@@ -48,7 +66,8 @@ def validar(repositorios):
             exigir(isinstance(usuario, str) and NOME.fullmatch(usuario), 'Colaborador inválido.')
             exigir(usuario.lower() != repo['owner'].lower(), 'Não gerenciar o proprietário como colaborador.')
             exigir(permissao in ('read', 'write'), 'Colaboradores gerenciados aceitam somente read ou write.')
-        exigir(isinstance(repo['rules'], list) and repo['rules'], 'Declare pelo menos uma regra.')
+        exigir(isinstance(repo['rules'], list) and (repo['rules'] or configuracao),
+               'Declare pelo menos uma regra ou uma preferência de merge.')
         regras = []
         for regra in repo['rules']:
             exigir(isinstance(regra, dict) and 'rule_name' in regra, 'Regra sem rule_name.')
@@ -82,7 +101,7 @@ def selecionar(repositorios, alvos):
     return [r for r in repositorios if not alvos or f"{r['owner']}/{r['name']}" in alvos]
 
 
-def planejar(repo, regras, membros, permissoes):
+def planejar(repo, regras, membros, permissoes, configuracao_atual=None):
     """Considera só os itens declarados e preserva os demais campos/regras."""
     validar([repo])
     exigir(isinstance(regras, list), 'Resposta de proteções não é uma lista.')
@@ -92,7 +111,21 @@ def planejar(repo, regras, membros, permissoes):
         chave = regra['rule_name'].lower()
         exigir(chave not in por_nome, 'API retornou regras com nomes duplicados.')
         por_nome[chave] = regra
-    plano = {'rules': [], 'collaborators': [], 'changed': False}
+    desejada = repo.get('settings', {})
+    anterior = {}
+    if desejada:
+        exigir(isinstance(configuracao_atual, dict) and desejada.keys() <= configuracao_atual.keys(),
+               'API omitiu uma configuração de merge gerenciada.')
+        anterior = {k: configuracao_atual[k] for k in desejada}
+        exigir(all(isinstance(anterior[k], bool if isinstance(v, bool) else str) for k, v in desejada.items()),
+               'Tipo inesperado na configuração de merge retornada pela API.')
+        if 'default_merge_style' in desejada:
+            permissao = MODOS_MERGE[desejada['default_merge_style']]
+            exigir(configuracao_atual.get(permissao) is True,
+                   'O método de merge desejado precisa estar habilitado no repositório.')
+    patch = {k: v for k, v in desejada.items() if anterior[k] != v}
+    plano = {'rules': [], 'collaborators': [],
+             'settings': {'before': anterior, 'patch': patch}, 'changed': False}
     for desejada in repo['rules']:
         atual = por_nome.get(desejada['rule_name'].lower())
         depois = normalizar(desejada)
@@ -121,7 +154,7 @@ def planejar(repo, regras, membros, permissoes):
             'name': usuario, 'before': {'member': membro == 204, 'permission': atual},
             'after': desejada, 'changed': membro != 204 or atual != desejada,
         })
-    plano['changed'] = any(x['changed'] for x in plano['rules'] + plano['collaborators'])
+    plano['changed'] = bool(patch) or any(x['changed'] for x in plano['rules'] + plano['collaborators'])
     return plano
 
 

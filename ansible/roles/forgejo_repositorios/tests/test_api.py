@@ -54,10 +54,10 @@ class PlanejamentoTest(unittest.TestCase):
         atual['push_whitelist_usernames'] = None
         membros = [{'item': {'key': 'agent'}, 'status': 204}]
         permissoes = [{'item': {'key': 'agent'}, 'status': 200, 'json': {'permission': 'write'}}]
-        self.assertFalse(planejamento.planejar(repo, [atual], membros, permissoes)['changed'])
+        self.assertFalse(planejamento.planejar(repo, [atual], membros, permissoes, {**repo['settings'], 'allow_squash_merge': True})['changed'])
         del atual['enable_push']
         with self.assertRaises(AnsibleFilterError):
-            planejamento.planejar(repo, [atual], membros, permissoes)
+            planejamento.planejar(repo, [atual], membros, permissoes, {**repo['settings'], 'allow_squash_merge': True})
 
 
 class ApiFicticia(BaseHTTPRequestHandler):
@@ -87,7 +87,7 @@ class ApiFicticia(BaseHTTPRequestHandler):
         rota = '/' + '/'.join(partes[6:]) if len(partes) > 6 else ''
         if self.command == 'GET':
             if rota == '':
-                return self.responder(200, {'permissions': {'admin': estado.admin}})
+                return self.responder(200, {**estado.configuracao, 'permissions': {'admin': estado.admin}})
             if rota == '/branch_protections':
                 return self.responder(200, list(estado.regras.values()))
             if rota.startswith('/collaborators/'):
@@ -100,6 +100,10 @@ class ApiFicticia(BaseHTTPRequestHandler):
         api.snapshots_antes_de_escrever.append(bool(list(api.backup.glob(f'*/nextlevelcode_{nome}.json'))))
         if estado.negar:
             return self.responder(403, {'message': f'Erro fictício com segredo: {TOKEN}'})
+        if self.command == 'PATCH' and rota == '':
+            if not estado.ignorar_configuracao:
+                estado.configuracao.update(corpo)
+            return self.responder(200, estado.configuracao)
         if self.command == 'POST' and rota == '/branch_protections':
             if not estado.ignorar:
                 estado.regras[corpo['rule_name']] = corpo
@@ -128,7 +132,10 @@ class PlaybookTest(unittest.TestCase):
         self.api = ThreadingHTTPServer(('127.0.0.1', 0), ApiFicticia)
         def novo_estado():
             return SimpleNamespace(regras={}, membros={'outro': 'read'}, admin=True,
-                                   negar=False, ignorar=False, ignorar_colaborador=False)
+                                   negar=False, ignorar=False, ignorar_colaborador=False,
+                                   ignorar_configuracao=False,
+                                   configuracao={**DESEJADO['settings'], 'allow_squash_merge': True,
+                                                 'description': 'preservar'})
         self.infra = novo_estado()
         self.lab = novo_estado()
         self.api.repositorios = {'infra': self.infra, 'lab': self.lab}
@@ -204,6 +211,38 @@ class PlaybookTest(unittest.TestCase):
         self.assertIn('changed=0', self.executar(check=True))
         self.assertFalse(self.escritas())
         self.assertEqual(len(list((self.raiz / 'backup').glob('*/*.json'))), 1)
+
+    def test_aplica_padrao_de_merge_com_snapshot_e_idempotencia(self):
+        anterior = {'default_merge_style': 'merge', 'default_delete_branch_after_merge': False}
+        self.infra.configuracao.update(anterior)
+        self.infra.regras['main'] = {'rule_name': 'main', 'enable_status_check': False}
+        somente_settings = {**DESEJADO, 'rules': [], 'collaborators': {}}
+        extras = {'forgejo_repositorios': [somente_settings]}
+        self.assertIn('changed=1', self.executar(check=True, extras=extras))
+        self.assertFalse(self.escritas())
+        self.assertFalse(self.api.backup.exists())
+
+        self.executar(extras=extras)
+        self.assertEqual(self.escritas(), ['PATCH'])
+        self.assertFalse(self.infra.regras['main']['enable_status_check'])
+        self.assertEqual(self.infra.configuracao, {
+            **DESEJADO['settings'], 'allow_squash_merge': True, 'description': 'preservar',
+        })
+        snapshot, = self.api.backup.glob('*/*.json')
+        self.assertEqual(json.loads(snapshot.read_text())['plan']['settings'],
+                         {'before': anterior, 'patch': DESEJADO['settings']})
+        self.assertTrue(all(self.api.snapshots_antes_de_escrever))
+        self.api.chamadas.clear()
+        self.assertIn('changed=0', self.executar(extras=extras))
+        self.assertFalse(self.escritas())
+
+    def test_detecta_sucesso_http_sem_gravar_preferencia(self):
+        self.infra.configuracao['default_merge_style'] = 'merge'
+        self.infra.regras['main'] = copy.deepcopy(DESEJADO['rules'][0])
+        self.infra.ignorar_configuracao = True
+        self.executar(sucesso=False)
+        self.assertEqual(self.escritas(), ['PATCH'])
+        self.assertNotIn('agent', self.infra.membros)
 
     def test_corrige_drift_e_preserva_o_que_nao_gerencia(self):
         atual = copy.deepcopy(DESEJADO['rules'][0])

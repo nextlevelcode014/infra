@@ -239,6 +239,7 @@ pelo responsável. Os comandos não provisionam ambientes do laboratório.
                              if (r['owner'], r['name']) == ('nextlevelcode', nome)))
    assert len(repo['rules']) == 1 and repo['rules'][0]['rule_name'] == 'main'
    repo['rules'][0]['rule_name'] = 'teste-protecao-main'
+   repo.pop('settings', None)
    config = {'forgejo_repositorios': [repo],
              'forgejo_repositorios_alvos': [f'nextlevelcode/{nome}']}
    Path(f'/tmp/forgejo-ensaio-{nome}-vars.json').write_text(json.dumps(config))
@@ -360,6 +361,57 @@ versionada após a operação e reconsulte `branch_protections/main`.
 
 ### Conferir e aplicar
 
+A seção `settings` do YAML seleciona squash e marca a exclusão da branch
+de origem por padrão no formulário de merge de `infra` e `lab`. O responsável
+continua fazendo o squash manualmente e pode desmarcar a exclusão no PR.
+O playbook envia ao endpoint do repositório apenas as preferências declaradas
+que divergirem e confirma os valores com uma nova leitura da API. Confira
+a aplicação no repositório escolhido:
+
+```bash
+tea api --login forgejo repos/nextlevelcode/lab | python3 -c 'import json,sys; repo=json.load(sys.stdin); print(repo["default_merge_style"], repo["default_delete_branch_after_merge"])'
+```
+
+O esperado é `squash True`. No outro repositório, substitua `lab` por `infra`.
+
+Para aplicar as preferências primeiro, gere um recorte público do YAML.
+O exemplo seleciona o `infra`. Use `lab` na variável para executá-lo
+nesse repositório:
+
+```bash
+export FORGEJO_MERGE_REPO=infra
+FORGEJO_MERGE_VARS=$(mktemp /tmp/forgejo-merge-vars.XXXXXX)
+export FORGEJO_MERGE_VARS
+python3 - <<'PY_MERGE'
+import json
+import os
+from pathlib import Path
+import yaml
+
+nome = os.environ['FORGEJO_MERGE_REPO']
+assert nome in ('infra', 'lab')
+repos = yaml.safe_load(Path('vars/forgejo-repositorios.yml').read_text())['forgejo_repositorios']
+repo, = [r for r in repos if (r['owner'], r['name']) == ('nextlevelcode', nome)]
+recorte = {**repo, 'rules': [], 'collaborators': {}}
+Path(os.environ['FORGEJO_MERGE_VARS']).write_text(json.dumps({
+    'forgejo_repositorios': [recorte],
+    'forgejo_repositorios_alvos': [f'nextlevelcode/{nome}'],
+}))
+PY_MERGE
+ansible-playbook -i localhost, playbooks/forgejo-repositorios.yml --ask-vault-pass -e "@$FORGEJO_MERGE_VARS" --check --diff
+```
+
+Confira que a simulação mostra apenas preferências de merge. Com a
+aplicação autorizada, rode:
+
+```bash
+ansible-playbook -i localhost, playbooks/forgejo-repositorios.yml --ask-vault-pass -e "@$FORGEJO_MERGE_VARS" -e forgejo_repositorios_aplicar=true
+ansible-playbook -i localhost, playbooks/forgejo-repositorios.yml --ask-vault-pass -e "@$FORGEJO_MERGE_VARS" --check --diff
+rm -- "$FORGEJO_MERGE_VARS"
+```
+
+Confira `changed=0` na segunda simulação e os dois valores pela API.
+
 Os comandos desta seção rodam **dentro de `ansible/`**, depois do merge,
 do ensaio temporário e com autorização para os alvos. Mesmo `--check`
 consulta o serviço real. O exemplo seleciona somente `nextlevelcode/lab`.
@@ -448,6 +500,26 @@ remoção exige decisão própria; no ensaio, use somente a exclusão da regra
 temporária descrita acima. Se a API estiver indisponível, use a sessão web;
 se faltar acesso, recupere primeiro a conta administrativa pelos procedimentos
 da instância, sem alterar diretamente o banco para contornar a proteção.
+
+Para recuperar as preferências de merge, use o mesmo snapshot e seleção
+de repositório. Envie apenas o mapa anterior de preferências:
+
+```bash
+set -o pipefail
+python3 - "$FORGEJO_RECUPERACAO_SNAPSHOT" "$FORGEJO_RECUPERACAO_REPO" <<'PY_RECUPERAR' | tea api --login forgejo --method PATCH "repos/nextlevelcode/${FORGEJO_RECUPERACAO_REPO}" --data @- > /dev/null
+import json, sys
+from pathlib import Path
+snapshot = json.loads(Path(sys.argv[1]).read_text())
+assert sys.argv[2] in ('infra', 'lab')
+assert snapshot['repository'] == f'nextlevelcode/{sys.argv[2]}'
+settings = snapshot['plan']['settings']
+assert settings['patch']
+print(json.dumps({key: settings['before'][key] for key in settings['patch']}))
+PY_RECUPERAR
+```
+
+Repita a leitura do endpoint do repositório e compare as preferências com
+`plan.settings.before` do snapshot.
 
 Permissões de colaboradores ficam em `plan.collaborators[].before` no mesmo
 snapshot. Confira esse registro antes de restaurar **somente** o usuário

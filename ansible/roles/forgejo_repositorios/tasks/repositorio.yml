@@ -65,7 +65,15 @@
         forgejo_repositorios_plano: >-
           {{ forgejo_repositorios_repo | forgejo_repositorios_planejar(
              forgejo_repositorios_regras.json, forgejo_repositorios_membros.results,
-             forgejo_repositorios_permissoes.results) }}
+             forgejo_repositorios_permissoes.results, forgejo_repositorios_acesso.json) }}
+
+    - name: Apresentar as diferenças nas preferências de merge
+      ansible.builtin.debug:
+        msg:
+          antes: "{{ forgejo_repositorios_plano.settings.before }}"
+          alteracoes: "{{ forgejo_repositorios_plano.settings.patch }}"
+      when: forgejo_repositorios_plano.settings.patch | length > 0
+      changed_when: ansible_check_mode
 
     - name: Apresentar as diferenças de proteção
       ansible.builtin.debug:
@@ -103,7 +111,7 @@
             state: directory
             mode: '0700'
 
-        - name: Salvar regras e permissões gerenciadas sem tokens
+        - name: Salvar preferências, regras e permissões gerenciadas sem tokens
           ansible.builtin.copy:
             dest: "{{ forgejo_repositorios_backup_execucao }}/{{ forgejo_repositorios_repo.owner }}_{{ forgejo_repositorios_repo.name }}.json"
             content: >-
@@ -155,9 +163,40 @@
         that: >-
           not ((forgejo_repositorios_repo | forgejo_repositorios_planejar(
             forgejo_repositorios_regras_depois.json, forgejo_repositorios_membros.results,
-            forgejo_repositorios_permissoes.results)).rules | selectattr('changed') | list | length > 0)
+            forgejo_repositorios_permissoes.results, forgejo_repositorios_acesso.json)).rules | selectattr('changed') | list | length > 0)
         fail_msg: A API não confirmou as proteções; interrompido antes de conceder permissões.
       when: not ansible_check_mode
+
+    - name: Atualizar os padrões de merge declarados
+      when:
+        - not ansible_check_mode
+        - forgejo_repositorios_plano.settings.patch | length > 0
+      block:
+        - name: Aplicar os campos alterados
+          ansible.builtin.uri:
+            url: "{{ forgejo_repositorios_endpoint }}"
+            method: PATCH
+            body_format: json
+            body: "{{ forgejo_repositorios_plano.settings.patch }}"
+            status_code: 200
+          changed_when: true
+          no_log: true
+
+        - name: Reconsultar a configuração do repositório
+          ansible.builtin.uri:
+            url: "{{ forgejo_repositorios_endpoint }}"
+            method: GET
+            status_code: 200
+          register: forgejo_repositorios_acesso_depois
+          no_log: true
+
+        - name: Exigir que o Forgejo tenha aplicado os padrões
+          ansible.builtin.assert:
+            that: >-
+              not (forgejo_repositorios_repo | forgejo_repositorios_planejar(
+                forgejo_repositorios_regras_depois.json, forgejo_repositorios_membros.results,
+                forgejo_repositorios_permissoes.results, forgejo_repositorios_acesso_depois.json)).settings.patch
+            fail_msg: A API não confirmou as preferências de merge; interrompido antes de conceder permissões.
 
     - name: Adicionar ou ajustar somente os colaboradores declarados
       ansible.builtin.uri:

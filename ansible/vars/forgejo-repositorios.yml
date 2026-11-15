@@ -1,8 +1,11 @@
 ---
-# Política compartilhada; aplicação pode selecionar um repositório por vez.
+# Preferências e proteção compartilhadas. A aplicação pode selecionar um repositório por vez.
 forgejo_repositorios:
   - owner: nextlevelcode
     name: infra
+    settings: &padroes_merge
+      default_merge_style: squash
+      default_delete_branch_after_merge: true
     collaborators:
       agent: write
     rules: &protecao_main
@@ -33,6 +36,7 @@ forgejo_repositorios:
         apply_to_admins: true
   - owner: nextlevelcode
     name: lab
+    settings: *padroes_merge
     collaborators:
       agent: write
     rules: *protecao_main
