@@ -42,6 +42,30 @@ registra os SHAs, a seleção e os limites, e o título da execução mostra o
 número do PR e o SHA do head. Checks obrigatórios para merge são configurados
 separadamente na Etapa 7.
 
+## Repetir uma verificação de um PR
+
+Use os SHAs completos da base e do head registrados no PR ou no resumo do
+job. Em um clone separado, confirme o remote e busque o head do PR se
+ele ainda faltar, inclusive após o squash e a exclusão da branch:
+
+```bash
+git remote -v
+git fetch origin "$base" "refs/pull/${numero_pr}/head"
+git switch --detach "$head"
+git rev-parse HEAD "$base"
+git status --short
+python3 verificar.py pr "$base" "$head"
+```
+
+Preencha `numero_pr`, `base` e `head` com os valores do PR. Confira os
+dois SHAs na ordem head e base e a saída vazia do status. Se o comando
+original usava `origin/main HEAD`, passe os SHAs registrados no lugar
+dessas referências. Preserve o perfil e as opções, como `--colecoes` e
+`--espelho-providers`, ajustando os caminhos para as dependências
+equivalentes no novo ambiente. Registre o tempo de execução, a seleção,
+o resultado e as diferenças de ambiente. Em caso de nova tentativa,
+registre o motivo e o tempo até o primeiro resultado útil.
+
 ## Dependências
 
 Referência para reprodução em Linux: Git, Python **3.14.8**, Terraform
@@ -65,7 +89,9 @@ Se faltar uma versão do lock, a inicialização falha. O root Proxmox
 recebe uma chave pública fictícia no diretório temporário. O ambiente
 descarta configurações e variáveis da sessão, incluindo credenciais,
 inventário operacional e configurações de proxy. O teste Forgejo precisa
-conseguir abrir um socket em `127.0.0.1`.
+conseguir abrir um socket em `127.0.0.1`. Se o ambiente negar a abertura
+desse socket, registre a limitação e repita onde o loopback local seja
+permitido.
 
 Integração DNS por namespaces, consultas a provedores reais e operações em
 máquinas têm procedimentos no [guia DNS](../ansible/docs/lxc-dns.md#testes-locais).
