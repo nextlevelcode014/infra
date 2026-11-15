@@ -83,6 +83,31 @@ curl -sS -o /dev/null -w '%{content_type}\n' https://forge.nextlevelcode.pro/api
 O Git deve imprimir a ref de cada repositório. A API anônima continua sob o desafio. Confira
 também um fetch real por HTTPS e o envio de logs do runner no piloto.
 
+## Atualizar os resolvedores do runner
+
+`ansible/vars/rede-runner.yml` alimenta a lista de destinos DNS permitidos
+no Proxmox e o DNS do cloud-init da VM. Faça a troca em janela autorizada
+porque a atualização afeta a resolução dos jobs.
+
+1. De `terraform/`, execute `terraform plan`. Confira que a mudança
+   esperada é a lista DNS da VM do runner, sem recriação ou alterações em
+   outros recursos. Espere os jobs ativos terminarem e, na VM, execute
+   `sudo systemctl stop forgejo-runner`. Confira com
+   `systemctl is-active forgejo-runner` que o serviço está inativo.
+2. De `ansible/`, execute
+   `ansible-playbook playbooks/forgejo-runner-rede.yml --ask-vault-pass --limit proxmox`.
+   Confira com `ssh root@<proxmox_host> 'nft list table inet forgejo_runner'`
+   que os endereços desejados estão liberados em UDP e TCP na porta 53.
+3. De `terraform/`, execute `terraform apply` e confirme o plano revisado.
+   Confira a lista gerada com
+   `ssh root@<proxmox_host> 'qm cloudinit dump 300 network'` e a lista efetiva
+   com `ssh -J root@<proxmox_host> ubuntu@10.70.0.2 'resolvectl status'`.
+   Se a VM ainda mostrar a lista anterior, mantenha o serviço parado até
+   verificar a atualização no guest. Antes de devolver o runner à fila,
+   repita as verificações de DNS e HTTPS da seção anterior. Na VM, execute
+   `sudo systemctl start forgejo-runner` e confirme no Forgejo que o
+   registro voltou a receber jobs.
+
 ## Publicar a imagem e registrar
 
 O Anubis encaminha descoberta e emissão de token OCI no endereço público
