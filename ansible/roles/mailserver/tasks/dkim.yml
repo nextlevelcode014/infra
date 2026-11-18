@@ -1,0 +1,52 @@
+---
+- name: Preparar os diretórios DKIM do Rspamd
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  loop:
+    - "{{ mailserver_dkim_key | dirname }}"
+    - "{{ mailserver_rspamd_dir }}/override.d"
+  register: mailserver_dkim_diretorios
+
+- name: Gerar a chave RSA do Rspamd sem substituir uma chave existente
+  ansible.builtin.command:
+    expand_argument_vars: false
+    argv:
+      - docker
+      - run
+      - --rm
+      - --network=none
+      - --volume={{ mailserver_dkim_key | dirname }}:/dkim
+      - --entrypoint=/bin/sh
+      - "{{ mailserver_image }}"
+      - -ec
+      # Use o gerador que o rspamd-dkim chama, sem a recarga do daemon.
+      # Grave a chave pronta sem sobrescrever a de outra execução.
+      - |
+        umask 077
+        chave=/tmp/piloto-dkim.private
+        rspamadm dkim_keygen -d "$1" -s "$2" -b 2048 -k "$chave" >/dev/null
+        openssl pkey -in "$chave" -check -noout >/dev/null
+        temporaria=$(mktemp /dkim/.chave.XXXXXX)
+        trap 'rm -f -- "$temporaria"' EXIT
+        install -o _rspamd -g _rspamd -m 0600 "$chave" "$temporaria"
+        if ! ln -- "$temporaria" "/dkim/$3"; then
+          test -s "/dkim/$3"
+        fi
+      - gerar-dkim
+      - "{{ mailserver_dominio }}"
+      - "{{ mailserver_seletor }}"
+      - "{{ mailserver_dkim_key | basename }}"
+    creates: "{{ mailserver_dkim_key }}"
+
+- name: Configurar assinatura DKIM com o domínio exato do piloto
+  ansible.builtin.template:
+    src: dkim_signing.conf.j2
+    dest: "{{ mailserver_rspamd_dir }}/override.d/dkim_signing.conf"
+    owner: root
+    group: root
+    mode: "0644"
+  when: not (ansible_check_mode and mailserver_dkim_diretorios is changed)

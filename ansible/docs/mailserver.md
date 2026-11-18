@@ -68,6 +68,9 @@ Cloudflare em etapas. As caixas do domínio principal continuam no Proton.
    ```
 
    Confira o container saudável e os dois encaminhamentos TCP na tailnet.
+   O playbook prepara o DKIM do Rspamd com o domínio exato do piloto.
+   Se a configuração DKIM do container estiver desatualizada, a aplicação
+   recria o serviço com os mesmos volumes.
    O Certbot obtém o certificado para os dois nomes. Confira o agendamento
    com `ssh hetzner@hetzner 'systemctl list-timers certbot.timer'`. O DMS
    detecta a troca do certificado após a renovação.

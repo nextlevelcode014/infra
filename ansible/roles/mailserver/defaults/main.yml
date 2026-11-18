@@ -6,4 +6,5 @@ mailserver_contas: "{{ vault_mailserver_contas }}"
 mailserver_certbot_email: "{{ caddy_email }}"
 mailserver_certbot_dir: /etc/letsencrypt
 mailserver_certbot_credenciais: "{{ mailserver_dir }}/cloudflare.ini"
-mailserver_dkim_key: "{{ mailserver_data_dir }}/config/rspamd/dkim/{{ mailserver_dominio }}-{{ mailserver_seletor }}.private"
+mailserver_rspamd_dir: "{{ mailserver_data_dir }}/config/rspamd"
+mailserver_dkim_key: "{{ mailserver_rspamd_dir }}/dkim/{{ mailserver_dominio }}-{{ mailserver_seletor }}.private"

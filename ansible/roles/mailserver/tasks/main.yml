@@ -51,25 +51,8 @@
 - name: Configurar emissão e renovação do TLS
   ansible.builtin.import_tasks: tls.yml
 
-- name: Gerar a chave DKIM do piloto
-  ansible.builtin.command:
-    argv:
-      - docker
-      - run
-      - --rm
-      - --network=none
-      - --env=ENABLE_RSPAMD=1
-      - --env=ENABLE_OPENDKIM=0
-      - --volume={{ mailserver_data_dir }}/config:/tmp/docker-mailserver
-      - --entrypoint=setup
-      - "{{ mailserver_image }}"
-      - config
-      - dkim
-      - domain
-      - "{{ mailserver_dominio }}"
-      - selector
-      - "{{ mailserver_seletor }}"
-    creates: "{{ mailserver_dkim_key }}"
+- name: Preparar a assinatura DKIM do piloto
+  ansible.builtin.import_tasks: dkim.yml
 
 - name: Subir o Docker Mailserver
   ansible.builtin.include_role:
@@ -77,6 +60,40 @@
   vars:
     compose_stack_dir: "{{ mailserver_dir }}"
     compose_stack_wait: true
+
+# O DMS copia os overrides ao iniciar. Compare com a cópia do container para
+# também concluir uma aplicação anterior interrompida antes da recriação.
+- name: Conferir se o container recebeu a configuração DKIM
+  ansible.builtin.command:
+    argv:
+      - docker
+      - compose
+      - -f
+      - compose.yml
+      - exec
+      - -T
+      - mailserver
+      - cmp
+      - -s
+      - /tmp/docker-mailserver/rspamd/override.d/dkim_signing.conf
+      - /etc/rspamd/override.d/dkim_signing.conf
+    chdir: "{{ mailserver_dir }}"
+  register: mailserver_dkim_config_no_container
+  changed_when: false
+  failed_when: mailserver_dkim_config_no_container.rc not in [0, 1, 2]
+  when: not ansible_check_mode
+
+- name: Recriar o Mailserver para carregar a configuração DKIM
+  community.docker.docker_compose_v2:
+    project_src: "{{ mailserver_dir }}"
+    files: [compose.yml]
+    services: [mailserver]
+    state: present
+    recreate: always
+    wait: true
+  when:
+    - not ansible_check_mode
+    - mailserver_dkim_config_no_container.rc != 0
 
 - name: Publicar as portas de cliente na tailnet
   ansible.builtin.import_tasks: tailscale.yml
