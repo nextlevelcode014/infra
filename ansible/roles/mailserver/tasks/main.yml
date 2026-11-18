@@ -22,14 +22,27 @@
   vars:
     compose_stack_dir: "{{ mailserver_dir }}"
 
-- name: Preparar diretórios persistentes
+- name: Restringir o acesso aos dados persistentes no host
   ansible.builtin.file:
-    path: "{{ mailserver_data_dir }}/{{ item }}"
+    path: "{{ mailserver_data_dir }}"
     state: directory
     owner: root
     group: root
     mode: "0700"
-  loop: [mail, estado, config]
+
+# O Dovecot grava com UID/GID 5000 na imagem. Postfix e Rspamd precisam
+# atravessar as outras montagens, enquanto o diretório pai protege no host.
+- name: Preparar os volumes persistentes com as permissões do Mailserver
+  ansible.builtin.file:
+    path: "{{ mailserver_data_dir }}/{{ item.nome }}"
+    state: directory
+    owner: "{{ item.dono }}"
+    group: "{{ item.grupo }}"
+    mode: "{{ item.modo }}"
+  loop:
+    - {nome: mail, dono: "5000", grupo: "5000", modo: "0700"}
+    - {nome: estado, dono: root, grupo: root, modo: "0711"}
+    - {nome: config, dono: root, grupo: root, modo: "0711"}
 
 - name: Configurar as contas do piloto
   ansible.builtin.template:
