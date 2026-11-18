@@ -1,0 +1,18 @@
+---
+- name: Gerenciar o DNS do piloto pela API da Cloudflare
+  hosts: vps
+  gather_facts: false
+  vars_files:
+    - ../vars/mailserver.yml
+  tasks:
+    - name: Exigir a etapa explícita de DNS
+      ansible.builtin.assert:
+        that: mailserver_dns_etapa | default('') in ['enderecos', 'entrega', 'retirar-mx']
+        fail_msg: Passe mailserver_dns_etapa=enderecos, entrega ou retirar-mx.
+    - name: Aplicar a etapa de DNS
+      ansible.builtin.include_role:
+        name: mailserver
+        tasks_from: dns
+      vars:
+        # use o token da zona já provisionado para a VPS
+        mailserver_dns_token: "{{ vault_caddy_vps_cloudflare_token }}"

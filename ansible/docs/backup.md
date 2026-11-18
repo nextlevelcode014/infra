@@ -33,7 +33,7 @@ próprio (`docs/nextcloud.md`). Serviço com repositório próprio passa
 | `forgejo` (LXC) | 02:00 | forgejo |
 | `vaultwarden` (LXC) | 02:15 | vaultwarden |
 | `pi` | 02:30 | adguard, arr, fmd, immich |
-| `hetzner` (VPS) | 03:00 | uptime-kuma |
+| `hetzner` (VPS) | 03:00 | mailserver (quando ativado), uptime-kuma |
 
 Os horários ficam em `borg_backup_times` (`group_vars/all/vars.yml`). Entre
 hosts a trava do Borg ainda é disputada (`borg_lock_wait`: 10 min). O

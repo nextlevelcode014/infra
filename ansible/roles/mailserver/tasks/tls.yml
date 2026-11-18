@@ -1,0 +1,53 @@
+---
+- name: Instalar o Certbot e o plugin DNS da Cloudflare
+  ansible.builtin.apt:
+    name: [certbot, python3-certbot-dns-cloudflare]
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Gravar token para o desafio DNS-01
+  ansible.builtin.copy:
+    dest: "{{ mailserver_certbot_credenciais }}"
+    content: "dns_cloudflare_api_token = {{ vault_caddy_vps_cloudflare_token }}\n"
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+
+- name: Emitir certificado para os dois nomes do piloto
+  ansible.builtin.command:
+    argv:
+      - certbot
+      - certonly
+      - --non-interactive
+      - --agree-tos
+      - --email={{ mailserver_certbot_email }}
+      - --dns-cloudflare
+      - --dns-cloudflare-credentials={{ mailserver_certbot_credenciais }}
+      - --dns-cloudflare-propagation-seconds=60
+      - --cert-name={{ mailserver_mx }}
+      - -d
+      - "{{ mailserver_mx }}"
+      - -d
+      - "{{ mailserver_cliente }}"
+    creates: "{{ mailserver_certbot_dir }}/live/{{ mailserver_mx }}/fullchain.pem"
+
+- name: Conferir validade e nomes do certificado
+  ansible.builtin.command:
+    argv:
+      - openssl
+      - verify
+      - -verify_hostname
+      - "{{ item }}"
+      - -untrusted
+      - "{{ mailserver_certbot_dir }}/live/{{ mailserver_mx }}/chain.pem"
+      - "{{ mailserver_certbot_dir }}/live/{{ mailserver_mx }}/cert.pem"
+  changed_when: false
+  loop: ["{{ mailserver_mx }}", "{{ mailserver_cliente }}"]
+
+- name: Agendar a renovação
+  ansible.builtin.systemd:
+    name: certbot.timer
+    enabled: true
+    state: started

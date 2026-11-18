@@ -60,6 +60,17 @@
   loop_control:
     label: "{{ item.id }}"
 
+- name: Conferir se o backup do Mailserver foi instalado nesta VPS
+  ansible.builtin.stat:
+    path: "{{ borg_backup_config_dir }}/mailserver.yaml"
+  register: uptime_kuma_mailserver_backup
+
+- name: Montar a lista de monitores de backup ativos
+  ansible.builtin.set_fact:
+    uptime_kuma_backups_ativos: >-
+      {{ uptime_kuma_backups | combine(
+           {'mailserver': 'Docker Mailserver'} if uptime_kuma_mailserver_backup.stat.exists else {}) }}
+
 # Push: quem avisa é o borgmatic de cada host, no fim de cada backup. O token
 # é o mesmo que o borg_client calcula (borg_backup_push_token).
 - name: Gerar os monitores de backup
@@ -75,7 +86,7 @@
            'group': uptime_kuma_backup_group,
            'name': 'Backup ' ~ backup.value,
            'push_token': borg_backup_push_token}) }}
-  loop: "{{ uptime_kuma_backups | dict2items }}"
+  loop: "{{ uptime_kuma_backups_ativos | dict2items }}"
   loop_control:
     loop_var: backup
     label: "backup-{{ backup.key }}"
@@ -122,7 +133,7 @@
     not in ([uptime_kuma_notification_id]
             + (uptime_kuma_groups | map(attribute='id') | list)
             + (uptime_kuma_monitors | map(attribute='id') | list)
-            + (uptime_kuma_backups | dict2items | map(attribute='key')
+            + (uptime_kuma_backups_ativos | dict2items | map(attribute='key')
                | map('regex_replace', '^', 'backup-') | list)
             + (uptime_kuma_reboot_watch | dict2items | map(attribute='key')
                | map('regex_replace', '^', 'reboot-') | list))

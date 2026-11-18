@@ -1,0 +1,106 @@
+---
+- name: Validar hashes das contas do piloto
+  ansible.builtin.assert:
+    that:
+      - mailserver_contas is mapping
+      - "'ana' in mailserver_contas and 'bruno' in mailserver_contas"
+      - mailserver_contas.keys() | reject('match', '^[a-z][a-z0-9_.-]*$') | list | length == 0
+      - mailserver_contas.values() | reject('match', '^\\$6\\$[./A-Za-z0-9]+\\$[./A-Za-z0-9]{86}$') | list | length == 0
+    fail_msg: Preencha o vault com hashes gerados por openssl passwd -6.
+  no_log: true
+
+- name: Garantir o Docker na VPS
+  ansible.builtin.include_role:
+    name: geerlingguy.docker
+  vars:
+    docker_users: []
+
+- name: Preparar o diretório da stack
+  ansible.builtin.include_role:
+    name: compose_stack
+    tasks_from: dir
+  vars:
+    compose_stack_dir: "{{ mailserver_dir }}"
+
+- name: Preparar diretórios persistentes
+  ansible.builtin.file:
+    path: "{{ mailserver_data_dir }}/{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+  loop: [mail, estado, config]
+
+- name: Configurar as contas do piloto
+  ansible.builtin.template:
+    src: postfix-accounts.cf.j2
+    dest: "{{ mailserver_data_dir }}/config/postfix-accounts.cf"
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+
+- name: Entregar mensagens para postmaster à caixa administrativa
+  ansible.builtin.copy:
+    dest: "{{ mailserver_data_dir }}/config/postfix-virtual.cf"
+    content: "postmaster@{{ mailserver_dominio }} ana@{{ mailserver_dominio }}\n"
+    owner: root
+    group: root
+    mode: "0600"
+
+- name: Configurar emissão e renovação do TLS
+  ansible.builtin.import_tasks: tls.yml
+
+- name: Gerar a chave DKIM do piloto
+  ansible.builtin.command:
+    argv:
+      - docker
+      - run
+      - --rm
+      - --network=none
+      - --env=ENABLE_RSPAMD=1
+      - --env=ENABLE_OPENDKIM=0
+      - --volume={{ mailserver_data_dir }}/config:/tmp/docker-mailserver
+      - --entrypoint=setup
+      - "{{ mailserver_image }}"
+      - config
+      - dkim
+      - domain
+      - "{{ mailserver_dominio }}"
+      - selector
+      - "{{ mailserver_seletor }}"
+    creates: "{{ mailserver_dkim_key }}"
+
+- name: Subir o Docker Mailserver
+  ansible.builtin.include_role:
+    name: compose_stack
+  vars:
+    compose_stack_dir: "{{ mailserver_dir }}"
+    compose_stack_wait: true
+
+- name: Publicar as portas de cliente na tailnet
+  ansible.builtin.import_tasks: tailscale.yml
+
+- name: Preparar o cliente Borg
+  ansible.builtin.include_role:
+    name: borg_client
+
+- name: Configurar o backup Borg do Mailserver
+  ansible.builtin.include_role:
+    name: borg_client
+    tasks_from: backup
+  vars:
+    borg_backup_name: mailserver
+    borg_backup_sources:
+      - "{{ mailserver_data_dir }}"
+    borg_backup_commands:
+      - before: action
+        when: [create]
+        run:
+          - docker compose -f {{ mailserver_dir }}/compose.yml stop mailserver
+      - after: action
+        when: [create]
+        run: &mailserver_backup_start
+          - docker compose -f {{ mailserver_dir }}/compose.yml start mailserver
+      - after: error
+        run: *mailserver_backup_start

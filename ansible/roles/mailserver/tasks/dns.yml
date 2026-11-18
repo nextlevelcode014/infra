@@ -1,0 +1,82 @@
+---
+- name: Coletar o IPv4 da VPS para os registros públicos
+  ansible.builtin.setup:
+    gather_subset: ['!all', '!min', default_ipv4]
+  when: mailserver_dns_etapa != 'retirar-mx'
+
+- name: Ler o endereço de acesso dos clientes na tailnet
+  ansible.builtin.command: tailscale ip -4
+  register: mailserver_dns_tailnet
+  changed_when: false
+  check_mode: false
+  no_log: true
+  when: mailserver_dns_etapa == 'enderecos'
+
+- name: Publicar os endereços do SMTP e dos clientes
+  community.general.cloudflare_dns:
+    zone: "{{ mailserver_zona }}"
+    api_token: "{{ mailserver_dns_token }}"
+    record: "{{ item.nome }}"
+    type: A
+    value: "{{ item.valor }}"
+    ttl: 300
+    proxied: false
+    solo: true
+  loop:
+    - {nome: "{{ mailserver_mx }}", valor: "{{ ansible_facts.default_ipv4.address }}"}
+    - {nome: "{{ mailserver_cliente }}", valor: "{{ mailserver_dns_tailnet.stdout }}"}
+  delegate_to: localhost
+  become: false
+  no_log: true
+  when: mailserver_dns_etapa == 'enderecos'
+
+- name: Preparar a entrega pública
+  when: mailserver_dns_etapa == 'entrega'
+  block:
+    - name: Derivar somente a parte pública da chave DKIM ativa
+      ansible.builtin.command:
+        argv: [openssl, pkey, -in, "{{ mailserver_dkim_key }}", -pubout]
+      register: mailserver_dns_dkim
+      changed_when: false
+      check_mode: false
+
+    - name: Publicar SPF, DKIM e DMARC
+      community.general.cloudflare_dns:
+        zone: "{{ mailserver_zona }}"
+        api_token: "{{ mailserver_dns_token }}"
+        record: "{{ item.nome }}"
+        type: TXT
+        value: "{{ item.valor }}"
+        ttl: 300
+        solo: true
+      vars:
+        mailserver_dns_dkim_publica: >-
+          {{ mailserver_dns_dkim.stdout_lines | reject('match', '^-----') | join('') }}
+        mailserver_dns_dkim_txt: "v=DKIM1; k=rsa; p={{ mailserver_dns_dkim_publica }}"
+      loop:
+        - nome: "{{ mailserver_dominio }}"
+          valor: '"v=spf1 ip4:{{ ansible_facts.default_ipv4.address }} -all"'
+        - nome: "{{ mailserver_seletor }}._domainkey.{{ mailserver_dominio }}"
+          valor: >-
+            "{{ mailserver_dns_dkim_txt | regex_findall('.{1,255}') | join('" "') }}"
+        - nome: "_dmarc.{{ mailserver_dominio }}"
+          valor: '"v=DMARC1; p=reject; adkim=s; aspf=s"'
+      delegate_to: localhost
+      become: false
+      no_log: true
+
+- name: Publicar ou retirar o MX do piloto
+  community.general.cloudflare_dns:
+    zone: "{{ mailserver_zona }}"
+    api_token: "{{ mailserver_dns_token }}"
+    record: "{{ mailserver_dominio }}"
+    type: MX
+    value: "{{ mailserver_mx }}"
+    priority: 10
+    ttl: 300
+    solo: "{{ true if mailserver_dns_etapa == 'entrega' else omit }}"
+    state: "{{ 'present' if mailserver_dns_etapa == 'entrega' else 'absent' }}"
+  delegate_to: localhost
+  become: false
+  no_log: true
+  when: mailserver_dns_etapa in ['entrega', 'retirar-mx']

@@ -26,6 +26,17 @@ resource "hcloud_firewall" "vps" {
     source_ips  = ["0.0.0.0/0", "::/0"]
   }
 
+  dynamic "rule" {
+    for_each = var.mailserver_piloto_habilitado ? [25] : []
+    content {
+      description = "SMTP do piloto"
+      direction   = "in"
+      protocol    = "tcp"
+      port        = tostring(rule.value)
+      source_ips  = ["0.0.0.0/0"]
+    }
+  }
+
   # Conexão direta do Tailscale; sem ela os pares caem no relay (DERP).
   rule {
     description = "Tailscale direto"

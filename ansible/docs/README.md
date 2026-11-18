@@ -26,6 +26,7 @@ modelo.
 |---|---|---|---|
 | AdGuard | Pi | `adguard.md` | `adguard-restore.md` |
 | Anubis | VPS | `anubis.md` | — |
+| Docker Mailserver | VPS | `mailserver.md` | seção no próprio doc |
 | Bread of Life | LXC | `bread-of-life.md` | issue #89 |
 | Stack Arr | Pi | `arr-stack.md` | `arr-stack-restore.md` |
 | Exit node | Pi | `exit-node.md` | — |

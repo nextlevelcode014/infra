@@ -1,0 +1,16 @@
+---
+- name: Configurar o Docker Mailserver na VPS
+  hosts: vps
+  gather_facts: false
+  vars_files:
+    - ../vars/mailserver.yml
+  pre_tasks:
+    - name: Exigir ativação explícita do piloto
+      ansible.builtin.assert:
+        that: mailserver_ativar | default(false) | bool
+        fail_msg: Use -e mailserver_ativar=true para aplicar o piloto na VPS.
+    - name: Coletar fatos da VPS
+      ansible.builtin.setup:
+  roles:
+    - role: vps_host
+    - role: mailserver

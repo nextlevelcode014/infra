@@ -1,2 +1,5 @@
 # Security → API tokens, leitura e escrita. Guardado no Vaultwarden.
 hcloud_token = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+# Ative após conferir o TCP/25 de saída e publicar o A do MX.
+# mailserver_piloto_habilitado = true

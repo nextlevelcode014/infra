@@ -13,6 +13,11 @@ Tailscale) e ICMP. O resto é descartado **antes de chegar na VM**: vale mesmo
 com o UFW desligado, e barra as portas que o Docker publica por cima do UFW. A
 administração continua pelo Tailscale SSH, que não depende de porta aberta.
 
+Com `mailserver_piloto_habilitado = true`, o Terraform também abre a TCP/25
+de entrada em IPv4 e configura o PTR do IPv4 primário para o nome do MX.
+A liberação de **saída** é por conta na Hetzner. Veja a ordem de ativação no
+[guia do Mailserver](../../ansible/docs/mailserver.md).
+
 ## Proteções
 
 - `delete_protection` e `rebuild_protection` ligadas na Hetzner: nem o console

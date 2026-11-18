@@ -83,6 +83,7 @@ usadas depois.
 | `playbooks/caddy-pi.yml` | `pi_hosts` | Caddy reserva do `*.lab` no Pi: sempre no ar, só no IP Tailscale; atende quando o `*.lab` da Cloudflare aponta para o Pi |
 | `playbooks/caddy-vps.yml` | `vps` | Caddy da VPS: domínios públicos (forge, status page do Uptime Kuma) + sites privados em `*.lab` que moram nela |
 | `playbooks/anubis.yml` | `vps` | Anubis (prova de trabalho anti-bot) na frente dos domínios públicos da VPS; aplicar antes do `caddy-vps.yml` |
+| `playbooks/mailserver.yml`, `playbooks/mailserver-dns.yml` | `vps` | piloto de correio e etapas de DNS, com execução explícita ([guia](docs/mailserver.md)) |
 | `playbooks/uptime-kuma.yml` | `vps` | Uptime Kuma na VPS (fora de casa), em `uptime.lab` pelo Caddy da VPS |
 | `playbooks/immich.yml` | `pi_hosts` | Immich do Pi + backup Borg |
 | `playbooks/pi-completo.yml` | `pi_hosts` | Pi inteiro na ordem certa; com `-e pi_restaurar_tudo=RESTAURAR_PI` traz os dados do Borg antes (`docs/pi-reconstrucao.md`) |
@@ -165,6 +166,7 @@ linha.
 | `vps_host` | base de toda VPS: UFW (só 80/443 + `tailscale0`), sshd sem senha nem root, unattended-upgrades, fail2ban de fallback |
 | `registro_versoes` | nome, imagem, digest e versão de cada container antes (`tasks_from: antes`) e depois (`tasks_from: depois`) de uma atualização; log em `/var/log/atualizar` |
 | `reboot_watch` | timer de hora em hora que avisa um monitor push quando o reboot está pendente há 3+ dias, o `apt-daily-upgrade` falhou ou um repositório do apt não responde; dependência do `vps_host` e do `pi_host`, pula LXC |
+| `mailserver` | Docker Mailserver na VPS, certificado DNS-01, acesso pela tailnet e backup Borg |
 | `uptime_kuma` | Uptime Kuma + AutoKuma + Docker na VPS, sem o usuário no grupo `docker`; monitores em `group_vars/vps/monitors.yml` |
 | `immich` | Immich do Pi, acesso só pelo Caddy; backup num repositório próprio (ADR 0016) |
 | `borg_restore` | miolo de todos os restores: escolhe o archive (prefixo + máquina de origem), extrai (no Pi, dentro do LUKS) e valida |

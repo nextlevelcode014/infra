@@ -152,3 +152,9 @@ vault_forgejo_runner_token: "SUBSTITUA"
 # Preencha os dois valores para conectar o registro exclusivo do lab.
 vault_forgejo_runner_lab_uuid: ""
 vault_forgejo_runner_lab_token: ""
+
+# Docker Mailserver. Use openssl passwd -6 para cada senha, sem passar a
+# senha na linha de comando. Cole só os hashes, com aspas, no vault cifrado.
+vault_mailserver_contas:
+  ana: "CHANGE-ME"
+  bruno: "CHANGE-ME"

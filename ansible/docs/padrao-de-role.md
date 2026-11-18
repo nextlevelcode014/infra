@@ -119,5 +119,5 @@ de `docs/README.md`, com a linha no índice dele.
 
 ## Fora do padrão
 
-Nenhum role hoje. Role que entrar fora do padrão ganha uma linha aqui, com o
-que diverge, até ser migrado.
+- `mailserver`: publica o SMTP em IPv4 público, tem restore isolado no guia e
+  aplicação explícita, fora do `site.yml` ([ADR 0028](../../docs/decisoes/0028-isolar-o-acesso-dos-clientes-de-correio-na-tailnet.md)).

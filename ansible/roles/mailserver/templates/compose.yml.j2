@@ -1,0 +1,28 @@
+services:
+  mailserver:
+    image: {{ mailserver_image }}
+    hostname: {{ mailserver_mx }}
+    restart: unless-stopped
+    ports:
+      - "{{ ansible_facts.default_ipv4.address }}:25:25"
+      - "127.0.0.1:587:587"
+      - "127.0.0.1:993:993"
+    environment:
+      POSTFIX_INET_PROTOCOLS: ipv4
+      PERMIT_DOCKER: none
+      SPOOF_PROTECTION: "1"
+      POSTMASTER_ADDRESS: postmaster@{{ mailserver_dominio }}
+      SSL_TYPE: letsencrypt
+      ENABLE_RSPAMD: "1"
+      ENABLE_AMAVIS: "0"
+      ENABLE_SPAMASSASSIN: "0"
+      ENABLE_OPENDKIM: "0"
+      ENABLE_OPENDMARC: "0"
+      ENABLE_POLICYD_SPF: "0"
+      ENABLE_UPDATE_CHECK: "0"
+    volumes:
+      - ./dados/mail:/var/mail
+      - ./dados/estado:/var/mail-state
+      - ./dados/config:/tmp/docker-mailserver
+      - {{ mailserver_certbot_dir }}/live/{{ mailserver_mx }}:/etc/letsencrypt/live/{{ mailserver_mx }}:ro
+      - {{ mailserver_certbot_dir }}/archive/{{ mailserver_mx }}:/etc/letsencrypt/archive/{{ mailserver_mx }}:ro

@@ -12,7 +12,8 @@ A VPS fica fora de casa e serve duas coisas:
 
 Na frente da VM fica o **firewall da Hetzner Cloud** (`vps-publica`, do
 `terraform/hetzner/`): só `80`/`443` TCP, `41641` UDP (Tailscale direto) e
-ICMP chegam nela. Ele vale mesmo com o UFW desligado, e é ele que deixa a 22
+ICMP chegam nela. O piloto de correio acrescenta TCP/25 em IPv4 quando
+ativado no Terraform. Ele vale mesmo com o UFW desligado, e é ele que deixa a 22
 fechada desde o boot.
 
 Dentro dela, todo playbook da VPS aplica antes o role `vps_host` (e o
@@ -80,8 +81,10 @@ Confira: `ssh hetzner@hetzner uptime` mostra o boot novo, e o monitor
 *Atualizações VPS* fica verde (`sudo systemctl start reboot-watch.service`
 para não esperar a hora cheia).
 
-Porta publicada pelo Docker passa por cima do UFW: compose na VPS publica
-sempre em `127.0.0.1:`, e o Caddy chega por localhost.
+Porta publicada pelo Docker passa por cima do UFW. Os serviços web publicam
+em `127.0.0.1:`, e o Caddy chega por localhost. O
+[Mailserver](mailserver.md) é a exceção, quando ativado: TCP/25 no IPv4 público
+com firewall da Hetzner, e clientes em loopback via Tailscale Serve.
 
 IPv6: o firewall já aceita 80/443, mas nenhum domínio tem registro AAAA, então
 ninguém chega por IPv6. Para ligar, basta o AAAA na Cloudflare.

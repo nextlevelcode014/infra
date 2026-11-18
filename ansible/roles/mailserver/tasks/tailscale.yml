@@ -1,0 +1,19 @@
+---
+- name: Ler encaminhamentos existentes
+  ansible.builtin.command: tailscale serve status --json
+  register: mailserver_serve_status
+  changed_when: false
+  check_mode: false
+  no_log: true
+
+- name: Encaminhar submission e IMAPS sem terminação TLS no proxy
+  ansible.builtin.command:
+    argv: [tailscale, serve, --bg, "--tcp={{ item }}", "tcp://127.0.0.1:{{ item }}"]
+  vars:
+    mailserver_serve: "{{ mailserver_serve_status.stdout | from_json or {} }}"
+    mailserver_forward: "{{ (mailserver_serve.TCP | default({})).get(item | string, {}) }}"
+  loop: [587, 993]
+  when: >-
+    mailserver_forward.TCPForward | default('') != '127.0.0.1:' ~ item
+    or (mailserver_serve.AllowFunnel | default({}) | dict2items
+        | selectattr('key', 'search', ':' ~ item ~ '$') | selectattr('value') | list | length > 0)
