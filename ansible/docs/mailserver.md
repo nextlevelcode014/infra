@@ -191,6 +191,9 @@ borgmatic -c /etc/borgmatic/mailserver.yaml extract --archive "$archive" --desti
 Só avance se o comando terminar com sucesso e houver `dados/mail`,
 `dados/estado` e `dados/config` sob `$restore/opt/mailserver`.
 
+O `mktemp` pode gerar letras maiúsculas no sufixo. Converta o sufixo para
+minúsculas ao montar o nome do projeto, como exige o Compose.
+
 ```bash
 cd "$restore/opt/mailserver"
 cat > restore.yml <<'YAML'
@@ -202,13 +205,19 @@ networks:
   default:
     internal: true
 YAML
-projeto="mailserver-restore-${restore##*.}"
+sufixo="${restore##*.}"
+projeto="mailserver-restore-${sufixo,,}"
 docker compose -p "$projeto" -f compose.yml -f restore.yml config
+```
+
+Confira no `config` a rede interna e a ausência de portas publicadas.
+Depois, suba a instância restaurada.
+
+```bash
 docker compose -p "$projeto" -f compose.yml -f restore.yml up -d --wait
 ```
 
-Confira a rede interna e zero portas publicadas no `config` antes do
-`up`. Compare o `Message-ID` e corpo pelo Dovecot na instância restaurada.
+Compare o `Message-ID` e o corpo pelo Dovecot na instância restaurada.
 
 ```bash
 id_mensagem='<Message-ID>'
