@@ -308,6 +308,122 @@ lista de contas. O role escreve cada conta como destino de si mesma,
 depois os aliases explícitos e por último o curinga. Essa ordem preserva
 a entrega direta às duas caixas. [Ensaio no lab](https://forge.nextlevelcode.pro/nextlevelcode/lab/pulls/22)
 
+## Migrar o MX do domínio principal
+
+Use `ansible/` e o inventário `inventory/vps.yml` nos comandos desta
+seção. Confirme a janela, o SHA aprovado e quem vai testar o recebimento
+em cada caixa. Durante a propagação, mantenha o Proton e o Mailserver
+disponíveis. Guarde o estado público antes de começar.
+
+```bash
+for ns in $(dig +short NS nextlevelcode.pro); do
+    dig @"$ns" +norecurse +noall +answer nextlevelcode.pro MX
+    dig @"$ns" +norecurse +noall +answer nextlevelcode.pro TXT | awk '/v=spf1/'
+done
+```
+
+Compare o resultado com [`vars/mailserver-migracao.yml`](../vars/mailserver-migracao.yml).
+O plano aceita o conjunto de MX do Proton ou o conjunto do Mailserver.
+Se os registros divergirem, confira a zona e revise os valores antes de
+continuar. Reserve a janela para um único operador escrever no DNS.
+
+### Preparar a autenticação
+
+A etapa gera a chave privada na VPS, publica o TXT de DKIM do Mailserver
+em `mail._domainkey.nextlevelcode.pro` e acrescenta o IPv4 da VPS ao SPF
+que já autoriza o Proton. O Mailserver pode continuar com o domínio
+principal desativado durante essa etapa. O curinga DKIM revogado e os
+seletores do Proton continuam válidos em seus próprios nomes. A consulta
+pela API distingue o seletor explícito da resposta do curinga.
+
+```bash
+ansible-playbook -i inventory/vps.yml playbooks/mailserver-migracao.yml --limit hetzner --ask-vault-pass -e mailserver_migracao_etapa=autenticacao
+dig +short TXT nextlevelcode.pro | awk '/v=spf1/'
+dig +short TXT mail._domainkey.nextlevelcode.pro
+dig +short TXT '_dmarc.nextlevelcode.pro'
+dig +short MX nextlevelcode.pro
+```
+
+Confira um SPF com `ip4:` da VPS e `include:_spf.protonmail.ch`, o DKIM com
+uma chave pública, o DMARC vigente e os dois MX do Proton. Aguarde a
+propagação da autenticação antes de enviar do Mailserver com o domínio
+principal. A prévia dessa etapa com `--check` lê a VPS e a Cloudflare e
+requer que a chave privada já exista.
+
+### Ativar as caixas e trocar o MX
+
+1. Confirme que o vault contém as duas contas e os aliases acordados.
+   Ative `mailserver_principal_ativo` no arquivo versionado e use o
+   [fluxo de revisão e aplicação](../../docs/fluxo-de-mudanca.md#revisão-merge-e-aplicação)
+   antes de rodar o playbook da stack.
+
+   ```bash
+   ansible-playbook -i inventory/vps.yml playbooks/mailserver.yml --limit hetzner --ask-vault-pass -e mailserver_ativar=true
+   ssh hetzner@hetzner 'sudo docker compose -f /opt/mailserver/compose.yml ps'
+   ```
+
+   Confira a saúde do container. No Thunderbird, configure as duas contas
+   com os endereços completos, usando `cliente-piloto.nextlevelcode.pro`
+   em IMAP 993 com SSL/TLS e SMTP 587 com STARTTLS pela tailnet. Envie de
+   ambas para uma caixa externa sob seu controle. Confira `spf=pass`,
+   `dkim=pass` com `d=nextlevelcode.pro` e `s=mail`, e `dmarc=pass`.
+2. Rode a prévia da troca. Ela consulta a VPS e a Cloudflare, então use
+   somente na janela autorizada. O playbook confirma as duas caixas, as
+   rotas no Postfix, a chave DKIM e o SPF de transição.
+
+   ```bash
+   ansible-playbook -i inventory/vps.yml playbooks/mailserver-migracao.yml --limit hetzner --ask-vault-pass -e mailserver_migracao_etapa=cortar-mx --check
+   ```
+
+   Confira a previsão de atualização do MX primário e remoção do
+   secundário. Execute a escrita autorizada.
+
+   ```bash
+   ansible-playbook -i inventory/vps.yml playbooks/mailserver-migracao.yml --limit hetzner --ask-vault-pass -e mailserver_migracao_etapa=cortar-mx
+   for ns in $(dig +short NS nextlevelcode.pro); do
+       dig @"$ns" +norecurse +noall +answer nextlevelcode.pro MX
+   done
+   dig +short MX nextlevelcode.pro
+   ```
+
+   Confira o MX de prioridade 10 para `mx-piloto.nextlevelcode.pro.` nos
+   autoritativos e no resolvedor. A API aplica o lote em uma transação na
+   zona, e a distribuição pública propaga os registros individualmente.
+   [Comportamento dos lotes na Cloudflare](https://developers.cloudflare.com/dns/manage-dns-records/how-to/batch-record-changes/)
+3. Teste uma mensagem de login ou recuperação no alias pessoal e em
+   `work`. Envie também de fora para um destinatário fictício sem cadastro
+   e confira que ele chegou em `work`. Acompanhe as caixas nos dois
+   provedores durante a propagação para localizar entregas feitas por
+   remetentes que ainda usam o MX em cache.
+
+### Voltar o MX ao Proton
+
+Na janela autorizada, execute a volta de `ansible/`. Essa etapa usa
+somente a Cloudflare e serve também quando a VPS estiver indisponível.
+
+```bash
+ansible-playbook -i inventory/vps.yml playbooks/mailserver-migracao.yml --limit hetzner --ask-vault-pass -e mailserver_migracao_etapa=voltar-mx
+for ns in $(dig +short NS nextlevelcode.pro); do
+    dig @"$ns" +norecurse +noall +answer nextlevelcode.pro MX
+done
+dig +short MX nextlevelcode.pro
+```
+
+Confira `10 mail.protonmail.ch.` e `20 mailsec.protonmail.ch.`. Teste
+entrega no Proton e mantenha as duas caixas do Mailserver disponíveis
+enquanto houver MX em cache ou mensagens da janela para recuperar. A
+volta do MX preserva o SPF de transição, as chaves DKIM e as caixas. A
+desativação do domínio local vem depois de reconciliar a fila e as caixas.
+
+Para reexecutar a regressão na estação, de `ansible/`:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 python3 roles/mailserver/tests/test_migracao_dns.py -v
+```
+
+Confira o resultado com a API simulada em loopback. O teste cobre a
+prévia, os lotes de mudança, a releitura e os estados recusados.
+
 ## Backup
 
 O Borgmatic copia as caixas, o estado (incluindo a fila) e a configuração

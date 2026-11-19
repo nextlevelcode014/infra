@@ -1,0 +1,6 @@
+---
+mailserver_migracao_ttl: 300
+mailserver_migracao_mx_proton:
+  - {content: mail.protonmail.ch, priority: 10, ttl: 300}
+  - {content: mailsec.protonmail.ch, priority: 20, ttl: 300}
+mailserver_migracao_spf_proton: "v=spf1 include:_spf.protonmail.ch -all"

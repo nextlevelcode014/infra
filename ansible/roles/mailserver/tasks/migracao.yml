@@ -1,0 +1,38 @@
+---
+- name: Gerar a chave do domínio principal antes de publicá-la
+  ansible.builtin.include_tasks: dkim-chaves.yml
+  vars:
+    mailserver_dkim_dominios: ["{{ mailserver_zona }}"]
+  when: mailserver_migracao_etapa == 'autenticacao'
+
+- name: Preparar as informações do Mailserver
+  when: mailserver_migracao_etapa != 'voltar-mx'
+  block:
+    - name: Ler o IPv4 da VPS
+      ansible.builtin.setup:
+        gather_subset: ['!all', '!min', default_ipv4]
+
+    - name: Derivar a chave pública DKIM do domínio principal
+      ansible.builtin.command:
+        argv:
+          - openssl
+          - pkey
+          - -in
+          - "{{ mailserver_dkim_dir }}/{{ mailserver_zona }}-{{ mailserver_seletor }}.private"
+          - -pubout
+      register: mailserver_migracao_chave
+      changed_when: false
+      check_mode: false
+
+    - name: Preparar os dados públicos para a conferência da Cloudflare
+      ansible.builtin.set_fact:
+        mailserver_migracao_ipv4: "{{ ansible_facts.default_ipv4.address }}"
+        mailserver_migracao_dkim_publica: >-
+          {{ mailserver_migracao_chave.stdout_lines | reject('match', '^-----') | join('') }}
+
+- name: Conferir o serviço ativo antes do corte
+  ansible.builtin.include_tasks: migracao-conferir-caixas.yml
+  when: mailserver_migracao_etapa == 'cortar-mx'
+
+- name: Planejar e aplicar o lote de DNS
+  ansible.builtin.import_tasks: migracao-dns.yml

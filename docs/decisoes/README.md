@@ -64,6 +64,7 @@ fonte (PR, commit ou comentário de onde o motivo foi tirado).
 | [0027](0027-runner-do-forgejo-em-vm-com-rede-propria.md) | Runner do Forgejo em VM e bridge próprias | Aceita |
 | [0028](0028-isolar-o-acesso-dos-clientes-de-correio-na-tailnet.md) | Só o SMTP entre servidores é público no piloto de correio | Proposta |
 | [0029](0029-separar-caixas-pessoal-e-de-trabalho.md) | Caixas pessoal e de trabalho separadas no domínio principal | Proposta |
+| [0030](0030-trocar-o-mx-em-lote-depois-da-autenticacao.md) | Autenticação antes do corte e troca dos MX em lote | Proposta |
 
 ## Modelo
 

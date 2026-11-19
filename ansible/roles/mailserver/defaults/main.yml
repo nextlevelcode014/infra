@@ -24,3 +24,6 @@ mailserver_certbot_dir: /etc/letsencrypt
 mailserver_certbot_credenciais: "{{ mailserver_dir }}/cloudflare.ini"
 mailserver_rspamd_dir: "{{ mailserver_data_dir }}/config/rspamd"
 mailserver_dkim_dir: "{{ mailserver_rspamd_dir }}/dkim"
+mailserver_migracao_api: https://api.cloudflare.com/client/v4
+mailserver_migracao_http_local: false
+mailserver_migracao_token: "{{ vault_caddy_vps_cloudflare_token }}"

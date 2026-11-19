@@ -1,0 +1,17 @@
+---
+- name: Ler os conjuntos de registros exatos
+  ansible.builtin.uri:
+    url: "{{ mailserver_migracao_endpoint }}?{{ item.value | combine({'per_page': 100}) | urlencode }}"
+    method: GET
+    status_code: 200
+  loop: "{{ mailserver_migracao_consultas | dict2items }}"
+  register: mailserver_migracao_registros
+  check_mode: false
+  no_log: true
+
+- name: Calcular o lote a partir do estado observado
+  ansible.builtin.set_fact:
+    mailserver_migracao_lote: >-
+      {{ mailserver_migracao_registros.results | mailserver_planejar_migracao(
+         mailserver_migracao_etapa, mailserver_migracao_config,
+         mailserver_migracao_ipv4 | default(''), mailserver_migracao_dkim_publica | default('')) }}

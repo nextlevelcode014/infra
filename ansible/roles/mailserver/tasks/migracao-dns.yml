@@ -1,0 +1,102 @@
+---
+- name: Restringir o envio da credencial à API da Cloudflare
+  ansible.builtin.assert:
+    that:
+      - >-
+        mailserver_migracao_api == 'https://api.cloudflare.com/client/v4' or
+        ((mailserver_migracao_http_local | bool) and mailserver_migracao_token == 'token-ficticio'
+         and mailserver_migracao_api is match('^http://127\\.0\\.0\\.1:[0-9]+/client/v4$'))
+    fail_msg: Use a API HTTPS da Cloudflare ou a API simulada em loopback com token fictício.
+
+- name: Consultar e reconciliar os registros da migração
+  delegate_to: localhost
+  become: false
+  vars:
+    mailserver_migracao_dkim_nome: "{{ mailserver_seletor }}._domainkey.{{ mailserver_zona }}"
+    mailserver_migracao_config:
+      zona: "{{ mailserver_zona }}"
+      dkim_nome: "{{ mailserver_migracao_dkim_nome }}"
+      ttl: "{{ mailserver_migracao_ttl }}"
+      spf_proton: "{{ mailserver_migracao_spf_proton }}"
+      mx_proton: "{{ mailserver_migracao_mx_proton }}"
+      mx_mailserver:
+        content: "{{ mailserver_mx }}"
+        priority: 10
+        ttl: "{{ mailserver_migracao_ttl }}"
+    mailserver_migracao_consultas: >-
+      {{ {'mx': {'name': mailserver_zona, 'type': 'MX'}}
+         | combine({'txt': {'name': mailserver_zona, 'type': 'TXT'},
+                    'dkim': {'name': mailserver_migracao_dkim_nome},
+                    'alvo': {'name': mailserver_mx, 'type': 'A'}}
+                   if mailserver_migracao_etapa != 'voltar-mx' else {}) }}
+  module_defaults:
+    ansible.builtin.uri:
+      headers:
+        Authorization: "Bearer {{ mailserver_migracao_token }}"
+      unredirected_headers: [Authorization]
+      follow_redirects: none
+      use_netrc: false
+      use_proxy: false
+      validate_certs: true
+      timeout: 20
+  block:
+    - name: Encontrar a zona ativa pela API
+      ansible.builtin.uri:
+        url: "{{ mailserver_migracao_api }}/zones?name={{ mailserver_zona | urlencode }}&status=active"
+        method: GET
+        status_code: 200
+      register: mailserver_migracao_zona
+      check_mode: false
+      no_log: true
+
+    - name: Confirmar uma única zona com o nome esperado
+      ansible.builtin.assert:
+        that:
+          - mailserver_migracao_zona.json.success
+          - mailserver_migracao_zona.json.result | length == 1
+          - mailserver_migracao_zona.json.result[0].name == mailserver_zona
+          - mailserver_migracao_zona.json.result[0].id is match('^[a-fA-F0-9]{32}$')
+        fail_msg: A consulta precisa retornar uma única zona ativa com o nome esperado.
+
+    - name: Definir o endpoint da zona
+      ansible.builtin.set_fact:
+        mailserver_migracao_endpoint: >-
+          {{ mailserver_migracao_api }}/zones/{{ mailserver_migracao_zona.json.result[0].id }}/dns_records
+
+    - name: Reunir os dados para o plano de escrita
+      ansible.builtin.import_tasks: migracao-consultar.yml
+
+    - name: Apresentar as operações previstas sem mostrar a credencial
+      ansible.builtin.debug:
+        msg: >-
+          {{ mailserver_migracao_lote | dict2items | map(attribute='key') | join(', ')
+             if mailserver_migracao_lote else 'DNS já converge para a etapa solicitada.' }}
+      changed_when: ansible_check_mode and mailserver_migracao_lote | length > 0
+
+    - name: Enviar todas as operações desta etapa em um lote
+      ansible.builtin.uri:
+        url: "{{ mailserver_migracao_endpoint }}/batch"
+        method: POST
+        body_format: json
+        body: "{{ mailserver_migracao_lote }}"
+        status_code: 200
+      register: mailserver_migracao_escrita
+      when: not ansible_check_mode and mailserver_migracao_lote | length > 0
+      changed_when: true
+      no_log: true
+
+    - name: Conferir a convergência do lote aplicado
+      when: mailserver_migracao_escrita is changed
+      block:
+        - name: Conferir o sucesso retornado pela API
+          ansible.builtin.assert:
+            that: mailserver_migracao_escrita.json.success
+            fail_msg: A Cloudflare não confirmou a escrita do lote.
+
+        - name: Reler o estado após a escrita
+          ansible.builtin.import_tasks: migracao-consultar.yml
+
+        - name: Confirmar que o estado convergiu
+          ansible.builtin.assert:
+            that: mailserver_migracao_lote | length == 0
+            fail_msg: O estado da Cloudflare após a escrita divergiu da etapa solicitada.
