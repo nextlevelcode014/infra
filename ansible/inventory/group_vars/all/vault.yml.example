@@ -162,3 +162,13 @@ vault_mailserver_contas:
 # Contas de mail.nextlevelcode.pro. Omita o mapa ou deixe {} até a adoção.
 vault_mailserver_contas_adocao:
   admin: "CHANGE-ME"
+
+# Domínio principal. Substitua os endereços pessoais deste exemplo
+# pelas partes antes de @ e guarde os dois hashes no vault cifrado.
+vault_mailserver_principal:
+  pessoal: "pessoal"
+  contas:
+    pessoal: "CHANGE-ME"
+    work: "CHANGE-ME"
+  aliases_pessoais:
+    contato: "pessoal"

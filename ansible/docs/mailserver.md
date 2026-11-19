@@ -268,6 +268,46 @@ que a resposta A do curinga volte a servir de rota SMTP implícita. Mantenha
 a caixa ativa durante a expiração do TTL para receber mensagens
 encaminhadas com o MX em cache.
 
+## Preparar as caixas do domínio principal
+
+O domínio principal tem uma caixa pessoal e outra de trabalho. Os aliases
+pessoais declarados no vault apontam para a caixa pessoal. O endereço
+`support@nextlevelcode.pro` aponta para `work@nextlevelcode.pro`, que
+também recebe os destinatários sem cadastro pelo catch-all. Os dois
+logins são independentes.
+
+1. Crie uma senha para cada caixa no gerenciador. Gere os hashes e preencha
+   `vault_mailserver_principal` seguindo o [exemplo do vault](../inventory/group_vars/all/vault.yml.example).
+   Use a parte antes de `@` para a conta e para os aliases pessoais. A
+   geração da senha e a edição do vault são manuais porque exigem acesso ao
+   gerenciador e a senha do vault. De `ansible/`:
+
+   ```bash
+   openssl passwd -6
+   openssl passwd -6
+   ansible-vault edit inventory/group_vars/all/vault.yml
+   ```
+
+   Confira que os dois hashes têm prefixo `$6$`, que há uma entrada
+   `work` e outra correspondente a `pessoal` no mapa `contas`, e que todos
+   os valores de `aliases_pessoais` apontam para essa caixa pessoal.
+2. Mantenha `mailserver_principal_ativo: false` em
+   [`vars/mailserver.yml`](../vars/mailserver.yml) enquanto prepara a
+   migração. A ativação torna `nextlevelcode.pro` um domínio local no
+   Postfix, inclusive para mensagens enviadas pelo próprio Mailserver.
+   Planeje a ativação e a troca do MX na mesma janela. O playbook de DNS
+   publica registros apenas para o piloto e o subdomínio de adoção.
+3. Na janela, valide os dois logins e a entrega para um alias pessoal,
+   para `work` e para um destinatário sem cadastro. Mantenha o Proton
+   disponível durante a propagação e teste links de login ou recuperação
+   nos endereços em uso. Trate SPF, DKIM e DMARC do domínio principal no
+   plano da troca, pois eles também atendem o e-mail enviado pelo Proton.
+
+Nos domínios com catch-all, o Postfix consulta o mapa de aliases antes da
+lista de contas. O role escreve cada conta como destino de si mesma,
+depois os aliases explícitos e por último o curinga. Essa ordem preserva
+a entrega direta às duas caixas. [Ensaio no lab](https://forge.nextlevelcode.pro/nextlevelcode/lab/pulls/22)
+
 ## Backup
 
 O Borgmatic copia as caixas, o estado (incluindo a fila) e a configuração

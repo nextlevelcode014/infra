@@ -1,25 +1,6 @@
 ---
-- name: Validar a estrutura das contas e preservar as caixas do piloto
-  ansible.builtin.assert:
-    that:
-      - mailserver_contas[mailserver_dominio] is mapping
-      - "'ana' in mailserver_contas[mailserver_dominio] and 'bruno' in mailserver_contas[mailserver_dominio]"
-      - mailserver_contas[mailserver_dominio_adocao] is mapping
-    fail_msg: Preencha os mapas de contas como no exemplo do vault.
-  no_log: true
-
-- name: Validar usuários, destinos dos aliases e hashes por domínio
-  ansible.builtin.assert:
-    that:
-      - contas.keys() | reject('match', '^[a-z][a-z0-9_.-]*\\Z') | list | length == 0
-      - contas.values() | reject('match', '^\\$6\\$[./A-Za-z0-9]+\\$[./A-Za-z0-9]{86}\\Z') | list | length == 0
-      - mailserver_aliases[item].values() | difference(contas.keys()) | length == 0
-      - mailserver_aliases[item].keys() | intersect(contas.keys()) | length == 0
-    fail_msg: Preencha o vault com hashes gerados por openssl passwd -6.
-  vars:
-    contas: "{{ mailserver_contas[item] }}"
-  loop: "{{ mailserver_dominios_ativos }}"
-  no_log: true
+- name: Validar contas e aliases
+  ansible.builtin.import_tasks: validar.yml
 
 - name: Garantir o Docker na VPS
   ansible.builtin.include_role:
@@ -72,6 +53,7 @@
     owner: root
     group: root
     mode: "0600"
+  no_log: true
 
 - name: Configurar emissão e renovação do TLS
   ansible.builtin.import_tasks: tls.yml

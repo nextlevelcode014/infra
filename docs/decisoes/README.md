@@ -62,8 +62,8 @@ fonte (PR, commit ou comentário de onde o motivo foi tirado).
 | [0025](0025-permissoes-do-forgejo-aplicadas-por-playbook-local.md) | Permissões do Forgejo aplicadas por playbook local | Aceita |
 | [0026](0026-bread-of-life-com-https-no-caddy.md) | Bread of Life usa HTTPS no Caddy do Proxmox | Proposta |
 | [0027](0027-runner-do-forgejo-em-vm-com-rede-propria.md) | Runner do Forgejo em VM e bridge próprias | Aceita |
-
 | [0028](0028-isolar-o-acesso-dos-clientes-de-correio-na-tailnet.md) | Só o SMTP entre servidores é público no piloto de correio | Proposta |
+| [0029](0029-separar-caixas-pessoal-e-de-trabalho.md) | Caixas pessoal e de trabalho separadas no domínio principal | Proposta |
 
 ## Modelo
 

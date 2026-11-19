@@ -1,0 +1,40 @@
+---
+- name: Validar as duas caixas e os aliases pessoais quando o domínio principal estiver ativo
+  ansible.builtin.assert:
+    that:
+      - mailserver_principal_config is mapping
+      - mailserver_principal_config.contas is mapping
+      - mailserver_principal_config.pessoal is string
+      - mailserver_principal_config.pessoal != mailserver_principal_trabalho
+      - mailserver_principal_config.pessoal in mailserver_principal_config.contas
+      - mailserver_principal_trabalho in mailserver_principal_config.contas
+      - mailserver_principal_config.aliases_pessoais is mapping
+      - mailserver_principal_config.aliases_pessoais | length > 0
+      - "'support' not in mailserver_principal_config.aliases_pessoais"
+      - mailserver_principal_config.aliases_pessoais.values() | difference([mailserver_principal_config.pessoal]) | length == 0
+    fail_msg: Preencha as caixas pessoal e de trabalho e aponte os aliases pessoais para a caixa pessoal.
+  when: mailserver_principal_ativo | bool
+  no_log: true
+
+- name: Validar a estrutura das contas e preservar as caixas do piloto
+  ansible.builtin.assert:
+    that:
+      - mailserver_contas[mailserver_dominio] is mapping
+      - "'ana' in mailserver_contas[mailserver_dominio] and 'bruno' in mailserver_contas[mailserver_dominio]"
+      - mailserver_contas[mailserver_dominio_adocao] is mapping
+    fail_msg: Preencha os mapas de contas como no exemplo do vault.
+  no_log: true
+
+- name: Validar usuários, destinos dos aliases e hashes por domínio
+  ansible.builtin.assert:
+    that:
+      - contas.keys() | reject('match', '^[a-z][a-z0-9_.-]*\\Z') | list | length == 0
+      - contas.values() | reject('match', '^\\$6\\$[./A-Za-z0-9]+\\$[./A-Za-z0-9]{86}\\Z') | list | length == 0
+      - mailserver_aliases[item].keys() | reject('match', '^[a-z][a-z0-9_.-]*\\Z') | list | length == 0
+      - mailserver_aliases[item].values() | difference(contas.keys()) | length == 0
+      - mailserver_aliases[item].keys() | intersect(contas.keys()) | length == 0
+    fail_msg: Confira os nomes das contas e aliases e use hashes gerados por openssl passwd -6.
+  vars:
+    contas: "{{ mailserver_contas[item] }}"
+  loop: "{{ mailserver_dominios_ativos }}"
+  no_log: true

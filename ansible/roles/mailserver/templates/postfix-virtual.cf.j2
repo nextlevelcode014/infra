@@ -1,5 +1,13 @@
 {% for dominio in mailserver_dominios_ativos %}
+{% if dominio in mailserver_catch_all %}
+{% for conta in mailserver_contas[dominio] | sort %}
+{{ conta }}@{{ dominio }} {{ conta }}@{{ dominio }}
+{% endfor %}
+{% endif %}
 {% for alias, conta in mailserver_aliases[dominio] | dictsort %}
 {{ alias }}@{{ dominio }} {{ conta }}@{{ dominio }}
 {% endfor %}
+{% if dominio in mailserver_catch_all %}
+@{{ dominio }} {{ mailserver_catch_all[dominio] }}@{{ dominio }}
+{% endif %}
 {% endfor %}
