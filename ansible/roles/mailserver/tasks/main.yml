@@ -1,12 +1,24 @@
 ---
-- name: Validar hashes das contas do piloto
+- name: Validar a estrutura das contas e preservar as caixas do piloto
   ansible.builtin.assert:
     that:
-      - mailserver_contas is mapping
-      - "'ana' in mailserver_contas and 'bruno' in mailserver_contas"
-      - mailserver_contas.keys() | reject('match', '^[a-z][a-z0-9_.-]*$') | list | length == 0
-      - mailserver_contas.values() | reject('match', '^\\$6\\$[./A-Za-z0-9]+\\$[./A-Za-z0-9]{86}$') | list | length == 0
+      - mailserver_contas[mailserver_dominio] is mapping
+      - "'ana' in mailserver_contas[mailserver_dominio] and 'bruno' in mailserver_contas[mailserver_dominio]"
+      - mailserver_contas[mailserver_dominio_adocao] is mapping
+    fail_msg: Preencha os mapas de contas como no exemplo do vault.
+  no_log: true
+
+- name: Validar usuários, destinos dos aliases e hashes por domínio
+  ansible.builtin.assert:
+    that:
+      - contas.keys() | reject('match', '^[a-z][a-z0-9_.-]*\\Z') | list | length == 0
+      - contas.values() | reject('match', '^\\$6\\$[./A-Za-z0-9]+\\$[./A-Za-z0-9]{86}\\Z') | list | length == 0
+      - mailserver_aliases[item].values() | difference(contas.keys()) | length == 0
+      - mailserver_aliases[item].keys() | intersect(contas.keys()) | length == 0
     fail_msg: Preencha o vault com hashes gerados por openssl passwd -6.
+  vars:
+    contas: "{{ mailserver_contas[item] }}"
+  loop: "{{ mailserver_dominios_ativos }}"
   no_log: true
 
 - name: Garantir o Docker na VPS
@@ -44,7 +56,7 @@
     - {nome: estado, dono: root, grupo: root, modo: "0711"}
     - {nome: config, dono: root, grupo: root, modo: "0711"}
 
-- name: Configurar as contas do piloto
+- name: Configurar as contas dos domínios ativos
   ansible.builtin.template:
     src: postfix-accounts.cf.j2
     dest: "{{ mailserver_data_dir }}/config/postfix-accounts.cf"
@@ -53,10 +65,10 @@
     mode: "0600"
   no_log: true
 
-- name: Entregar mensagens para postmaster à caixa administrativa
-  ansible.builtin.copy:
+- name: Configurar os aliases locais dos domínios ativos
+  ansible.builtin.template:
+    src: postfix-virtual.cf.j2
     dest: "{{ mailserver_data_dir }}/config/postfix-virtual.cf"
-    content: "postmaster@{{ mailserver_dominio }} ana@{{ mailserver_dominio }}\n"
     owner: root
     group: root
     mode: "0600"
@@ -64,7 +76,7 @@
 - name: Configurar emissão e renovação do TLS
   ansible.builtin.import_tasks: tls.yml
 
-- name: Preparar a assinatura DKIM do piloto
+- name: Preparar a assinatura DKIM por domínio
   ansible.builtin.import_tasks: dkim.yml
 
 - name: Subir o Docker Mailserver

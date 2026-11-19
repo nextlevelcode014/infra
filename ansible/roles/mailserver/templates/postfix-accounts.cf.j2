@@ -1,3 +1,5 @@
-{% for conta, hash in mailserver_contas | dictsort %}
-{{ conta }}@{{ mailserver_dominio }}|{SHA512-CRYPT}{{ hash }}
+{% for dominio in mailserver_dominios_ativos %}
+{% for conta, hash in mailserver_contas[dominio] | dictsort %}
+{{ conta }}@{{ dominio }}|{SHA512-CRYPT}{{ hash }}
+{% endfor %}
 {% endfor %}

@@ -1,12 +1,14 @@
 # Docker Mailserver na VPS
 
 `playbooks/mailserver.yml` aplica a stack, configura o certificado e agenda
-o backup. `playbooks/mailserver-dns.yml` escreve os registros do piloto na
-Cloudflare em etapas. As caixas do domínio principal continuam no Proton.
+o backup. `playbooks/mailserver-dns.yml` escreve os registros de cada
+subdomínio na Cloudflare em etapas. As caixas do domínio principal continuam
+no Proton.
 
 | O quê | Onde |
 |---|---|
 | Caixas de teste | `ana@piloto-mail.nextlevelcode.pro`, `bruno@piloto-mail.nextlevelcode.pro` |
+| Primeira caixa de adoção | `admin@mail.nextlevelcode.pro`, com alias `postmaster@mail.nextlevelcode.pro` |
 | SMTP entre servidores | `mx-piloto.nextlevelcode.pro:25`, IPv4 público, STARTTLS oferecido |
 | SMTP autenticado | `cliente-piloto.nextlevelcode.pro:587`, tailnet, STARTTLS |
 | IMAP | `cliente-piloto.nextlevelcode.pro:993`, tailnet, TLS desde a conexão |
@@ -157,6 +159,115 @@ Cloudflare em etapas. As caixas do domínio principal continuam no Proton.
    por IMAP. Guarde o `Message-ID` e uma frase do corpo para conferir o
    restore. O teste é manual porque usa uma caixa externa autenticada.
 
+## Adotar mail.nextlevelcode.pro com o piloto ativo
+
+Use o MX, o PTR e o certificado já verificados no piloto. Os clientes usam
+`cliente-piloto.nextlevelcode.pro` nas portas 587 e 993 da tailnet, com o
+endereço completo da nova caixa como usuário. O MX e o catch-all de
+`nextlevelcode.pro` continuam no Proton, onde ficam os endereços públicos
+como `work@nextlevelcode.pro` e `support@nextlevelcode.pro`.
+
+1. Na Cloudflare, confira que o nome `mail.nextlevelcode.pro` e os nomes
+   `mail._domainkey.mail.nextlevelcode.pro` e `_dmarc.mail.nextlevelcode.pro`
+   estão livres de registros explícitos e de uso por outros serviços. O
+   curinga da zona pode responder a consultas A antes da publicação. O TXT
+   cria um nome explícito e passa a impedir essa resposta para o subdomínio.
+   No mesmo terminal em que será feita a comparação após a publicação,
+   registre os MX e TXT de autenticação existentes e os CNAME de DKIM do
+   Proton.
+
+   ```bash
+   dns_antes=$(mktemp)
+   dns_depois=$(mktemp)
+   ns=$(dig +short NS nextlevelcode.pro | head -n 1)
+   registro() {
+     printf '%s %s\n' "$1" "$2"
+     dig @"$ns" +short "$1" "$2" | sort
+   }
+   correio_atual() {
+     for dominio in nextlevelcode.pro piloto-mail.nextlevelcode.pro; do
+       registro MX "$dominio"
+       registro TXT "$dominio"
+       registro TXT "_dmarc.$dominio"
+     done
+     registro TXT mail._domainkey.piloto-mail.nextlevelcode.pro
+     for seletor in protonmail protonmail2 protonmail3; do
+       registro CNAME "$seletor._domainkey.nextlevelcode.pro"
+     done
+   }
+   correio_atual > "$dns_antes"
+   cat "$dns_antes"
+   ```
+
+   Confira os MX do Proton e do piloto e os registros de autenticação em uso.
+2. Crie a senha de `admin@mail.nextlevelcode.pro` no gerenciador. De
+   `ansible/`, gere o hash interativamente e adicione-o como `admin` em
+   `vault_mailserver_contas_adocao`. O vault atual do piloto já contém o
+   mapa `vault_mailserver_contas`. A criação da senha e a edição do vault
+   são manuais porque exigem acesso ao gerenciador e a senha do vault.
+
+   ```bash
+   openssl passwd -6
+   ansible-vault edit inventory/group_vars/all/vault.yml
+   ```
+
+   Confira que a entrada `admin` contém o hash com prefixo `$6$`.
+3. Na janela aprovada, aplique a stack na VPS. A troca da configuração DKIM
+   recria o container com os mesmos volumes e mantém a chave do piloto.
+
+   ```bash
+   ansible-playbook playbooks/mailserver.yml --limit hetzner --ask-vault-pass -e mailserver_ativar=true
+   ssh hetzner@hetzner 'sudo docker compose -f /opt/mailserver/compose.yml ps'
+   ssh hetzner@hetzner 'sudo docker compose -f /opt/mailserver/compose.yml exec -T mailserver doveadm user admin@mail.nextlevelcode.pro'
+   ```
+
+   Confira o container saudável e a caixa reconhecida pelo Dovecot. Do
+   desktop autorizado, repita as verificações TLS da instalação nas portas
+   587 e 993 e configure a nova conta no Thunderbird. Confira o login por
+   IMAP com SSL/TLS.
+4. De `ansible/`, publique SPF, DKIM e DMARC e, por último, o MX.
+
+   ```bash
+   ansible-playbook playbooks/mailserver-dns.yml --limit hetzner --ask-vault-pass -e mailserver_dns_etapa=entrega -e mailserver_dns_dominio=mail.nextlevelcode.pro
+   dig +short MX mail.nextlevelcode.pro
+   dig +short TXT mail.nextlevelcode.pro
+   dig +short TXT mail._domainkey.mail.nextlevelcode.pro
+   dig +short TXT _dmarc.mail.nextlevelcode.pro
+   correio_atual > "$dns_depois"
+   diff -u "$dns_antes" "$dns_depois"
+   ```
+
+   Confira o MX de prioridade 10 apontando para
+   `mx-piloto.nextlevelcode.pro.`, o SPF restrito ao IPv4 da VPS, a chave
+   DKIM própria do novo domínio, o DMARC com `p=reject` e o `diff` vazio.
+5. Envie do Thunderbird pela porta 587 com STARTTLS e autenticação para
+   uma caixa externa que você controla. Confira `spf=pass`, `dkim=pass`
+   e `dmarc=pass` para `mail.nextlevelcode.pro` nos cabeçalhos do provedor.
+   Responda para `postmaster@mail.nextlevelcode.pro` e confirme a leitura
+   por IMAP na caixa `admin`. Repita o teste com uma caixa do piloto e
+   confira que o DKIM dela continua alinhado a `piloto-mail.nextlevelcode.pro`.
+   O teste é manual porque usa uma caixa externa autenticada.
+6. Guarde o `Message-ID` e uma frase da resposta recebida na caixa
+   `admin`. Faça o [backup](#backup) e repita o
+   [restore isolado](#restore-isolado) com essa caixa.
+
+Para suspender a entrega no novo subdomínio, de `ansible/`:
+
+```bash
+ansible-playbook playbooks/mailserver-dns.yml --limit hetzner --ask-vault-pass -e mailserver_dns_etapa=retirar-mx -e mailserver_dns_dominio=mail.nextlevelcode.pro
+dig +short MX mail.nextlevelcode.pro
+dig +short A mail.nextlevelcode.pro
+dig +short AAAA mail.nextlevelcode.pro
+dig +short MX piloto-mail.nextlevelcode.pro
+dig +short MX nextlevelcode.pro
+```
+
+Confira que o novo domínio ficou sem MX, A ou AAAA e que os MX do piloto e
+do Proton continuam presentes. Preserve o TXT no novo domínio para impedir
+que a resposta A do curinga volte a servir de rota SMTP implícita. Mantenha
+a caixa ativa durante a expiração do TTL para receber mensagens
+encaminhadas com o MX em cache.
+
 ## Backup
 
 O Borgmatic copia as caixas, o estado (incluindo a fila) e a configuração
@@ -221,13 +332,15 @@ Compare o `Message-ID` e o corpo pelo Dovecot na instância restaurada.
 
 ```bash
 id_mensagem='<Message-ID>'
+caixa='ana@piloto-mail.nextlevelcode.pro'
 docker compose -p "$projeto" -f compose.yml -f restore.yml exec -T mailserver \
-  doveadm fetch -u ana@piloto-mail.nextlevelcode.pro 'hdr.message-id text' HEADER Message-ID "$id_mensagem"
+  doveadm fetch -u "$caixa" 'hdr.message-id text' HEADER Message-ID "$id_mensagem"
 docker compose -p "$projeto" -f compose.yml -f restore.yml down
 ```
 
-Substitua a caixa no comando se ela for outra. Confira o mesmo ID e corpo,
-e em seguida remova a extração temporária após conferir o caminho.
+Para verificar a adoção, use `caixa='admin@mail.nextlevelcode.pro'`. Confira
+o mesmo ID e corpo, e em seguida remova a extração temporária após conferir
+o caminho.
 
 ## Desativação
 

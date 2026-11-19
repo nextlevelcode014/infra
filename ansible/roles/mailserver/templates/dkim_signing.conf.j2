@@ -6,5 +6,12 @@ use_esld = false;
 use_redis = false;
 allow_username_mismatch = true;
 check_pubkey = true;
-selector = "{{ mailserver_seletor }}";
-path = "/tmp/docker-mailserver/rspamd/dkim/{{ mailserver_dominio }}-{{ mailserver_seletor }}.private";
+try_fallback = false;
+domain {
+{% for dominio in mailserver_dominios_ativos %}
+  "{{ dominio }}" {
+    selector = "{{ mailserver_seletor }}";
+    path = "/tmp/docker-mailserver/rspamd/dkim/{{ dominio }}-{{ mailserver_seletor }}.private";
+  }
+{% endfor %}
+}

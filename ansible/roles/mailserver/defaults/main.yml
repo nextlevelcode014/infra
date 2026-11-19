@@ -2,9 +2,16 @@
 mailserver_dir: /opt/mailserver
 mailserver_data_dir: "{{ mailserver_dir }}/dados"
 mailserver_image: ghcr.io/docker-mailserver/docker-mailserver:17.0.0@sha256:6cd2d4dbfb41ce3b8108968d266fb41b950ad27220979c67bda8a31bd1f6611d
-mailserver_contas: "{{ vault_mailserver_contas }}"
+mailserver_contas: >-
+  {{ {mailserver_dominio: vault_mailserver_contas,
+      mailserver_dominio_adocao: vault_mailserver_contas_adocao | default({})} }}
+mailserver_aliases: >-
+  {{ {mailserver_dominio: {'postmaster': 'ana'},
+      mailserver_dominio_adocao: {'postmaster': 'admin'}} }}
+mailserver_dominios_ativos: >-
+  {{ mailserver_contas | dict2items | rejectattr('value', 'equalto', {}) | map(attribute='key') | list }}
 mailserver_certbot_email: "{{ caddy_email }}"
 mailserver_certbot_dir: /etc/letsencrypt
 mailserver_certbot_credenciais: "{{ mailserver_dir }}/cloudflare.ini"
 mailserver_rspamd_dir: "{{ mailserver_data_dir }}/config/rspamd"
-mailserver_dkim_key: "{{ mailserver_rspamd_dir }}/dkim/{{ mailserver_dominio }}-{{ mailserver_seletor }}.private"
+mailserver_dkim_dir: "{{ mailserver_rspamd_dir }}/dkim"

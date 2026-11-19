@@ -1,6 +1,7 @@
 ---
 mailserver_zona: nextlevelcode.pro
 mailserver_dominio: piloto-mail.nextlevelcode.pro
+mailserver_dominio_adocao: mail.nextlevelcode.pro
 mailserver_mx: mx-piloto.nextlevelcode.pro
 mailserver_cliente: cliente-piloto.nextlevelcode.pro
 mailserver_seletor: mail

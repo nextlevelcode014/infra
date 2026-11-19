@@ -1,0 +1,5 @@
+{% for dominio in mailserver_dominios_ativos %}
+{% for alias, conta in mailserver_aliases[dominio] | dictsort %}
+{{ alias }}@{{ dominio }} {{ conta }}@{{ dominio }}
+{% endfor %}
+{% endfor %}

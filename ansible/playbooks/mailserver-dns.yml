@@ -1,5 +1,5 @@
 ---
-- name: Gerenciar o DNS do piloto pela API da Cloudflare
+- name: Gerenciar o DNS do Mailserver pela API da Cloudflare
   hosts: vps
   gather_facts: false
   vars_files:
@@ -9,6 +9,12 @@
       ansible.builtin.assert:
         that: mailserver_dns_etapa | default('') in ['enderecos', 'entrega', 'retirar-mx']
         fail_msg: Passe mailserver_dns_etapa=enderecos, entrega ou retirar-mx.
+    - name: Restringir a publicação ao piloto ou ao subdomínio de adoção
+      ansible.builtin.assert:
+        that:
+          - mailserver_dns_dominio | default(mailserver_dominio) in [mailserver_dominio, mailserver_dominio_adocao]
+          - mailserver_dns_etapa != 'enderecos' or mailserver_dns_dominio is not defined
+        fail_msg: Use mailserver_dns_dominio apenas em entrega ou retirar-mx, com um subdomínio do Mailserver.
     - name: Aplicar a etapa de DNS
       ansible.builtin.include_role:
         name: mailserver
@@ -16,3 +22,4 @@
       vars:
         # use o token da zona já provisionado para a VPS
         mailserver_dns_token: "{{ vault_caddy_vps_cloudflare_token }}"
+        mailserver_dns_alvo: "{{ mailserver_dns_dominio | default(mailserver_dominio) }}"
