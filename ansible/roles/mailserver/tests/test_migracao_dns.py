@@ -26,8 +26,8 @@ CHAVE = "YWJj" * 98
 SPF = "v=spf1 include:_spf.protonmail.ch -all"
 SPF_TRANSICAO = f"v=spf1 ip4:{IP} include:_spf.protonmail.ch -all"
 MX_PROTON = [
-    {"content": "mail.protonmail.ch", "priority": 10, "ttl": 300},
-    {"content": "mailsec.protonmail.ch", "priority": 20, "ttl": 300},
+    {"content": "mail.protonmail.ch", "priority": 10, "ttl": 1},
+    {"content": "mailsec.protonmail.ch", "priority": 20, "ttl": 1},
 ]
 MX_MAILSERVER = {"content": MX, "priority": 10, "ttl": 300}
 ID_ZONA = "a" * 32
@@ -143,7 +143,7 @@ class MigracaoTest(unittest.TestCase):
             "tasks": [{"ansible.builtin.include_role": {"name": "mailserver", "tasks_from": "migracao-dns"}}],
         }]))
 
-    def executar(self, etapa, api, *, check=False, erro=None, play=None):
+    def executar(self, etapa, api, *, check=False, erro=None, play=None, **variaveis):
         parametros = {
             "mailserver_migracao_etapa": etapa,
             "mailserver_migracao_api": api,
@@ -151,6 +151,7 @@ class MigracaoTest(unittest.TestCase):
             "mailserver_migracao_token": "token-ficticio",
             "mailserver_migracao_ipv4": IP,
             "mailserver_migracao_dkim_publica": CHAVE,
+            **variaveis,
         }
         resultado = subprocess.run(
             ["ansible-playbook", "-i", str(self.inv), str(play or self.play), "-e", json.dumps(parametros)]
@@ -214,7 +215,7 @@ class MigracaoTest(unittest.TestCase):
     def test_playbook_bloqueia_o_corte_com_o_dominio_desligado(self):
         with cloudflare_simulada() as (api, _, reqs, _, _):
             self.executar("cortar-mx", api, play=pasta_ansible / "playbooks/mailserver-migracao.yml",
-                          erro="Ative o domínio principal pelo fluxo versionado")
+                          erro="Ative o domínio principal pelo fluxo versionado", mailserver_principal_ativo=False)
             self.assertEqual(reqs, [])
 
     def test_estados_inesperados_sao_recusados_antes_do_lote(self):

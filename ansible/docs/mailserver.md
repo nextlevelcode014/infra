@@ -291,12 +291,11 @@ logins são independentes.
    Confira que os dois hashes têm prefixo `$6$`, que há uma entrada
    `work` e outra correspondente a `pessoal` no mapa `contas`, e que todos
    os valores de `aliases_pessoais` apontam para essa caixa pessoal.
-2. Mantenha `mailserver_principal_ativo: false` em
-   [`vars/mailserver.yml`](../vars/mailserver.yml) enquanto prepara a
-   migração. A ativação torna `nextlevelcode.pro` um domínio local no
-   Postfix, inclusive para mensagens enviadas pelo próprio Mailserver.
-   Planeje a ativação e a troca do MX na mesma janela. O playbook de DNS
-   publica registros apenas para o piloto e o subdomínio de adoção.
+2. Confira `mailserver_principal_ativo: true` em
+   [`vars/mailserver.yml`](../vars/mailserver.yml) na revisão aprovada.
+   A aplicação torna `nextlevelcode.pro` um domínio local no Postfix,
+   inclusive para mensagens enviadas pelo próprio Mailserver. Aplique
+   a configuração na mesma janela planejada para a troca do MX.
 3. Na janela, valide os dois logins e a entrega para um alias pessoal,
    para `work` e para um destinatário sem cadastro. Mantenha o Proton
    disponível durante a propagação e teste links de login ou recuperação
@@ -324,6 +323,8 @@ done
 
 Compare o resultado com [`vars/mailserver-migracao.yml`](../vars/mailserver-migracao.yml).
 O plano aceita o conjunto de MX do Proton ou o conjunto do Mailserver.
+Os MX do Proton usam TTL automático, que a API representa como `1`.
+Na resposta pública, os autoritativos anunciam 300 segundos.
 Se os registros divergirem, confira a zona e revise os valores antes de
 continuar. Reserve a janela para um único operador escrever no DNS.
 
@@ -353,7 +354,7 @@ requer que a chave privada já exista.
 ### Ativar as caixas e trocar o MX
 
 1. Confirme que o vault contém as duas contas e os aliases acordados.
-   Ative `mailserver_principal_ativo` no arquivo versionado e use o
+   Confira `mailserver_principal_ativo: true` no arquivo versionado e use o
    [fluxo de revisão e aplicação](../../docs/fluxo-de-mudanca.md#revisão-merge-e-aplicação)
    antes de rodar o playbook da stack.
 

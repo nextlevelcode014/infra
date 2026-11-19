@@ -1,6 +1,7 @@
 ---
 mailserver_migracao_ttl: 300
+# A API representa Auto como 1. Os autoritativos anunciam 300 segundos.
 mailserver_migracao_mx_proton:
-  - {content: mail.protonmail.ch, priority: 10, ttl: 300}
-  - {content: mailsec.protonmail.ch, priority: 20, ttl: 300}
+  - {content: mail.protonmail.ch, priority: 10, ttl: 1}
+  - {content: mailsec.protonmail.ch, priority: 20, ttl: 1}
 mailserver_migracao_spf_proton: "v=spf1 include:_spf.protonmail.ch -all"
