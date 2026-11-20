@@ -92,8 +92,12 @@ vault_caddy_pi_cloudflare_token: "CHANGE-ME"
 # do serviço) para recuperação no Pi.
 vault_vaultwarden_admin_token: "CHANGE-ME"
 
-# Credenciais SMTP do Vaultwarden (Proton Mail). O username é o email
-# completo da conta Proton que vai enviar as notificações.
+# Senha em texto da conta vaultwarden@nextlevelcode.pro no Mailserver.
+# O hash desta mesma senha vai em vault_mailserver_principal.contas.vaultwarden.
+vault_vaultwarden_mailserver_smtp_password: "CHANGE-ME"
+
+# Credenciais anteriores (Proton Mail), para reversão durante a migração.
+# O usuário é o endereço completo da conta Proton usada para enviar.
 vault_vaultwarden_smtp_username: "vaultwarden@nextlevelcode.pro"
 vault_vaultwarden_smtp_password: "CHANGE-ME"
 
@@ -164,11 +168,12 @@ vault_mailserver_contas_adocao:
   admin: "CHANGE-ME"
 
 # Domínio principal. Substitua os endereços pessoais deste exemplo
-# pelas partes antes de @ e guarde os dois hashes no vault cifrado.
+# pelas partes antes de @ e guarde os hashes no vault cifrado.
 vault_mailserver_principal:
   pessoal: "pessoal"
   contas:
     pessoal: "CHANGE-ME"
     work: "CHANGE-ME"
+    vaultwarden: "CHANGE-ME"
   aliases_pessoais:
     contato: "pessoal"

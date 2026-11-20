@@ -179,6 +179,14 @@ Proxmox pode ser desligado no fim.
    não gerencia registros da Cloudflare (a VPS nova também é assim,
    `docs/vps.md`).
 
+   Confira o STARTTLS de dentro do container e confirme que o Vaultwarden
+   do Pi envia e aceita um código de 2FA por e-mail, conforme o passo 5 de
+   [Migrar o SMTP para o Mailserver](vaultwarden.md#migrar-o-smtp-para-o-mailserver).
+
+   ```bash
+   ssh ubuntu@nextlevelcode 'timeout 15 sudo docker exec vaultwarden openssl s_client -starttls smtp -connect cliente-piloto.nextlevelcode.pro:587 -verify_hostname cliente-piloto.nextlevelcode.pro -verify_return_error -brief'
+   ```
+
 9. **Remote do Git:** no `~/.ssh/config`, o bloco do Forgejo fica assim (só a
    linha `HostName` muda, e entra a `HostKeyAlias`; a linha `Host` fica igual):
 

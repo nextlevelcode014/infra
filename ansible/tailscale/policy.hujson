@@ -66,6 +66,13 @@
             "ip":  ["tcp:587", "tcp:993"],
         },
 
+        // Vaultwarden de produção e do Pi -> submission do Mailserver.
+        {
+            "src": ["tag:vaultwarden", "tag:pi"],
+            "dst": ["tag:vps"],
+            "ip":  ["tcp:587"],
+        },
+
         // --- Administração: só pelos desktops listados em "hosts" ------------
         {
             "src": ["infra-admin-1", "infra-admin-2"],
@@ -248,6 +255,7 @@
         "tag:proxmox":     ["autogroup:admin"],
         "tag:proxmox-lxc": ["autogroup:admin"],
         "tag:forgejo":     ["autogroup:admin"],
+        "tag:vaultwarden": ["autogroup:admin"],
         "tag:caddy":       ["autogroup:admin"],
         "tag:pi":          ["autogroup:admin"],
         "tag:vps":         ["autogroup:admin"],
@@ -309,12 +317,20 @@
             "accept": ["tag:caddy:443", "tag:pi:443", "tag:pi:53", "tag:forgejo:2222"],
             "deny":   ["tag:pi:22", "tag:proxmox:22", "tag:proxmox:8006"],
         },
-        // O Pi só fala com o Caddy (HPB do Nextcloud) e com o Uptime Kuma
-        // (aviso de backup).
+        // HPB do Nextcloud, avisos de backup e SMTP de contingência.
         {
             "src":    "tag:pi",
-            "accept": ["tag:caddy:443", "tag:caddy-vps:443"],
-            "deny":   ["tag:proxmox:22", "tag:proxmox-lxc:22", "tag:proxmox-lxc:4000", "tag:vps:22"],
+            "accept": ["tag:caddy:443", "tag:caddy-vps:443", "tag:vps:587"],
+            "deny":   ["tag:proxmox:22", "tag:proxmox-lxc:22", "tag:proxmox-lxc:4000", "tag:vps:22", "tag:vps:993"],
+        },
+        {
+            "src":    "tag:vaultwarden",
+            "accept": ["tag:vps:587"],
+            "deny":   ["tag:vps:22", "tag:vps:993"],
+        },
+        {
+            "src":    "tag:forgejo",
+            "deny":   ["tag:vps:587", "tag:vps:993"],
         },
         // O lab não alcança nada da infra.
         {
@@ -325,7 +341,7 @@
                 "tag:proxmox-lxc:22", "tag:proxmox-lxc:8080", "tag:proxmox-lxc:4000",
                 "tag:forgejo:2222", "tag:forgejo:3000",
                 "tag:caddy:443", "tag:caddy-vps:443",
-                "tag:vps:22",
+                "tag:vps:22", "tag:vps:587", "tag:vps:993",
             ],
         },
         // O CI do lab chega no Coolify do lab, e em mais nada.

@@ -13,7 +13,7 @@ tailnet: não há domínio público.
 
 **Toda a config vem do compose**, por variável de ambiente
 (`roles/vaultwarden/defaults/main.yml`): cadastro fechado, verificação de
-e-mail, SMTP do Proton, 2FA por e-mail. O playbook apaga o
+e-mail, SMTP do Mailserver, 2FA por e-mail. O playbook apaga o
 `vw-data/config.json` a cada execução, então **o que se muda no painel admin
 some na próxima aplicação**. Mudança de config é no defaults e reaplicar.
 
@@ -26,13 +26,15 @@ some na próxima aplicação**. Mudança de config é no defaults e reaplicar.
     token em texto, o que se digita no `/admin`, fica fora do Vaultwarden
     (Bitwarden de outro aparelho e papel): sem ele não se entra no painel
     com o cofre fora do ar;
-  - `vault_vaultwarden_smtp_username` e `vault_vaultwarden_smtp_password`:
-    o token SMTP do Proton para `vaultwarden@nextlevelcode.pro`;
+  - `vault_vaultwarden_mailserver_smtp_password`: a senha SMTP da conta
+    `vaultwarden@nextlevelcode.pro` no Mailserver;
   - as quatro `vault_forgejo_borg_*`, que são do Borg de todos os serviços.
-- **ACL** (`tailscale/policy.hujson`), já na política: `tag:caddy` →
-  `tag:proxmox-lxc:8080`.
-- **DNS:** nada a fazer. O curinga `*.lab` da Cloudflare já aponta para o
-  Caddy do Proxmox.
+- **ACL** (`tailscale/policy.hujson`): `tag:caddy` → `tag:proxmox-lxc:8080`
+  para a interface web e `tag:vaultwarden` / `tag:pi` → `tag:vps:587`
+  para o SMTP autenticado.
+- **DNS:** o curinga `*.lab` aponta para o Caddy do Proxmox.
+  `cliente-piloto.nextlevelcode.pro` aponta para a VPS na tailnet e consta
+  no certificado do [Mailserver](mailserver.md).
 
 ## Instalação
 
@@ -52,11 +54,13 @@ some na próxima aplicação**. Mudança de config é no defaults e reaplicar.
 
    Confira: o nó `vaultwarden-lxc` aparece no console do Tailscale.
 
-3. **Tag** no console → Machines → `vaultwarden-lxc` → Edit ACL tags:
-   `tag:proxmox-lxc`. É manual porque as tags de nó ficam no console
-   (`tailscale/README.md`, "Tags"). Sem ela, o Caddy não alcança a 8080.
+3. **Tags** no console → Machines → `vaultwarden-lxc` → Edit ACL tags:
+   `tag:proxmox-lxc` para o Caddy e `tag:vaultwarden` para o Mailserver.
+   É manual porque as tags de nó ficam no console
+   (`tailscale/README.md`, "Tags").
 
-   Confira: `ssh root@10.50.0.202 tailscale status --self` mostra a tag.
+   Confira: `ssh root@10.50.0.202 tailscale status --json | jq -r '.Self.Tags[]'`
+   mostra as duas tags.
 
 4. **Vaultwarden:**
 
@@ -90,6 +94,87 @@ some na próxima aplicação**. Mudança de config é no defaults e reaplicar.
 8. **Clientes** (extensão, celular, desktop): servidor auto-hospedado
    `https://vault.lab.nextlevelcode.pro`. Só funcionam com o aparelho na
    tailnet.
+
+## Migrar o SMTP para o Mailserver
+
+Faça a aplicação em janela autorizada, depois do merge. O Mailserver deve
+estar atendendo o domínio principal e entregando mensagens internas e externas.
+Execute os comandos de `ansible/`.
+
+1. Gere uma senha exclusiva para `vaultwarden@nextlevelcode.pro`. Guarde-a
+   num gerenciador acessível mesmo com o Vaultwarden fora do ar. Estes
+   comandos pedem a senha interativamente e abrem o vault cifrado.
+
+   ```bash
+   openssl passwd -6
+   ansible-vault edit inventory/group_vars/all/vault.yml
+   ```
+
+   Confira no editor que `vault_mailserver_principal.contas.vaultwarden`
+   contém o hash com prefixo `$6$` e que
+   `vault_vaultwarden_mailserver_smtp_password` contém a senha que gerou esse
+   hash. Mantenha o usuário e o token do Proton no vault durante a janela.
+2. Cadastre a conta na VPS pelo playbook do Mailserver e confirme que o
+   Dovecot reconhece o endereço.
+
+   ```bash
+   ansible-playbook playbooks/mailserver.yml --limit hetzner --ask-vault-pass -e mailserver_ativar=true
+   ssh hetzner@hetzner 'sudo docker compose -f /opt/mailserver/compose.yml exec -T mailserver doveadm user vaultwarden@nextlevelcode.pro'
+   ```
+
+3. Compare a política do console com a versão do repositório e incorpore
+   pelo fluxo de PR qualquer edição feita no console antes de publicar a
+   [política da tailnet](../tailscale/README.md#aplicar-uma-mudança).
+   Acrescente `tag:vaultwarden` ao LXC conforme o passo 3 da
+   instalação. Confirme `tag:pi` no Pi e `tag:vps` na VPS em **Machines**.
+   Do LXC e do Pi, valide a 587 e o nome no certificado. A saída de cada
+   host deve mostrar a verificação TLS bem-sucedida.
+
+   ```bash
+   ansible 'vaultwarden,rpi' --ask-vault-pass -m shell -a 'timeout 15 openssl s_client -starttls smtp -connect cliente-piloto.nextlevelcode.pro:587 -verify_hostname cliente-piloto.nextlevelcode.pro -verify_return_error -brief </dev/null'
+   ```
+
+4. Atualize o LXC. O Compose recria o container para carregar as variáveis
+   SMTP, com uma breve interrupção do serviço. Confirme o `/alive` e repita
+   a verificação TLS de dentro do container para conferir o caminho do Docker.
+
+   ```bash
+   ansible-playbook playbooks/vaultwarden.yml --limit vaultwarden --ask-vault-pass
+   curl -fsS https://vault.lab.nextlevelcode.pro/alive
+   ssh root@10.50.0.202 'timeout 15 docker exec vaultwarden openssl s_client -starttls smtp -connect cliente-piloto.nextlevelcode.pro:587 -verify_hostname cliente-piloto.nextlevelcode.pro -verify_return_error -brief'
+   ```
+
+5. Com uma sessão atual aberta, entre pela janela privativa do navegador
+   com uma conta que usa 2FA por e-mail. Receba o código enviado de
+   `vaultwarden@nextlevelcode.pro`, use-o e confirme que o cofre abre.
+   Esse teste é manual porque passa pelo navegador e pela caixa de e-mail.
+6. Atualize a configuração de contingência com `proxmox_fora: false` e
+   o LUKS do Pi montado. Confira que o container do Vaultwarden segue parado.
+   Repita o teste de 2FA no Pi quando ele assumir em um ensaio ou na
+   [contingência](pi-recuperacao.md).
+
+   ```bash
+   ansible-playbook playbooks/pi-recuperacao.yml --limit rpi --ask-vault-pass
+   ssh ubuntu@nextlevelcode 'sudo docker ps -q --filter name=vaultwarden'
+   ```
+
+Se a entrega falhar e o Proton ainda estiver apto a enviar para a caixa de
+2FA, reaplique o playbook do LXC com o token anterior e repita o teste em
+janela privativa.
+
+```bash
+ansible-playbook playbooks/vaultwarden.yml --limit vaultwarden --ask-vault-pass -e vaultwarden_smtp_mailserver_ativo=false
+```
+
+Se o Pi já tiver recebido a configuração nova, reverta também em standby
+e confira o resultado com o comando do passo 6.
+
+```bash
+ansible-playbook playbooks/pi-recuperacao.yml --limit rpi --ask-vault-pass -e vaultwarden_smtp_mailserver_ativo=false
+```
+
+O parâmetro vale para uma execução. Se a reversão precisar durar, registre
+o valor em branch antes da próxima aplicação.
 
 ## Backup
 

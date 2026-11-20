@@ -274,7 +274,9 @@ O domínio principal tem uma caixa pessoal e outra de trabalho. Os aliases
 pessoais declarados no vault apontam para a caixa pessoal. O endereço
 `support@nextlevelcode.pro` aponta para `work@nextlevelcode.pro`, que
 também recebe os destinatários sem cadastro pelo catch-all. Os dois
-logins são independentes.
+logins são independentes. A conta de serviço `vaultwarden@nextlevelcode.pro`
+entra no mesmo mapa `contas` com senha própria. Veja a ordem de aplicação
+em [Migrar o SMTP para o Mailserver](vaultwarden.md#migrar-o-smtp-para-o-mailserver).
 
 1. Crie uma senha para cada caixa no gerenciador. Gere os hashes e preencha
    `vault_mailserver_principal` seguindo o [exemplo do vault](../inventory/group_vars/all/vault.yml.example).

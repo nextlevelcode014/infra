@@ -27,7 +27,7 @@ services:
       SMTP_FROM: "{{ vaultwarden_smtp_from }}"
       SMTP_FROM_NAME: "{{ vaultwarden_smtp_from_name }}"
       SMTP_USERNAME: "{{ vaultwarden_smtp_username }}"
-      SMTP_PASSWORD: "{{ vaultwarden_smtp_password }}"
+      SMTP_PASSWORD: {{ vaultwarden_smtp_password | replace('$', '$$') | to_json }}
     volumes:
       - ./vw-data:/data
     ports:

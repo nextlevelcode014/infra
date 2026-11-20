@@ -37,6 +37,7 @@ immich_db_password: stagingnaoesegredo
 # o dump dentro dele); token admin e SMTP do Vaultwarden não fazem falta no ensaio.
 forgejo_db_password: stagingnaoesegredo
 vaultwarden_admin_token: staging-nao-e-segredo
+vaultwarden_smtp_host: smtp.invalid
 vaultwarden_smtp_password: staging-nao-e-segredo
 
 # FMD no pi-lab: sem sidecar (entraria na tailnet como outro "fmd", com Funnel)

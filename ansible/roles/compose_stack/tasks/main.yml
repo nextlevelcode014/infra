@@ -4,6 +4,8 @@
     src: "{{ compose_stack_template }}"
     dest: "{{ compose_stack_dir }}/compose.yml"
     mode: "0640"
+  no_log: "{{ compose_stack_ocultar_template | bool }}"
+  diff: "{{ not (compose_stack_ocultar_template | bool) }}"
   register: compose_stack_render
 
 # Nome antigo do Forgejo e do Vaultwarden. Com os dois no diretório o compose

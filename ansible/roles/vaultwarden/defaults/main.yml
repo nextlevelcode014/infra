@@ -8,14 +8,21 @@ vaultwarden_bind_port: 8080
 vaultwarden_admin_token: "{{ vault_vaultwarden_admin_token }}"
 vaultwarden_signups_allowed: "false"
 
-# SMTP
-vaultwarden_smtp_host: "smtp.protonmail.ch"
+# SMTP. A opção de voltar ao Proton usa o token anterior durante a migração.
+vaultwarden_smtp_mailserver_ativo: true
+vaultwarden_smtp_host: >-
+  {{ 'cliente-piloto.nextlevelcode.pro' if vaultwarden_smtp_mailserver_ativo | bool
+     else 'smtp.protonmail.ch' }}
 vaultwarden_smtp_port: "587"
 vaultwarden_smtp_security: "starttls"
 vaultwarden_smtp_from: "vaultwarden@nextlevelcode.pro"
 vaultwarden_smtp_from_name: "NextLevelCode | Vaultwarden"
-vaultwarden_smtp_username: "{{ vault_vaultwarden_smtp_username }}"
-vaultwarden_smtp_password: "{{ vault_vaultwarden_smtp_password }}"
+vaultwarden_smtp_username: >-
+  {{ vaultwarden_smtp_from if vaultwarden_smtp_mailserver_ativo | bool
+     else vault_vaultwarden_smtp_username }}
+vaultwarden_smtp_password: >-
+  {{ vault_vaultwarden_mailserver_smtp_password if vaultwarden_smtp_mailserver_ativo | bool
+     else vault_vaultwarden_smtp_password }}
 
 # Segurança
 vaultwarden_signups_verify: "true"

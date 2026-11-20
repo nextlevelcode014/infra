@@ -49,3 +49,4 @@
   vars:
     compose_stack_dir: "{{ vaultwarden_dir }}"
     compose_stack_standby: "{{ vaultwarden_standby }}"
+    compose_stack_ocultar_template: true
