@@ -24,10 +24,10 @@
         priority: 10
         ttl: "{{ mailserver_migracao_ttl }}"
     mailserver_migracao_consultas: >-
-      {{ {'mx': {'name': mailserver_zona, 'type': 'MX'}}
-         | combine({'txt': {'name': mailserver_zona, 'type': 'TXT'},
-                    'dkim': {'name': mailserver_migracao_dkim_nome},
-                    'alvo': {'name': mailserver_mx, 'type': 'A'}}
+      {{ {'mx': {'name': mailserver_zona, 'type': 'MX'},
+          'txt': {'name': mailserver_zona, 'type': 'TXT'},
+          'alvo': {'name': mailserver_mx, 'type': 'A'}}
+         | combine({'dkim': {'name': mailserver_migracao_dkim_nome}}
                    if mailserver_migracao_etapa != 'voltar-mx' else {}) }}
   module_defaults:
     ansible.builtin.uri:

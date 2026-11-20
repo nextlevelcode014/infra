@@ -399,21 +399,54 @@ requer que a chave privada já exista.
    provedores durante a propagação para localizar entregas feitas por
    remetentes que ainda usam o MX em cache.
 
+### Finalizar o SPF
+
+Depois de confirmar o recebimento pelo Mailserver, verifique que o Proton
+já deixou de enviar por `nextlevelcode.pro` e confirme o fim da janela de
+reversão. O canal antigo de e-mail do Uptime Kuma usa o SMTP do Proton.
+Confira a situação desse canal e de outros envios antes de publicar.
+
+Use `ansible/`. A prévia lê a VPS e a Cloudflare. Ela confere as caixas,
+o IPv4, o MX e a chave DKIM publicada. Confira que a prévia mostra
+`patches` ou informa que o DNS já converge.
+
+```bash
+ansible-playbook -i inventory/vps.yml playbooks/mailserver-migracao.yml --limit hetzner --ask-vault-pass -e mailserver_migracao_etapa=finalizar-spf --check
+ansible-playbook -i inventory/vps.yml playbooks/mailserver-migracao.yml --limit hetzner --ask-vault-pass -e mailserver_migracao_etapa=finalizar-spf
+for ns in $(dig +short NS nextlevelcode.pro); do
+    dig @"$ns" +norecurse +noall +answer nextlevelcode.pro TXT | awk '/v=spf1/'
+done
+dig +short TXT nextlevelcode.pro | awk '/v=spf1/'
+```
+
+Execute a escrita apenas na janela aprovada. Confira um único TXT
+`v=spf1 ip4:<ipv4_da_vps> -all` em cada autoritativo e no resolvedor. Quando
+o cache do SPF anterior expirar, envie uma mensagem pelo Mailserver para
+uma caixa externa sob seu controle. No original recebido, confira
+`spf=pass`, `dkim=pass` com `d=nextlevelcode.pro` e `s=mail`, e
+`dmarc=pass`. Essa conferência é manual porque usa uma caixa externa
+autenticada.
+
 ### Voltar o MX ao Proton
 
-Na janela autorizada, execute a volta de `ansible/`. Essa etapa usa
-somente a Cloudflare e serve também quando a VPS estiver indisponível.
+Na janela autorizada, confira que o Proton hospeda o domínio e tem as
+caixas ativas antes de apontar o MX para lá. Execute a volta de `ansible/`.
+Essa etapa usa somente a Cloudflare e serve também quando a VPS estiver
+indisponível. Se o SPF já for exclusivo da VPS, o mesmo lote restaura
+o SPF de transição.
 
 ```bash
 ansible-playbook -i inventory/vps.yml playbooks/mailserver-migracao.yml --limit hetzner --ask-vault-pass -e mailserver_migracao_etapa=voltar-mx
 for ns in $(dig +short NS nextlevelcode.pro); do
     dig @"$ns" +norecurse +noall +answer nextlevelcode.pro MX
+    dig @"$ns" +norecurse +noall +answer nextlevelcode.pro TXT | awk '/v=spf1/'
 done
 dig +short MX nextlevelcode.pro
 ```
 
-Confira `10 mail.protonmail.ch.` e `20 mailsec.protonmail.ch.`. Teste
-entrega no Proton e mantenha as duas caixas do Mailserver disponíveis
+Confira `10 mail.protonmail.ch.`, `20 mailsec.protonmail.ch.` e o
+`include:_spf.protonmail.ch` no SPF. Teste a entrega no Proton e mantenha
+as duas caixas do Mailserver disponíveis
 enquanto houver MX em cache ou mensagens da janela para recuperar. A
 volta do MX preserva o SPF de transição, as chaves DKIM e as caixas. A
 desativação do domínio local vem depois de reconciliar a fila e as caixas.

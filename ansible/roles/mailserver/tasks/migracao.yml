@@ -30,9 +30,9 @@
         mailserver_migracao_dkim_publica: >-
           {{ mailserver_migracao_chave.stdout_lines | reject('match', '^-----') | join('') }}
 
-- name: Conferir o serviço ativo antes do corte
+- name: Conferir o serviço ativo antes de concluir o corte
   ansible.builtin.include_tasks: migracao-conferir-caixas.yml
-  when: mailserver_migracao_etapa == 'cortar-mx'
+  when: mailserver_migracao_etapa in ['cortar-mx', 'finalizar-spf']
 
 - name: Planejar e aplicar o lote de DNS
   ansible.builtin.import_tasks: migracao-dns.yml

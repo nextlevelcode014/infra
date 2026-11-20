@@ -25,6 +25,7 @@ IP = "192.0.2.10"
 CHAVE = "YWJj" * 98
 SPF = "v=spf1 include:_spf.protonmail.ch -all"
 SPF_TRANSICAO = f"v=spf1 ip4:{IP} include:_spf.protonmail.ch -all"
+SPF_FINAL = f"v=spf1 ip4:{IP} -all"
 MX_PROTON = [
     {"content": "mail.protonmail.ch", "priority": 10, "ttl": 1},
     {"content": "mailsec.protonmail.ch", "priority": 20, "ttl": 1},
@@ -34,6 +35,10 @@ ID_ZONA = "a" * 32
 CONFIG = {
     "zona": ZONA, "dkim_nome": DKIM, "ttl": 300, "spf_proton": SPF,
     "mx_proton": MX_PROTON, "mx_mailserver": MX_MAILSERVER,
+}
+FILTROS = {
+    "mx": {"name": ZONA, "type": "MX"}, "txt": {"name": ZONA, "type": "TXT"},
+    "dkim": {"name": DKIM}, "alvo": {"name": MX, "type": "A"},
 }
 
 
@@ -54,6 +59,22 @@ def estado_inicial():
 def consultar(estado, filtro):
     encontrados = [registro for registro in estado if all(registro.get(k) == v for k, v in filtro.items())]
     return {"success": True, "result": encontrados, "result_info": {"total_count": len(encontrados)}}
+
+
+def resultados_dns(estado):
+    return [{"item": {"key": chave, "value": filtro}, "json": consultar(estado, filtro)}
+            for chave, filtro in FILTROS.items()]
+
+
+def estado_apos_corte():
+    estado = [item for item in estado_inicial() if item["id"] != "mx2"]
+    next(item for item in estado if item["id"] == "mx1").update(MX_MAILSERVER)
+    next(item for item in estado if item["id"] == "spf")["content"] = serializar_txt(SPF_TRANSICAO)
+    estado.append({
+        "id": "dkim", "name": DKIM, "type": "TXT", "ttl": 300,
+        "content": serializar_txt(f"v=DKIM1; k=rsa; p={CHAVE}"),
+    })
+    return estado
 
 
 @contextlib.contextmanager
@@ -197,13 +218,51 @@ class MigracaoTest(unittest.TestCase):
                 "patches": [{"id": "mx1", **MX_PROTON[0]}],
                 "posts": [{"name": ZONA, "type": "MX", **MX_PROTON[1]}],
             })
-            self.assertTrue(all(q.get("type") == "MX" for metodo, url, q in reqs
-                                if metodo == "GET" and url.endswith("/dns_records")))
+            self.assertEqual({(q["name"], q["type"]) for metodo, url, q in reqs
+                              if metodo == "GET" and url.endswith("/dns_records")},
+                             {(ZONA, "MX"), (ZONA, "TXT"), (MX, "A")})
             self.executar("voltar-mx", api)
             self.assertEqual(len(lotes), 3)
             for registro in original:
                 if registro["id"] not in {"spf", "mx2"}:
                     self.assertIn(registro, estado)
+
+    def test_finaliza_somente_o_spf_e_restaura_a_autorizacao_na_volta(self):
+        with cloudflare_simulada() as (api, estado, _, lotes, _):
+            estado[:] = estado_apos_corte()
+            transicao = deepcopy(estado)
+            self.executar("finalizar-spf", api, check=True)
+            self.assertEqual(estado, transicao)
+            self.assertEqual(lotes, [])
+
+            self.executar("finalizar-spf", api)
+            patch_final = {"id": "spf", "content": serializar_txt(SPF_FINAL)}
+            self.assertEqual(lotes, [{"patches": [patch_final]}])
+            esperado = deepcopy(transicao)
+            next(registro for registro in esperado if registro["id"] == "spf").update(patch_final)
+            self.assertEqual(estado, esperado)
+            self.executar("finalizar-spf", api)
+            self.assertEqual(len(lotes), 1)
+            for etapa in ("autenticacao", "cortar-mx"):
+                self.assertEqual(planejar_migracao(resultados_dns(estado), etapa, CONFIG, IP, CHAVE), {})
+
+            self.executar("voltar-mx", api, play=pasta_ansible / "playbooks/mailserver-migracao.yml")
+            self.assertEqual(lotes[1], {
+                "patches": [{"id": "mx1", **MX_PROTON[0]}, {"id": "spf", "content": serializar_txt(SPF_TRANSICAO)}],
+                "posts": [{"name": ZONA, "type": "MX", **MX_PROTON[1]}],
+            })
+            self.assertEqual(planejar_migracao(resultados_dns(estado), "voltar-mx", CONFIG), {})
+
+    def test_finalizacao_exige_mx_na_vps_spf_de_transicao_e_dkim(self):
+        with self.assertRaisesRegex(AnsibleFilterError, "MX já aponte apenas para o Mailserver"):
+            planejar_migracao(resultados_dns(estado_inicial()), "finalizar-spf", CONFIG, IP, CHAVE)
+        for registros in (
+            [item for item in estado_apos_corte() if item["id"] != "dkim"],
+            [{**item, "content": serializar_txt(SPF)} if item["id"] == "spf" else item
+             for item in estado_apos_corte()],
+        ):
+            with self.assertRaisesRegex(AnsibleFilterError, "Conclua a transição do SPF e publique o DKIM"):
+                planejar_migracao(resultados_dns(registros), "finalizar-spf", CONFIG, IP, CHAVE)
 
     def test_falha_se_a_resposta_de_sucesso_nao_produz_o_estado_esperado(self):
         with cloudflare_simulada() as (api, estado, _, lotes, controle):
@@ -219,10 +278,6 @@ class MigracaoTest(unittest.TestCase):
             self.assertEqual(reqs, [])
 
     def test_estados_inesperados_sao_recusados_antes_do_lote(self):
-        filtros = {
-            "mx": {"name": ZONA, "type": "MX"}, "txt": {"name": ZONA, "type": "TXT"},
-            "dkim": {"name": DKIM}, "alvo": {"name": MX, "type": "A"},
-        }
         for conflitante, registro in (
             ("conjunto MX atual", {"id": "extra", "name": ZONA, "type": "MX", **MX_MAILSERVER}),
             ("exatamente um SPF", {"id": "extra", "name": ZONA, "type": "TXT", "content": "v=spf1 ?all"}),
@@ -230,10 +285,8 @@ class MigracaoTest(unittest.TestCase):
         ):
             with self.subTest(conflitante):
                 dados = estado_inicial() + [registro]
-                resultados = [{"item": {"key": chave, "value": filtro}, "json": consultar(dados, filtro)}
-                              for chave, filtro in filtros.items()]
                 with self.assertRaisesRegex(AnsibleFilterError, conflitante):
-                    planejar_migracao(resultados, "autenticacao", CONFIG, IP, CHAVE)
+                    planejar_migracao(resultados_dns(dados), "autenticacao", CONFIG, IP, CHAVE)
         self.assertEqual(texto_dns(serializar_txt(f"v=DKIM1; k=rsa; p={CHAVE}")), f"v=DKIM1; k=rsa; p={CHAVE}")
 
 

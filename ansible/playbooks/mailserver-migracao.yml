@@ -10,15 +10,15 @@
       ansible.builtin.assert:
         that:
           - ansible_play_hosts_all == ['hetzner']
-          - mailserver_migracao_etapa | default('') in ['autenticacao', 'cortar-mx', 'voltar-mx']
-        fail_msg: Use --limit hetzner e mailserver_migracao_etapa=autenticacao, cortar-mx ou voltar-mx.
+          - mailserver_migracao_etapa | default('') in ['autenticacao', 'cortar-mx', 'finalizar-spf', 'voltar-mx']
+        fail_msg: Use --limit hetzner e selecione autenticacao, cortar-mx, finalizar-spf ou voltar-mx.
       run_once: true
 
-    - name: Confirmar a ativação versionada antes de cortar o MX
+    - name: Confirmar a ativação versionada antes de concluir o corte
       ansible.builtin.assert:
         that: mailserver_principal_ativo | bool
-        fail_msg: Ative o domínio principal pelo fluxo versionado antes de cortar o MX.
-      when: mailserver_migracao_etapa == 'cortar-mx'
+        fail_msg: Ative o domínio principal pelo fluxo versionado antes de cortar o MX ou finalizar o SPF.
+      when: mailserver_migracao_etapa in ['cortar-mx', 'finalizar-spf']
 
     - name: Executar a etapa de migração
       ansible.builtin.include_role:
