@@ -14,16 +14,26 @@ homelab — não compensa para uma tailnet de uma pessoa.
 Depois do merge do PR:
 
 1. Abrir <https://login.tailscale.com/admin/acls/file>.
-2. Colar o conteúdo inteiro de `policy.hujson`, trocar
-   `<ip-tailscale-do-desktop-1>` e `<ip-tailscale-do-desktop-2>` pelos IPs
-   reais (os que já estão no console, ou `tailscale ip -4` em cada desktop) e
-   salvar. O IP fica fora do repo porque o
-   repo é público; esquecida a troca, o console recusa o save por IP inválido.
+2. Colar o conteúdo inteiro de `policy.hujson` e preencher os aliases
+   `infra-admin-1`, `infra-admin-2` e `webhook-temporario` com os IPv4 Tailscale
+   correspondentes. Confira o nó na página **Machines** ou rode
+   `tailscale ip -4` em cada máquina. Preencha os IPs no console para manter
+   os endereços fora do repositório público e salve a política.
 3. Conferir: o save só completa se a seção `tests` passar. Erro de teste = a
    mudança reabriu algo que devia estar fechado; corrija no repo, não no console.
 
 Por que não dá para scriptar: o console exige login no navegador, e a
 alternativa (API) é o token descartado acima.
+
+### Funnel do webhook temporário
+
+O alias `webhook-temporario` autoriza o Funnel para um único nó, preservando
+sua identidade na tailnet. A publicação é configurada no próprio nó e deve
+apontar para o proxy local dedicado ao webhook. Depois de publicar, rode
+`sudo tailscale funnel status` no nó para conferir a origem configurada e
+valide de fora da tailnet que o proxy aceita a rota do webhook e rejeita
+as demais. Ao encerrar o uso temporário, desative a publicação e remova
+o alias e seu atributo em um PR.
 
 ## Mudou no console?
 
