@@ -12,11 +12,10 @@ mailserver_contas: >-
 mailserver_aliases: >-
   {{ {mailserver_dominio: {'postmaster': 'ana'},
       mailserver_dominio_adocao: {'postmaster': 'admin'}}
-     | combine({mailserver_zona: mailserver_principal_config.aliases_pessoais
-                | combine({'support': mailserver_principal_trabalho})}
+     | combine({mailserver_zona: mailserver_principal_config.aliases}
                if mailserver_principal_ativo | bool else {}) }}
 mailserver_catch_all: >-
-  {{ {mailserver_zona: mailserver_principal_trabalho} if mailserver_principal_ativo | bool else {} }}
+  {{ {mailserver_zona: mailserver_principal_config.catch_all} if mailserver_principal_ativo | bool else {} }}
 mailserver_dominios_ativos: >-
   {{ mailserver_contas | dict2items | rejectattr('value', 'equalto', {}) | map(attribute='key') | list }}
 mailserver_certbot_email: "{{ caddy_email }}"

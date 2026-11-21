@@ -1,4 +1,7 @@
 ---
+- name: Validar a declaração usada pela prévia
+  ansible.builtin.import_tasks: validar.yml
+
 - name: Conferir as duas caixas no Dovecot em execução
   ansible.builtin.command:
     argv:
@@ -13,7 +16,7 @@
       - user
       - "{{ item }}@{{ mailserver_zona }}"
     chdir: "{{ mailserver_dir }}"
-  loop: ["{{ mailserver_principal_config.pessoal }}", "{{ mailserver_principal_trabalho }}"]
+  loop: ["{{ mailserver_principal_config.pessoal }}", "{{ mailserver_principal_config.trabalho }}"]
   changed_when: false
   check_mode: false
   no_log: true
@@ -36,8 +39,8 @@
   loop: >-
     {{ mailserver_aliases[mailserver_zona]
        | combine({mailserver_principal_config.pessoal: mailserver_principal_config.pessoal,
-                  mailserver_principal_trabalho: mailserver_principal_trabalho,
-                  '': mailserver_principal_trabalho})
+                  mailserver_principal_config.trabalho: mailserver_principal_config.trabalho,
+                  '': mailserver_catch_all[mailserver_zona]})
        | dict2items }}
   register: mailserver_migracao_alias
   failed_when: >-

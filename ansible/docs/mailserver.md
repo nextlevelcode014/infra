@@ -270,16 +270,18 @@ encaminhadas com o MX em cache.
 
 ## Preparar as caixas do domínio principal
 
-O domínio principal tem uma caixa pessoal e outra de trabalho. Os aliases
-pessoais declarados no vault apontam para a caixa pessoal. O endereço
-`support@nextlevelcode.pro` aponta para `work@nextlevelcode.pro`, que
-também recebe os destinatários sem cadastro pelo catch-all. Os dois
-logins são independentes. A conta de serviço `vaultwarden@nextlevelcode.pro`
-entra no mesmo mapa `contas` com senha própria. Veja a ordem de aplicação
+O domínio principal declara as contas e rotas em `vault_mailserver_principal`.
+Os campos `pessoal` e `trabalho` identificam as caixas conferidas pela prévia
+de migração. Na configuração atual, os aliases pessoais apontam para a
+caixa pessoal e `support@nextlevelcode.pro` aponta para `work@nextlevelcode.pro`,
+que também recebe os destinatários sem cadastro pelo catch-all. A conta
+de serviço `vaultwarden@nextlevelcode.pro` entra no mapa `contas` com senha
+própria. Veja a ordem de aplicação
 em [Migrar o SMTP para o Mailserver](vaultwarden.md#migrar-o-smtp-para-o-mailserver).
 
-1. Crie uma senha para cada caixa no gerenciador. Gere os hashes e preencha
-   `vault_mailserver_principal` seguindo o [exemplo do vault](../inventory/group_vars/all/vault.yml.example).
+1. Para caixas novas, crie uma senha para cada caixa no gerenciador. Gere
+   os hashes e preencha `vault_mailserver_principal` seguindo o
+   [exemplo do vault](../inventory/group_vars/all/vault.yml.example).
    Use a parte antes de `@` para a conta e para os aliases pessoais. A
    geração da senha e a edição do vault são manuais porque exigem acesso ao
    gerenciador e a senha do vault. De `ansible/`:
@@ -290,9 +292,9 @@ em [Migrar o SMTP para o Mailserver](vaultwarden.md#migrar-o-smtp-para-o-mailser
    ansible-vault edit inventory/group_vars/all/vault.yml
    ```
 
-   Confira que os dois hashes têm prefixo `$6$`, que há uma entrada
-   `work` e outra correspondente a `pessoal` no mapa `contas`, e que todos
-   os valores de `aliases_pessoais` apontam para essa caixa pessoal.
+   Confira que os hashes têm prefixo `$6$`, que `pessoal` e `trabalho`
+   apontam para contas distintas e que todos os destinos em `aliases` e
+   `catch_all` existem em `contas`.
 2. Confira `mailserver_principal_ativo: true` em
    [`vars/mailserver.yml`](../vars/mailserver.yml) na revisão aprovada.
    A aplicação torna `nextlevelcode.pro` um domínio local no Postfix,
@@ -307,7 +309,48 @@ em [Migrar o SMTP para o Mailserver](vaultwarden.md#migrar-o-smtp-para-o-mailser
 Nos domínios com catch-all, o Postfix consulta o mapa de aliases antes da
 lista de contas. O role escreve cada conta como destino de si mesma,
 depois os aliases explícitos e por último o curinga. Essa ordem preserva
-a entrega direta às duas caixas. [Ensaio no lab](https://forge.nextlevelcode.pro/nextlevelcode/lab/pulls/22)
+a entrega direta a cada caixa. [Ensaio no lab](https://forge.nextlevelcode.pro/nextlevelcode/lab/pulls/22)
+
+### Converter um vault existente
+
+Converta o vault ao atualizar para a revisão que usa `aliases` e `catch_all`.
+Execute de `ansible/` com o SHA aprovado, antes de aplicar a stack.
+
+1. Guarde uma cópia cifrada para reversão e abra o editor do Ansible Vault.
+   A edição exige a senha do vault e acesso ao cadastro atual.
+
+   ```bash
+   vault_anterior=$(mktemp)
+   cp -- inventory/group_vars/all/vault.yml "$vault_anterior"
+   ansible-vault edit inventory/group_vars/all/vault.yml
+   ```
+
+   Em `vault_mailserver_principal`, preserve `pessoal` e todas as entradas e
+   hashes de `contas`. Adicione `trabalho: work`, renomeie `aliases_pessoais`
+   para `aliases` preservando cada par e acrescente `support: work` a esse
+   mapa. Adicione `catch_all: work` no mesmo nível de `contas`. Confira a
+   estrutura no [exemplo do vault](../inventory/group_vars/all/vault.yml.example)
+   e revise os valores no editor antes de salvar. Mantenha os mapas do
+   piloto e do subdomínio de adoção como estavam.
+2. Na janela autorizada, rode a prévia abaixo. Ela consulta a VPS e a
+   Cloudflare e compara as duas caixas, os aliases e o catch-all declarados
+   com o serviço ativo. Use a etapa de finalizar SPF para verificar o
+   domínio com o MX já no Mailserver.
+
+   ```bash
+   ansible-playbook -i inventory/vps.yml playbooks/mailserver-migracao.yml --limit hetzner --ask-vault-pass -e mailserver_migracao_etapa=finalizar-spf --check
+   ```
+
+   Confira que as verificações do Dovecot e do Postfix passaram. Se uma
+   rota divergir, revise a conversão no editor antes de aplicar.
+3. Na aplicação autorizada, use `playbooks/mailserver.yml` conforme o passo 1
+   de [Ativar as caixas e trocar o MX](#ativar-as-caixas-e-trocar-o-mx).
+   Repita a prévia e verifique a entrega direta às duas caixas, a entrega
+   aos aliases pessoal e de suporte e a entrega de um endereço sem cadastro
+   à caixa de trabalho. Se for preciso reverter, volte à revisão anterior,
+   restaure o vault com `cp -- "$vault_anterior" inventory/group_vars/all/vault.yml`
+   na mesma sessão e confira a configuração antes de reaplicar a revisão
+   anterior na janela autorizada.
 
 ## Migrar o MX do domínio principal
 
@@ -451,14 +494,17 @@ enquanto houver MX em cache ou mensagens da janela para recuperar. A
 volta do MX preserva o SPF de transição, as chaves DKIM e as caixas. A
 desativação do domínio local vem depois de reconciliar a fila e as caixas.
 
-Para reexecutar a regressão na estação, de `ansible/`:
+Para reexecutar as regressões na estação, de `ansible/`:
 
 ```bash
+PYTHONDONTWRITEBYTECODE=1 python3 roles/mailserver/tests/test_contas.py -v
 PYTHONDONTWRITEBYTECODE=1 python3 roles/mailserver/tests/test_migracao_dns.py -v
 ```
 
-Confira o resultado com a API simulada em loopback. O teste cobre a
-prévia, os lotes de mudança, a releitura e os estados recusados.
+Confira a geração dos mapas, a resolução de destinatários e a validação da
+prévia com dados fictícios. A regressão de DNS usa uma API simulada em
+loopback para cobrir a prévia, os lotes de mudança, a releitura e os estados
+recusados.
 
 ## Backup
 

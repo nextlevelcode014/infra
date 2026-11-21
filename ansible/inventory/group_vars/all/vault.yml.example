@@ -167,13 +167,19 @@ vault_mailserver_contas:
 vault_mailserver_contas_adocao:
   admin: "CHANGE-ME"
 
-# Domínio principal. Substitua os endereços pessoais deste exemplo
-# pelas partes antes de @ e guarde os hashes no vault cifrado.
+# Domínio principal. Use apenas as partes antes de @ e guarde os hashes
+# no vault cifrado. Para converter o cadastro anterior, preserve pessoal,
+# contas e hashes, renomeie aliases_pessoais para aliases e acrescente
+# trabalho, support e catch_all como abaixo. Confira a prévia pelo guia
+# docs/mailserver.md antes de aplicar.
 vault_mailserver_principal:
-  pessoal: "pessoal"
+  pessoal: "caixa-pessoal"
+  trabalho: "work"
   contas:
-    pessoal: "CHANGE-ME"
+    caixa-pessoal: "CHANGE-ME"
     work: "CHANGE-ME"
     vaultwarden: "CHANGE-ME"
-  aliases_pessoais:
-    contato: "pessoal"
+  aliases:
+    hello: "caixa-pessoal"
+    support: "work"
+  catch_all: "work"

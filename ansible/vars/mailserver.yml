@@ -1,7 +1,6 @@
 ---
 mailserver_zona: nextlevelcode.pro
 mailserver_principal_ativo: true
-mailserver_principal_trabalho: work
 mailserver_dominio: piloto-mail.nextlevelcode.pro
 mailserver_dominio_adocao: mail.nextlevelcode.pro
 mailserver_mx: mx-piloto.nextlevelcode.pro

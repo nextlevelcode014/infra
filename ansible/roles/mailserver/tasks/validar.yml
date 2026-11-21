@@ -1,18 +1,18 @@
 ---
-- name: Validar as duas caixas e os aliases pessoais quando o domínio principal estiver ativo
+- name: Validar a declaração do domínio principal quando estiver ativo
   ansible.builtin.assert:
     that:
       - mailserver_principal_config is mapping
       - mailserver_principal_config.contas is mapping
       - mailserver_principal_config.pessoal is string
-      - mailserver_principal_config.pessoal != mailserver_principal_trabalho
+      - mailserver_principal_config.trabalho is string
+      - mailserver_principal_config.pessoal != mailserver_principal_config.trabalho
       - mailserver_principal_config.pessoal in mailserver_principal_config.contas
-      - mailserver_principal_trabalho in mailserver_principal_config.contas
-      - mailserver_principal_config.aliases_pessoais is mapping
-      - mailserver_principal_config.aliases_pessoais | length > 0
-      - "'support' not in mailserver_principal_config.aliases_pessoais"
-      - mailserver_principal_config.aliases_pessoais.values() | difference([mailserver_principal_config.pessoal]) | length == 0
-    fail_msg: Preencha as caixas pessoal e de trabalho e aponte os aliases pessoais para a caixa pessoal.
+      - mailserver_principal_config.trabalho in mailserver_principal_config.contas
+      - mailserver_principal_config.aliases is mapping
+      - mailserver_principal_config.catch_all is string
+      - mailserver_principal_config.catch_all in mailserver_principal_config.contas
+    fail_msg: Confira as caixas pessoal e de trabalho, o mapa de aliases e a caixa do catch-all no vault.
   when: mailserver_principal_ativo | bool
   no_log: true
 
@@ -28,8 +28,12 @@
 - name: Validar usuários, destinos dos aliases e hashes por domínio
   ansible.builtin.assert:
     that:
+      - contas.keys() | reject('string') | list | length == 0
+      - contas.values() | reject('string') | list | length == 0
+      - mailserver_aliases[item].keys() | reject('string') | list | length == 0
+      - mailserver_aliases[item].values() | reject('string') | list | length == 0
       - contas.keys() | reject('match', '^[a-z][a-z0-9_.-]*\\Z') | list | length == 0
-      - contas.values() | reject('match', '^\\$6\\$[./A-Za-z0-9]+\\$[./A-Za-z0-9]{86}\\Z') | list | length == 0
+      - contas.values() | reject('match', '^\\$6\\$[./A-Za-z0-9]{1,16}\\$[./A-Za-z0-9]{86}\\Z') | list | length == 0
       - mailserver_aliases[item].keys() | reject('match', '^[a-z][a-z0-9_.-]*\\Z') | list | length == 0
       - mailserver_aliases[item].values() | difference(contas.keys()) | length == 0
       - mailserver_aliases[item].keys() | intersect(contas.keys()) | length == 0
