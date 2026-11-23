@@ -57,8 +57,10 @@ fora da infra, e como fazê-las, estão em
 Formatar o desktop de onde se roda a infra, ou começar numa máquina nova:
 [`docs/maquina-nova.md`](docs/maquina-nova.md).
 
-Upgrades planejados e ainda não feitos ficam em `docs/planos/`: hoje, o
-[full node Bitcoin e o upgrade do Pi](docs/planos/full-node-e-upgrade-do-pi.md).
+Os planos de mudanças futuras ficam em `docs/planos/`.
+
+- [Full node Bitcoin e upgrade do Pi](docs/planos/full-node-e-upgrade-do-pi.md)
+- [Observabilidade do homelab](docs/planos/observabilidade.md)
 
 ## Fluxo de mudança
 
