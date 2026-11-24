@@ -14,16 +14,27 @@ homelab — não compensa para uma tailnet de uma pessoa.
 Depois do merge do PR:
 
 1. Abrir <https://login.tailscale.com/admin/acls/file>.
-2. Colar o conteúdo inteiro de `policy.hujson` e preencher os aliases
-   `infra-admin-1`, `infra-admin-2` e `webhook-temporario` com os IPv4 Tailscale
-   correspondentes. Confira o nó na página **Machines** ou rode
-   `tailscale ip -4` em cada máquina. Preencha os IPs no console para manter
-   os endereços fora do repositório público e salve a política.
+2. Colar o conteúdo inteiro de `policy.hujson` e preencher todos os
+   placeholders em `hosts` com os IPv4 Tailscale correspondentes. Confira
+   o nó na página **Machines** ou rode `tailscale ip -4` no desktop.
+   Preencha os IPs no console para manter os endereços fora do repositório
+   público e salve a política.
 3. Conferir: o save só completa se a seção `tests` passar. Erro de teste = a
    mudança reabriu algo que devia estar fechado; corrija no repo, não no console.
 
 Por que não dá para scriptar: o console exige login no navegador, e a
 alternativa (API) é o token descartado acima.
+
+### Desktop e celular de correio
+
+Associe `correio-desktop` e `correio-celular` aos dois dispositivos de correio
+já cadastrados na tailnet. O grant desses aliases abre SMTP autenticado
+(587) e IMAPS (993) na VPS. Os testes do console conferem essas portas e o
+bloqueio do SSH na VPS (22) para os dois aliases.
+
+Depois de salvar, com o Tailscale conectado em cada dispositivo, confirme
+que o app sincroniza a caixa via IMAPS e consegue enviar uma mensagem via
+SMTP autenticado. Use as configurações do [guia do Mailserver](../docs/mailserver.md).
 
 ### Funnel do webhook temporário
 

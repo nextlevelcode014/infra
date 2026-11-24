@@ -8,12 +8,14 @@
 
     "ipsets": {},
 
-    // IPs Tailscale dos desktops de administração e do nó do webhook.
+    // IPs Tailscale dos dispositivos de administração, correio e webhook.
     // Os IPs reais ficam fora do repo: troque os placeholders no console
     // (tailscale/README.md).
     "hosts": {
         "infra-admin-1": "<ip-tailscale-do-desktop-1>",
         "infra-admin-2": "<ip-tailscale-do-desktop-2>",
+        "correio-desktop": "<ip-tailscale-do-desktop-de-correio>",
+        "correio-celular": "<ip-tailscale-do-celular-de-correio>",
         "webhook-temporario": "<ip-tailscale-do-webhook>",
     },
 
@@ -59,9 +61,15 @@
             "ip":  ["tcp:443"],
         },
 
-        // Correio do piloto, via Tailscale Serve na VPS.
+        // Correio dos desktops de administração, via Tailscale Serve na VPS.
         {
             "src": ["infra-admin-1", "infra-admin-2"],
+            "dst": ["tag:vps"],
+            "ip":  ["tcp:587", "tcp:993"],
+        },
+        // Clientes de correio com acesso por dispositivo.
+        {
+            "src": ["correio-desktop", "correio-celular"],
             "dst": ["tag:vps"],
             "ip":  ["tcp:587", "tcp:993"],
         },
@@ -281,6 +289,16 @@
             "src": "infra-admin-1",
             "accept": ["tag:vps:587", "tag:vps:993"],
             "deny": ["tag:proxmox-lxc:4000"],
+        },
+        {
+            "src": "correio-desktop",
+            "accept": ["tag:vps:587", "tag:vps:993"],
+            "deny": ["tag:vps:22"],
+        },
+        {
+            "src": "correio-celular",
+            "accept": ["tag:vps:587", "tag:vps:993"],
+            "deny": ["tag:vps:22"],
         },
         // Nós em container (FMD, exit node) não alcançam nada da infra.
         {
