@@ -1,0 +1,2 @@
+# Bytecode gerado quando o Ansible carrega filter plugins em Python.
+__pycache__/
