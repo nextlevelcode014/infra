@@ -31,6 +31,15 @@ re_git='(^|[;&|[:space:]])git([[:space:]]+-[^[:space:]]+([[:space:]]+[^-[:space:
 [[ "$comando" =~ $re_git ]] || exit 0
 acao="${BASH_REMATCH[4]}"
 
+# O repo avaliado é onde o git roda, não a pasta da sessão: `cd <pasta> &&`
+# antes do git muda o alvo (caso de worktree), e `git -C <pasta>` vence.
+re_cd='(^|[;&|[:space:]])cd[[:space:]]+([^[:space:];&|]+)'
+if [[ "$comando" =~ $re_cd ]]; then
+  alvo="${BASH_REMATCH[2]//[\"\']/}"
+  alvo="${alvo/#\~/$HOME}"
+  [[ "$alvo" == /* ]] || alvo="$pasta/$alvo"
+  pasta="$alvo"
+fi
 re_c='git[[:space:]]+-C[[:space:]]+([^[:space:]]+)'
 if [[ "$comando" =~ $re_c ]]; then
   alvo="${BASH_REMATCH[1]}"
