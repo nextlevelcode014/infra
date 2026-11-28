@@ -15,7 +15,7 @@ import tempfile
 REPO = Path(__file__).resolve().parent
 TAILNET = re.compile(r"(?<![\w-])[a-zA-Z0-9-]+\.ts\.net\b", re.IGNORECASE)
 IP_TAILSCALE = re.compile(r"\b100\.(?:6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.\d+\.\d+\b")
-IPS_GENERICOS = {"100.100.100.100", "100.127.255.255"}
+IPS_GENERICOS = {"100.64.0.0", "100.100.100.100", "100.127.255.255"}
 
 FIXTURES_DNS = {"b/ansible/roles/lxc_dns/tests/integracao.py"}
 ROOTS = {Path("terraform"), Path("terraform/hetzner")}
@@ -29,12 +29,14 @@ def git(*args):
     return subprocess.check_output(["git", "-C", REPO, *args])
 
 
-def conferir_privacidade(base, head):
+def conferir_privacidade(base, head=None):
+    """Sem head, compara a base com a árvore de trabalho (arquivos rastreados)."""
     arquivo = ""
     suspeitos = set()
+    revisoes = [base] if head is None else [base, head]
     patch = git(
         "diff", "--no-ext-diff", "--no-textconv", "--no-renames", "--no-color",
-        "--src-prefix=a/", "--dst-prefix=b/", "-U0", base, head, "--",
+        "--src-prefix=a/", "--dst-prefix=b/", "-U0", *revisoes, "--",
     )
     em_bloco = False
     for linha in patch.decode(errors="replace").splitlines():
@@ -131,6 +133,8 @@ def verificar(copia, caminhos, args, temporario, ambiente):
             roots.add(Path("terraform"))
         elif caminho.is_relative_to("ansible/tailscale"):
             print(f"Revisão manual da política Tailscale: {caminho}")
+        elif caminho.is_relative_to(".claude"):
+            print(f"Revisão manual da config do Claude Code: {caminho}")
         elif caminho.is_relative_to("ansible"):
             conferir_ansible = True
         else:
@@ -168,15 +172,30 @@ def verificar(copia, caminhos, args, temporario, ambiente):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("perfil", choices=["pr", "completo"])
+    parser.add_argument("perfil", choices=["pr", "completo", "privacidade"])
     parser.add_argument("base", help="Revisão de destino do PR")
-    parser.add_argument("head", help="Revisão proposta, igual ao HEAD do checkout")
+    parser.add_argument(
+        "head", nargs="?",
+        help="Revisão proposta, igual ao HEAD do checkout; opcional só em privacidade",
+    )
     parser.add_argument("--espelho-providers", type=Path, help="Espelho local exclusivo do Terraform")
     parser.add_argument(
         "--colecoes", type=Path, default=Path.home() / ".ansible/collections",
         help="Diretório pai de ansible_collections para coleções adicionais",
     )
     args = parser.parse_args()
+
+    if args.perfil == "privacidade":
+        # Modo leve do hook do Claude Code: só a conferência de valores
+        # privados, sem cópia do checkout. Sem head, olha a árvore de trabalho.
+        try:
+            conferir_privacidade(args.base, args.head)
+        except (ValueError, subprocess.CalledProcessError) as erro:
+            print(erro, file=sys.stderr)
+            return 1
+        return 0
+    if args.head is None:
+        parser.error(f"o perfil {args.perfil} exige head")
 
     try:
         head = git("rev-parse", "--verify", "--end-of-options", f"{args.head}^{{commit}}").decode().strip()

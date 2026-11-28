@@ -66,6 +66,7 @@ fonte (PR, commit ou comentário de onde o motivo foi tirado).
 | [0029](0029-separar-caixas-pessoal-e-de-trabalho.md) | Caixas pessoal e de trabalho separadas no domínio principal | Proposta |
 | [0030](0030-trocar-o-mx-em-lote-depois-da-autenticacao.md) | Autenticação antes do corte e troca dos MX em lote | Proposta |
 | [0031](0031-retirar-o-proton-do-spf-ao-encerrar-a-transicao.md) | O SPF passa a autorizar só a VPS ao encerrar a transição | Proposta |
+| [0032](0032-config-do-claude-code-deste-repo-fica-no-repo.md) | A config do Claude Code específica do infra fica versionada no repo | Aceita |
 
 ## Modelo
 

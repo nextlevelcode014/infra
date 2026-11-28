@@ -23,11 +23,25 @@ classificação, e qualquer comando que falhar interrompe a verificação.
 | `verificar.py` | Todos os checks locais | Mesmo efeito dos checks individuais |
 | `.forgejo/workflows/` | Todos os checks locais | Mudança na orquestração da CI deve validar os componentes que ela pode selecionar |
 | Markdown, política Tailscale ou `.gitignore` | Conferência de valores privados no diff | Revisão da política Tailscale é manual |
+| Config do Claude Code (`.claude/`) | Conferência de valores privados no diff | Revisão do hook é manual; os casos ensaiados ficam no PR |
 
 A conferência de privacidade roda nos dois perfis. Ela busca nomes de
 tailnet e IPv4 Tailscale nas linhas acrescentadas, com exceções para os
 endereços genéricos e para o domínio fictício do teste DNS. Mostra apenas os
 caminhos suspeitos. Revise também os demais dados sensíveis antes de publicar.
+
+Para rodar só essa conferência, sem a cópia do checkout:
+
+```bash
+python3 verificar.py privacidade HEAD
+python3 verificar.py privacidade origin/main HEAD
+```
+
+Com uma revisão, ela compara a revisão com a árvore de trabalho, incluindo o
+que ainda não foi commitado nos arquivos rastreados. Com duas, compara os
+commits. O hook do Claude Code em `.claude/hooks/grep-de-vazamento.sh` usa a
+primeira forma antes do `git commit` e a segunda, a partir do ancestral comum
+com a default, antes do `git push`. Saída `1` indica valor suspeito.
 
 ## Execução em pull requests
 

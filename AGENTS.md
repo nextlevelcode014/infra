@@ -14,10 +14,11 @@ root modules (`terraform/` e `terraform/hetzner/`).
 ou no `terraform.tfvars`, os dois fora do git. Nome da tailnet e IP Tailscale
 também: no código entram por variável, e nos docs por placeholder
 (`<tailnet>.ts.net`, `<ts_ip>`, `<proxmox_host>`). IP da LAN pode aparecer.
-Antes de commitar, confira que não entrou valor real:
-`git diff --cached | grep -E 'ts\.net|\b100\.(6[4-9]|[7-9][0-9]|1[01][0-9]|12[0-7])\.'`
-só pode mostrar placeholder e os endereços genéricos do Tailscale
-(`100.64.0.0/10`, `100.127.255.255`, `100.100.100.100`).
+Os únicos aceitos são os placeholders e os endereços genéricos do Tailscale
+(`100.64.0.0/10`, `100.127.255.255`, `100.100.100.100`). No Claude Code, o
+hook do projeto (`.claude/hooks/grep-de-vazamento.sh`) recusa `git commit` e
+`git push` com valor real, usando a mesma regra da CI. Fora dele, confira
+antes de commitar: `python3 verificar.py privacidade HEAD`.
 
 Mudança que toca as duas partes (container novo e a config dele) vai num PR
 só.

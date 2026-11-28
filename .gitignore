@@ -1,2 +1,8 @@
 # Bytecode gerado quando o Ansible carrega filter plugins em Python.
 __pycache__/
+
+# Claude Code: settings.json e hooks/ são do projeto e entram no git; o resto
+# é estado local da sessão (preferências, worktrees de agentes).
+.claude/settings.local.json
+.claude/worktrees/
+.claude/.cc-writes/
