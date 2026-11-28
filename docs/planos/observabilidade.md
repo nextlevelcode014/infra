@@ -22,13 +22,12 @@ versionados. Essa divisão segue os ADRs
 ```mermaid
 flowchart LR
     fontes["Proxmox, LXCs, Pi e VPS"]
-    apps["Aplicações instrumentadas"]
+    apps["Aplicações com endpoint de métricas"]
     operador["Responsável"]
 
     subgraph lxc["LXC de observabilidade no Proxmox"]
         prometheus["Prometheus"]
         loki["Loki"]
-        tempo["Tempo"]
         grafana["Grafana e regras de alerta"]
         investigador["Investigador e cliente MCP"]
         mcp["Grafana MCP em modo leitura"]
@@ -37,12 +36,9 @@ flowchart LR
     prometheus -->|consulta endpoints de métricas| fontes
     prometheus -->|consulta endpoints de métricas| apps
     fontes -->|journal e logs selecionados| alloy["Grafana Alloy junto às fontes"]
-    apps -->|spans via OTLP| alloy
     alloy -->|logs| loki
-    alloy -->|traces| tempo
     grafana -->|consultas| prometheus
     grafana -->|consultas| loki
-    grafana -->|consultas| tempo
     operador -->|tailnet| caddy["Caddy privado"]
     caddy --> grafana
     grafana -->|webhook autenticado| investigador
@@ -57,7 +53,7 @@ O acesso humano passa pelo [Caddy privado](../../ansible/docs/caddy.md).
 O investigador roda no mesmo perímetro privado da stack. A API do Grafana e o
 webhook ficam acessíveis só aos consumidores previstos. O Prometheus precisa
 alcançar os endpoints de métricas autorizados, e os coletores precisam
-alcançar a ingestão de Loki e Tempo. Definir os fluxos por origem, destino e
+alcançar a ingestão do Loki. Definir os fluxos por origem, destino e
 porta antes de aplicar as [regras da tailnet](../../ansible/tailscale/README.md).
 O Kuma segue na VPS. Se o Proxmox cair, ele pode perceber a perda dos alvos
 externos, enquanto o Grafana e o histórico local ficam indisponíveis.
@@ -66,16 +62,15 @@ externos, enquanto o Grafana e o histórico local ficam indisponíveis.
 | --- | --- |
 | Métricas | O Prometheus coleta de exporters e endpoints HTTP. PromQL mostra quando a latência ou a taxa de erros mudou, qual serviço foi afetado e por quanto tempo. |
 | Logs | Alloy encaminha fontes selecionadas do journal, do Caddy ou do Docker ao Loki. LogQL encontra eventos de um serviço na janela do incidente. |
-| Traces | A instrumentação OpenTelemetry gera spans e propaga o contexto. Alloy recebe OTLP e envia ao Tempo. O trace mostra o tempo gasto em cada etapa instrumentada. |
-| Correlação | Serviço, ambiente e janela de tempo ligam consultas agregadas a eventos. O `trace_id` no log permite abrir o trace correspondente no Grafana. |
+| Correlação | Serviço, ambiente e janela de tempo ligam consultas agregadas a eventos: a métrica aponta quando, e o log da mesma janela mostra o quê. |
 
-O Grafana consulta os três backends. Na sigla LGTM, o M é Mimir. Nesta
-proposta, o Prometheus guarda e consulta as métricas. Avaliar Loki e Tempo
+O Grafana consulta os dois backends. Na sigla LGTM, o M é Mimir. Nesta
+proposta, o Prometheus guarda e consulta as métricas. Avaliar o Loki
 em modo monolítico e escolher o armazenamento suportado pelas versões
 testadas. Medir CPU, RAM, escrita e crescimento diário em disco antes de
 fixar retenção, tamanho dos volumes e orçamento por sinal. Começar pelos
 logs que respondem a perguntas do piloto. Usar labels estáveis como
-serviço e ambiente. IDs de requisição e de trace ficam como campos da
+serviço e ambiente. IDs de requisição ficam como campos da
 telemetria, fora das labels.
 
 Separar a recuperação da configuração da recuperação do histórico. O Git e
@@ -83,6 +78,19 @@ o vault permitem recriar a configuração e as credenciais. Definir quais dados
 persistentes merecem backup a partir da janela de investigação necessária,
 e ensaiar a restauração correspondente. Documentar a volta da última versão
 validada e os limites de rollback quando houver migração de dados.
+
+### Traces ficam de fora
+
+Trace só existe em código instrumentado: a própria aplicação cria os spans
+e repassa o `trace_id` a quem ela chama. Os serviços do homelab são de
+terceiros (Jellyfin, Immich, Nextcloud, Forgejo) e, sem instrumentação
+embutida, um Tempo receberia no máximo os spans do proxy, que só repetem a
+latência que a métrica já mostra. Métricas e logs da mesma janela cobrem as
+perguntas do piloto.
+
+OpenTelemetry e Tempo voltam ao plano quando houver código próprio em
+produção para instrumentar, ou um serviço de terceiros que exporte traces
+e cuja lentidão métricas e logs não expliquem.
 
 ## Trilha de aprendizado e implantação
 
@@ -99,13 +107,11 @@ introduzir latência e erros de forma controlada.
    painéis a partir dessas consultas.
 2. Adicionar Alloy e Loki. Emitir logs estruturados e encontrar uma falha
    conhecida por serviço e intervalo com LogQL.
-3. Instrumentar as duas aplicações com OpenTelemetry e adicionar Tempo.
-   Encontrar a requisição pelo `trace_id` do log e apontar o span lento.
-4. Criar uma regra de alerta para o cenário. Observar disparo e recuperação,
+3. Criar uma regra de alerta para o cenário. Observar disparo e recuperação,
    e distinguir ausência de dados de um serviço saudável.
 
 **Critério de saída.** A mesma falha pode ser reproduzida e explicada
-manualmente, com janela de tempo, consultas, log e trace correspondentes.
+manualmente, com janela de tempo, consultas e logs correspondentes.
 
 ### 2. Repetir a investigação com MCP
 
@@ -168,10 +174,9 @@ a essa trilha.
 Entregar o LXC e sua configuração inicial no mesmo PR, seguindo o
 [contrato de evidências](../fluxo-de-mudanca.md). Começar com métricas e
 logs de um alvo autorizado, como o Caddy do caminho do Forgejo. Expandir
-para outros serviços conforme a utilidade e o volume medido. Adicionar
-traces onde houver instrumentação compatível. Por exemplo, a investigação
-de lentidão do Forgejo pode começar por métricas do caminho HTTP e logs
-do proxy, mesmo que os spans internos do Forgejo estejam indisponíveis.
+para outros serviços conforme a utilidade e o volume medido. Por
+exemplo, a investigação de lentidão do Forgejo começa por métricas do
+caminho HTTP e logs do proxy.
 Habilitar a investigação automática depois de validar acesso, retenção,
 conteúdo e recuperação com a coleta real.
 
@@ -204,10 +209,8 @@ contrato de evidências.
   e [tutorial de investigação com MCP](https://www.youtube.com/watch?v=7rZBNklWOJE)
   embasam o fluxo de telemetria até o alerta e a investigação.
 - [Prometheus](https://prometheus.io/docs/introduction/overview/),
-  [Grafana Alloy](https://grafana.com/docs/alloy/latest/introduction/),
-  [Loki monolítico](https://grafana.com/docs/loki/latest/get-started/deployment-modes/),
-  [Tempo monolítico](https://grafana.com/docs/tempo/latest/set-up-for-tracing/setup-tempo/deploy/locally/linux/)
-  e [propagação de contexto no OpenTelemetry](https://opentelemetry.io/docs/concepts/context-propagation/)
+  [Grafana Alloy](https://grafana.com/docs/alloy/latest/introduction/)
+  e [Loki monolítico](https://grafana.com/docs/loki/latest/get-started/deployment-modes/)
   servem de referência para a coleta e a correlação.
 - As transcrições dos tutoriais de Kubernetes serviram de base para a
   trilha do lab. A documentação oficial detalha os
