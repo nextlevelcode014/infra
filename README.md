@@ -57,6 +57,9 @@ fora da infra, e como fazê-las, estão em
 Formatar o desktop de onde se roda a infra, ou começar numa máquina nova:
 [`docs/maquina-nova.md`](docs/maquina-nova.md).
 
+O que cai junto com o quê, e o que um aparelho fora da tailnet alcança:
+[`docs/mapa-de-dependencias.md`](docs/mapa-de-dependencias.md).
+
 Os planos de mudanças futuras ficam em `docs/planos/`.
 
 - [Full node Bitcoin e upgrade do Pi](docs/planos/full-node-e-upgrade-do-pi.md)
